@@ -7,11 +7,20 @@ import java.util.Collection;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * The type Authenticated user dto.
+ */
 public class AuthenticatedUserDTO implements AuthenticatedUser {
 
     private final String email;
     private final List<String> roles;
 
+    /**
+     * Instantiates a new Authenticated user dto.
+     *
+     * @param email       the email
+     * @param authorities the authorities
+     */
     public AuthenticatedUserDTO(String email, Collection<? extends GrantedAuthority> authorities) {
         this.email = email;
         this.roles = authorities.stream()

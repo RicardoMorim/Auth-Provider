@@ -3,6 +3,9 @@ package com.ricardo.auth.domain;
 import jakarta.persistence.Embeddable;
 import lombok.Getter;
 
+/**
+ * The type Username.
+ */
 @Embeddable
 public class Username {
     @Getter
@@ -32,10 +35,19 @@ public class Username {
         this.username = username;
     }
 
+    /**
+     * Instantiates a new Username.
+     */
     protected Username() {
 
     }
 
+    /**
+     * Value of username.
+     *
+     * @param username the username
+     * @return the username
+     */
     public static Username valueOf(String username) {
         return new Username(username);
     }

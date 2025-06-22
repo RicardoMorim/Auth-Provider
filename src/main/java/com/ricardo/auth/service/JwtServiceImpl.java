@@ -12,14 +12,13 @@ import org.springframework.security.core.GrantedAuthority;
 import org.springframework.stereotype.Service;
 
 import java.security.Key;
-import java.util.Collection;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
+/**
+ * The type Jwt service.
+ */
 @Service
 public class JwtServiceImpl implements JwtService {
 
@@ -31,6 +30,9 @@ public class JwtServiceImpl implements JwtService {
 
     private Key key;
 
+    /**
+     * Init.
+     */
     @PostConstruct
     public void init() {
         byte[] keyBytes = Decoders.BASE64.decode(this.secret);

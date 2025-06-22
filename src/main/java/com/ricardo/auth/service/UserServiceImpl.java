@@ -1,7 +1,9 @@
 package com.ricardo.auth.service;
 
-import com.ricardo.auth.domain.AuthUser;
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.AuthUser;
+import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
+import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
@@ -9,12 +11,22 @@ import org.springframework.stereotype.Service;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * The type User service.
+ *
+ * @param <U>  the type parameter
+ * @param <ID> the type parameter
+ */
 @Service
 public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U, ID> {
 
     private final UserRepository<U, ID> userRepository;
 
-    // A implementação concreta do repositório será injetada pelo Spring
+    /**
+     * Instantiates a new User service.
+     *
+     * @param userRepository the user repository
+     */
     public UserServiceImpl(UserRepository<U, ID> userRepository) {
         this.userRepository = userRepository;
     }
@@ -22,13 +34,13 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
     @Override
     public U getUserById(ID id) {
         return userRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("User not found with id: " + id));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
     }
 
     @Override
     public U createUser(U user) {
         if (userRepository.existsByEmail(user.getEmail())) {
-            throw new RuntimeException("Email already exists: " + user.getEmail());
+            throw new DuplicateResourceException("Email already exists: " + user.getEmail());
         }
         return userRepository.save(user);
     }
@@ -36,7 +48,6 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
     @Override
     public U updateUser(ID id, U userDetails) {
         U user = getUserById(id);
-        // Atualiza os campos com base na interface AuthUser
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
@@ -47,6 +58,9 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
 
     @Override
     public void deleteUser(ID id) {
+        if (!userRepository.existsById(id)) {
+            throw new ResourceNotFoundException("User not found with id: " + id);
+        }
         userRepository.deleteById(id);
     }
 
@@ -58,7 +72,7 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
     @Override
     public U getUserByEmail(String email) {
         return userRepository.findByEmail(email)
-                .orElseThrow(() -> new RuntimeException("User not found with email: " + email));
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
     }
 
     @Override

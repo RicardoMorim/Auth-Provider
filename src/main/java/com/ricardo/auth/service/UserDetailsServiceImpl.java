@@ -7,11 +7,19 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
+/**
+ * The type User details service.
+ */
 @Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserService<User, Long> userService;
 
+    /**
+     * Instantiates a new User details service.
+     *
+     * @param userService the user service
+     */
     public UserDetailsServiceImpl(UserService<User, Long> userService) {
         this.userService = userService;
     }

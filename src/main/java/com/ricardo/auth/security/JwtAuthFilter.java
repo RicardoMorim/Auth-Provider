@@ -16,11 +16,19 @@ import java.io.IOException;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * The type Jwt auth filter.
+ */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
 
+    /**
+     * Instantiates a new Jwt auth filter.
+     *
+     * @param jwtService the jwt service
+     */
     public JwtAuthFilter(JwtService jwtService) {
         this.jwtService = jwtService;
     }

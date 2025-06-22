@@ -4,13 +4,15 @@ import com.ricardo.auth.core.Role;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.util.Collection;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The type User.
+ */
 @Entity
 @Table(name = "users")
 public class User implements AuthUser<AppRole> {
@@ -38,9 +40,19 @@ public class User implements AuthUser<AppRole> {
     @Column(name = "role")
     private Set<AppRole> roles;
 
+    /**
+     * Instantiates a new User.
+     */
     protected User() {
     }
 
+    /**
+     * Instantiates a new User.
+     *
+     * @param username the username
+     * @param email    the email
+     * @param password the password
+     */
     public User(Username username, Email email, Password password) {
         this.username = username;
         this.email = email;

@@ -7,6 +7,9 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import java.io.Serializable;
 import java.util.Objects;
 
+/**
+ * The type Password.
+ */
 @Getter
 @Embeddable
 public class Password implements Serializable {
@@ -18,6 +21,9 @@ public class Password implements Serializable {
         this.hashed = hashed;
     }
 
+    /**
+     * Instantiates a new Password.
+     */
     protected Password() {
     }
 
@@ -41,7 +47,6 @@ public class Password implements Serializable {
      *
      * @param password        the raw password to be hashed
      * @param passwordEncoder the PasswordEncoder to use for hashing
-     *
      * @return a new instance of Password with the hashed value
      */
     public static Password valueOf(String password, PasswordEncoder passwordEncoder) {
@@ -62,6 +67,13 @@ public class Password implements Serializable {
         return new Password(hashedPassword);
     }
 
+    /**
+     * Matches boolean.
+     *
+     * @param rawPassword     the raw password
+     * @param passwordEncoder the password encoder
+     * @return the boolean
+     */
     public boolean matches(String rawPassword, PasswordEncoder passwordEncoder) {
         if (rawPassword == null || rawPassword.isBlank()) {
             throw new IllegalArgumentException("Raw password cannot be null or blank");

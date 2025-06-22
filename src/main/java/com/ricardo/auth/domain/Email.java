@@ -4,6 +4,9 @@ import jakarta.persistence.Embeddable;
 
 import java.io.Serializable;
 
+/**
+ * The type Email.
+ */
 @Embeddable
 public class Email implements Serializable {
 
@@ -13,9 +16,17 @@ public class Email implements Serializable {
         this.email = email;
     }
 
+    /**
+     * Instantiates a new Email.
+     */
     protected Email() {
     }
 
+    /**
+     * Gets email.
+     *
+     * @return the email
+     */
     public String getEmail() {
         return email;
     }
@@ -25,6 +36,12 @@ public class Email implements Serializable {
         return email;
     }
 
+    /**
+     * Value of email.
+     *
+     * @param email the email
+     * @return the email
+     */
     public static Email valueOf(String email) {
         if (email == null || email.isEmpty()) {
             throw new IllegalArgumentException("Email cannot be null or empty");

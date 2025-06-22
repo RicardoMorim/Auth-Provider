@@ -14,17 +14,52 @@ import java.util.Set;
  */
 public interface AuthUser<R extends Role> extends UserDetails {
 
+    /**
+     * Gets id.
+     *
+     * @return the id
+     */
     Object getId();
 
+    /**
+     * Gets email.
+     *
+     * @return the email
+     */
     String getEmail();
 
+    /**
+     * Sets email.
+     *
+     * @param email the email
+     */
     void setEmail(String email);
 
+    /**
+     * Sets username.
+     *
+     * @param username the username
+     */
     void setUsername(String username);
 
+    /**
+     * Sets password.
+     *
+     * @param password the password
+     */
     void setPassword(String password);
 
+    /**
+     * Gets roles.
+     *
+     * @return the roles
+     */
     Set<R> getRoles();
 
+    /**
+     * Add role.
+     *
+     * @param role the role
+     */
     void addRole(R role);
 }
