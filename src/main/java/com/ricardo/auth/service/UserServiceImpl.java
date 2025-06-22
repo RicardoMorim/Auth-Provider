@@ -1,6 +1,6 @@
 package com.ricardo.auth.service;
 
-import com.ricardo.auth.core.AuthUser;
+import com.ricardo.auth.domain.AuthUser;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
