@@ -7,23 +7,21 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 import org.springframework.boot.test.autoconfigure.orm.jpa.TestEntityManager;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @DataJpaTest
-class UserRepositoryTest {
+@ActiveProfiles("test")
+public class UserRepositoryTest {
 
     @Autowired
     private TestEntityManager entityManager;
 
     @Autowired
-    private TestUserRepository userRepository; // Usa a interface de teste
-
-    // Como UserRepository tem @NoRepositoryBean, criamos uma interface de teste
-    // que o Spring Data JPA possa implementar em tempo de execução.
-    public interface TestUserRepository extends UserRepository<User, Long> {}
+    private UserJpaRepository userRepository; // Use the concrete implementation
 
     @BeforeEach
     void setUp() {
@@ -32,6 +30,7 @@ class UserRepositoryTest {
         Password password = Password.fromHash(new BCryptPasswordEncoder().encode("password123"));
         User user = new User(username, email, password);
         entityManager.persist(user);
+        entityManager.flush();
     }
 
     @Test

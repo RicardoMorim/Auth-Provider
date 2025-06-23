@@ -1,23 +1,30 @@
+package com.ricardo.auth.controller;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.config.TestConfig;
+import com.ricardo.auth.domain.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
-import com.ricardo.auth.dto.UserDTO;
-import com.ricardo.auth.dto.UserDTOMapper;
+import com.ricardo.auth.repository.UserJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.when;
+import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(UserController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
 class UserControllerTest {
 
     @Autowired
@@ -26,45 +33,98 @@ class UserControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
 
-    @MockBean
-    private UserService<User, Long> userService;
+    @Autowired
+    private UserJpaRepository userRepository;
 
-    @MockBean
-    private PasswordEncoder passwordEncoder; // Também precisa ser mockado
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+    }
 
     @Test
     void createUser_shouldReturn201_whenRequestIsValid() throws Exception {
         // Arrange
-        CreateUserRequestDTO request = new CreateUserRequestDTO("testuser", "test@example.com", "password123");
-        User createdUser = mock(User.class);
-        when(createdUser.getId()).thenReturn(1L);
-        when(createdUser.getUsername()).thenReturn("testuser");
-        when(createdUser.getEmail()).thenReturn("test@example.com");
-
-        when(userService.createUser(any(User.class))).thenReturn(createdUser);
+        CreateUserRequestDTO request = new CreateUserRequestDTO("newUser", "new@example.com", "password123");
 
         // Act & Assert
         mockMvc.perform(post("/api/users/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.id").value("1"))
-                .andExpect(jsonPath("$.username").value("testuser"));
+                .andExpect(jsonPath("$.username").value(request.getUsername()))
+                .andExpect(jsonPath("$.email").value(request.getEmail()));
+        
+        // Verify user was actually created in database
+        assertTrue(userRepository.existsByEmail("new@example.com"));
     }
 
     @Test
     void createUser_shouldReturn409_whenEmailAlreadyExists() throws Exception {
-        // Arrange
-        CreateUserRequestDTO request = new CreateUserRequestDTO("testuser", "test@example.com", "password123");
+        // Arrange - Create existing user
+        Username username = Username.valueOf("existinguser");
+        Email email = Email.valueOf("existing@example.com");
+        Password password = Password.valueOf("password123", passwordEncoder);
+        User existingUser = new User(username, email, password);
+        userRepository.save(existingUser);
 
-        when(userService.createUser(any(User.class)))
-                .thenThrow(new RuntimeException("Email already exists: test@example.com"));
+        CreateUserRequestDTO request = new CreateUserRequestDTO("newUser", "existing@example.com", "password123");
 
         // Act & Assert
         mockMvc.perform(post("/api/users/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isConflict())
-                .andExpect(jsonPath("$.message").value("Email already exists: test@example.com"));
+                .andExpect(jsonPath("$.message").value("Email already exists: existing@example.com"));
+    }
+
+    @Test
+    void createUser_shouldReturn400_whenUsernameIsEmpty() throws Exception {
+        // Arrange
+        CreateUserRequestDTO request = new CreateUserRequestDTO("", "new@example.com", "password123");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/users/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createUser_shouldReturn400_whenEmailIsEmpty() throws Exception {
+        // Arrange
+        CreateUserRequestDTO request = new CreateUserRequestDTO("newUser", "", "password123");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/users/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createUser_shouldReturn400_whenPasswordIsEmpty() throws Exception {
+        // Arrange
+        CreateUserRequestDTO request = new CreateUserRequestDTO("newUser", "new@example.com", "");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/users/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
+    }
+
+    @Test
+    void createUser_shouldReturn400_whenEmailIsInvalid() throws Exception {
+        // Arrange
+        CreateUserRequestDTO request = new CreateUserRequestDTO("newUser", "invalid-email", "password123");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/users/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isBadRequest());
     }
 }

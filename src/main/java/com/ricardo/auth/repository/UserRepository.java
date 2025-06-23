@@ -2,6 +2,7 @@ package com.ricardo.auth.repository;
 
 import com.ricardo.auth.domain.AuthUser;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.NoRepositoryBean;
 
 import java.util.Optional;
@@ -17,18 +18,20 @@ import java.util.Optional;
 public interface UserRepository<U extends AuthUser<?>, ID> extends JpaRepository<U, ID> {
 
     /**
-     * Find by email optional.
+     * Find by email string (queries the embedded Email object's email field).
      *
-     * @param email the email
-     * @return the optional
+     * @param email the email string
+     * @return the optional user
      */
+    @Query("SELECT u FROM #{#entityName} u WHERE u.email.email = :email")
     Optional<U> findByEmail(String email);
 
     /**
-     * Exists by email boolean.
+     * Check if user exists by email string.
      *
-     * @param email the email
-     * @return the boolean
+     * @param email the email string
+     * @return true if exists
      */
+    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM #{#entityName} u WHERE u.email.email = :email")
     boolean existsByEmail(String email);
 }

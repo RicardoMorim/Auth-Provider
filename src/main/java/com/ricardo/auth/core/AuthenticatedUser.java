@@ -11,7 +11,7 @@ public interface AuthenticatedUser {
      *
      * @return the email
      */
-    String getEmail();
+    String getName();
 
     /**
      * Gets roles.

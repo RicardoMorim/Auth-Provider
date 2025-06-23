@@ -1,70 +1,134 @@
 package com.ricardo.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.config.TestConfig;
+import com.ricardo.auth.domain.*;
 import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.repository.UserJpaRepository;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
-import org.springframework.boot.test.mock.mockito.MockBean;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.http.MediaType;
-import org.springframework.security.authentication.AuthenticationManager;
-import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
-import org.springframework.security.core.Authentication;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
-import java.util.Collections;
-
-import static org.mockito.ArgumentMatchers.any;
-import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.when;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AuthController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
+@ActiveProfiles("test")
+@Transactional
 class AuthControllerTest {
 
     @Autowired
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;
+    private ObjectMapper objectMapper;    @Autowired
+    private UserJpaRepository userRepository;
 
-    @MockBean
-    private JwtService jwtService;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
 
-    @MockBean
-    private AuthenticationManager authenticationManager;
+    private User testUser;
+
+    @BeforeEach
+    void setUp() {
+        userRepository.deleteAll();
+
+        // Create a test user with encoded password
+        Username username = Username.valueOf("testuser");
+        Email email = Email.valueOf("test@example.com");
+        Password password = Password.fromHash(passwordEncoder.encode("password123"));
+        testUser = new User(username, email, password);
+        userRepository.save(testUser);
+    }
 
     @Test
     void login_shouldReturnToken_whenCredentialsAreValid() throws Exception {
         // Arrange
-        LoginRequestDTO request = new LoginRequestDTO("test@example.com", "password");
-        Authentication authResult = new UsernamePasswordAuthenticationToken(
-                "test@example.com", null, Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-
-        when(authenticationManager.authenticate(any())).thenReturn(authResult);
-        when(jwtService.generateToken(any(), any())).thenReturn("dummy.jwt.token");
+        LoginRequestDTO request = new LoginRequestDTO("test@example.com", "password123");
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").value("dummy.jwt.token"));
+                .andExpect(jsonPath("$.token").exists())
+                .andExpect(jsonPath("$.token").isNotEmpty());
     }
 
     @Test
-    @WithMockUser(username = "user@example.com", authorities = {"ROLE_USER"})
-    void getAuthenticatedUser_shouldReturnUserDetails() throws Exception {
+    void login_shouldReturn401_whenCredentialsAreInvalid() throws Exception {
+        // Arrange
+        LoginRequestDTO request = new LoginRequestDTO("test@example.com", "wrongpassword");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void login_shouldReturn401_whenUserDoesNotExist() throws Exception {
+        // Arrange
+        LoginRequestDTO request = new LoginRequestDTO("nonexistent@example.com", "password123");
+
+        // Act & Assert
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getAuthenticatedUser_shouldReturnUserDetails_whenTokenIsValid() throws Exception {
+        // First, login to get a token
+        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "password123");
+
+        String response = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn()
+                .getResponse()
+                .getContentAsString();
+
+        // Extract token from response (you might need to parse JSON)
+        String token = extractTokenFromResponse(response);
+
+        // Use token to access protected endpoint
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer " + token))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("testuser"));
+    }
+
+    @Test
+    void getAuthenticatedUser_shouldReturn401_whenNoTokenProvided() throws Exception {
         // Act & Assert
         mockMvc.perform(get("/api/auth/me"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.email").value("user@example.com"))
-                .andExpect(jsonPath("$.roles[0]").value("ROLE_USER"));
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void getAuthenticatedUser_shouldReturn401_whenTokenIsInvalid() throws Exception {
+        // Act & Assert
+        mockMvc.perform(get("/api/auth/me")
+                        .header("Authorization", "Bearer invalid.jwt.token"))
+                .andExpect(status().isUnauthorized());
+    }
+
+    private String extractTokenFromResponse(String response) throws Exception {
+        // Parse JSON response to extract token
+        return objectMapper.readTree(response).get("token").asText();
     }
 }

@@ -25,6 +25,7 @@ public class User implements AuthUser<AppRole> {
     private Long version;
 
     @Embedded
+    @AttributeOverride(name = "username", column = @Column(unique = true, nullable = false))
     private Username username;
 
     @Embedded
@@ -34,7 +35,7 @@ public class User implements AuthUser<AppRole> {
     @Embedded
     private Password password;
 
-    @ElementCollection(targetClass = Role.class, fetch = FetchType.EAGER)
+    @ElementCollection(targetClass = AppRole.class, fetch = FetchType.EAGER)
     @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Enumerated(EnumType.STRING)
     @Column(name = "role")

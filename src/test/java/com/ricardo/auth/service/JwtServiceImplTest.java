@@ -1,6 +1,5 @@
 package com.ricardo.auth.service;
 
-import org.hibernate.cfg.Environment;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -24,8 +23,8 @@ class JwtServiceImplTest {
 
     @BeforeEach
     void setUp() {
-        // Use a secret key that is long enough for the HS256 algorithm
-        String secret = Environment.getProperties().getProperty("jwt.secret");
+        // Use a valid Base64 encoded secret key that is long enough for the HS256 algorithm
+        String secret = "dGVzdHNlY3JldGtleWZvcnRlc3RpbmdwdXJwb3Nlc29ubHkxMjM0NTY=";
         ReflectionTestUtils.setField(jwtService, "secret", secret);
         ReflectionTestUtils.setField(jwtService, "expiration", 3600000L); // 1 hour
         jwtService.init(); // Manually call PostConstruct method

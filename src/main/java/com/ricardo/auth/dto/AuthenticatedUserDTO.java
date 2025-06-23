@@ -12,25 +12,25 @@ import java.util.stream.Collectors;
  */
 public class AuthenticatedUserDTO implements AuthenticatedUser {
 
-    private final String email;
+    private final String name;
     private final List<String> roles;
 
     /**
      * Instantiates a new Authenticated user dto.
      *
-     * @param email       the email
+     * @param name       the email
      * @param authorities the authorities
      */
-    public AuthenticatedUserDTO(String email, Collection<? extends GrantedAuthority> authorities) {
-        this.email = email;
+    public AuthenticatedUserDTO(String name, Collection<? extends GrantedAuthority> authorities) {
+        this.name = name;
         this.roles = authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
     }
 
     @Override
-    public String getEmail() {
-        return email;
+    public String getName() {
+        return name;
     }
 
     @Override

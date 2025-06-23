@@ -5,9 +5,10 @@ import com.ricardo.auth.domain.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.UserDTO;
 import com.ricardo.auth.dto.UserDTOMapper;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.Authentication;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.web.bind.annotation.*;
 
@@ -16,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
  */
 @RestController
 @RequestMapping("/api/users")
-@ConditionalOnMissingBean(UserApiEndpoint.class)
 public class UserController implements UserApiEndpoint {
     private final PasswordEncoder passwordEncoder;
     private final UserService<User, Long> userService;
@@ -94,7 +94,8 @@ public class UserController implements UserApiEndpoint {
      * @return the response entity
      */
     @PutMapping("/update/{id}")
-    public ResponseEntity<UserDTO> updateUser(@RequestBody CreateUserRequestDTO request, @PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwner(authentication.name, #id)")
+    public ResponseEntity<UserDTO> updateUser(@RequestBody CreateUserRequestDTO request, @PathVariable Long id, Authentication authentication) {
         Username name = Username.valueOf(request.getUsername());
         Email email = Email.valueOf(request.getEmail());
         Password passwordInstance = Password.valueOf(request.getPassword(), passwordEncoder);
@@ -111,7 +112,13 @@ public class UserController implements UserApiEndpoint {
      * @return the response entity
      */
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<Void> deleteUser(@PathVariable Long id) {
+    @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwner(authentication.name, #id)")
+    public ResponseEntity<Void> deleteUser(@PathVariable Long id, Authentication authentication) {
+        User user = userService.getUserById(id);
+        if (user == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+
         userService.deleteUser(id);
         return ResponseEntity.noContent().build();
     }

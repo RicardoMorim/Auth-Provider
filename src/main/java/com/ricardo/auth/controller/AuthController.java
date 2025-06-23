@@ -4,10 +4,14 @@ import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.dto.AuthenticatedUserDTO;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.dto.TokenDTO;
+
+import java.util.Collection;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
 
@@ -41,8 +45,7 @@ public class AuthController {
     @PostMapping("/login")
     public ResponseEntity<TokenDTO> login(@RequestBody LoginRequestDTO request) {
         Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword())
-        );
+                new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
         UserDetails userDetails = (UserDetails) authentication.getPrincipal();
         String token = jwtService.generateToken(userDetails.getUsername(), userDetails.getAuthorities());
@@ -58,11 +61,24 @@ public class AuthController {
      */
     @GetMapping("/me")
     public ResponseEntity<AuthenticatedUserDTO> getAuthenticatedUser(Authentication authentication) {
-        UserDetails userDetails = (UserDetails) authentication.getPrincipal();
-        AuthenticatedUserDTO userDto = new AuthenticatedUserDTO(
-                userDetails.getUsername(),
-                userDetails.getAuthorities()
-        );
+        String name;
+        Collection<? extends GrantedAuthority> authorities;
+
+        // Handle different authentication types
+        if (authentication.getPrincipal() instanceof UserDetails) {
+            // Session-based authentication (from login)
+            UserDetails userDetails = (UserDetails) authentication.getPrincipal();
+            name = userDetails.getUsername();
+            authorities = userDetails.getAuthorities();
+        } else if (authentication.getPrincipal() instanceof String) {
+            // JWT-based authentication
+            name = (String) authentication.getPrincipal();
+            authorities = authentication.getAuthorities();
+        } else {
+            throw new IllegalStateException("Unknown authentication principal type");
+        }
+
+        AuthenticatedUserDTO userDto = new AuthenticatedUserDTO(name, authorities);
         return ResponseEntity.ok(userDto);
     }
 }
