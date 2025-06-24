@@ -1,0 +1,338 @@
+@startuml Ricardo Auth Spring Boot Starter - Class Diagram
+
+!define SPOTLESS_THEME
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #6C757D
+skinparam arrowColor #495057
+' Fix: Better note styling with dark text and border
+skinparam noteBackgroundColor #E8F4FD
+skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
+skinparam noteFontStyle bold
+' Fix: Prevent cropping with better spacing
+skinparam padding 10
+skinparam classFontSize 11
+skinparam packageFontSize 12
+
+title Ricardo Auth Spring Boot Starter\nArchitecture Overview
+
+' Fix: Use left to right direction to prevent cropping
+!define DIRECTION left to right
+
+package "Domain Layer" <<Rectangle>> {
+    
+    interface "AuthUser<T>" as AuthUser {
+        +getId(): Long
+        +getEmail(): String
+        +setEmail(email: String): void
+        +getUsername(): String
+        +setUsername(username: String): void
+        +getPassword(): String
+        +setPassword(hashedPassword: String): void
+        +getRoles(): Set<T>
+        +addRole(role: T): void
+        +removeRole(role: T): void
+        +getAuthorities(): Collection<GrantedAuthority>
+    }
+    
+    class User {
+        -id: Long
+        -version: Long
+        -username: Username
+        -email: Email
+        -password: Password
+        -roles: Set<AppRole>
+        +User(username: Username, email: Email, password: Password)
+        +isAccountNonExpired(): boolean
+        +isAccountNonLocked(): boolean
+        +isCredentialsNonExpired(): boolean
+        +isEnabled(): boolean
+    }
+    
+    class Username {
+        -username: String
+        +valueOf(username: String): Username
+        +getUsername(): String
+        -validateUsername(username: String): void
+    }
+    
+    class Email {
+        -email: String
+        +valueOf(email: String): Email
+        +getEmail(): String
+        -validateEmail(email: String): void
+    }
+    
+    class Password {
+        -hashed: String
+        +valueOf(raw: String, encoder: PasswordEncoder): Password
+        +fromHash(hashedPassword: String): Password
+        +getHashed(): String
+        +matches(raw: String, encoder: PasswordEncoder): boolean
+    }
+    
+    enum AppRole {
+        USER
+        ADMIN
+        +getAuthority(): String
+    }
+    
+    User .up.|> AuthUser
+    User *-- Username : contains
+    User *-- Email : contains
+    User *-- Password : contains
+    User o-- AppRole : has many
+}
+
+package "Core Interfaces" <<Rectangle>> {
+    
+    interface "UserService<T, ID>" as UserService {
+        +createUser(user: T): T
+        +getUserById(id: ID): T
+        +getUserByEmail(email: String): T
+        +getUserByUsername(username: String): T
+        +emailExists(email: String): boolean
+        +usernameExists(username: String): boolean
+        +updateUser(id: ID, user: T): T
+        +deleteUser(id: ID): void
+        +getAllUsers(): List<T>
+    }
+    
+    interface JwtService {
+        +generateToken(email: String, authorities: Collection<GrantedAuthority>): String
+        +extractEmail(token: String): String
+        +extractExpiration(token: String): Date
+        +validateToken(token: String, userDetails: UserDetails): Boolean
+        +isTokenExpired(token: String): Boolean
+        +extractAllClaims(token: String): Claims
+    }
+    
+    interface AuthenticatedUser {
+        +getName(): String
+        +getRoles(): List<String>
+    }
+}
+
+package "Service Layer" <<Rectangle>> {
+    
+    class UserServiceImpl {
+        -userRepository: UserJpaRepository
+        +createUser(user: User): User
+        +getUserByEmail(email: String): User
+        +emailExists(email: String): boolean
+        +usernameExists(username: String): boolean
+        +updateUser(id: Long, user: User): User
+        +deleteUser(id: Long): void
+        +getAllUsers(): List<User>
+    }
+    
+    class JwtServiceImpl {
+        -secret: String
+        -expiration: long
+        +generateToken(email: String, authorities: Collection<GrantedAuthority>): String
+        +validateToken(token: String, userDetails: UserDetails): Boolean
+        -createToken(claims: Map<String, Object>, subject: String): String
+        -getKey(): Key
+    }
+    
+    class UserDetailsServiceImpl {
+        -userService: UserService<User, Long>
+        +loadUserByUsername(email: String): UserDetails
+    }
+    
+    UserServiceImpl .up.|> UserService
+    JwtServiceImpl .up.|> JwtService
+    UserDetailsServiceImpl .up.|> UserDetailsService
+}
+
+package "Repository Layer" <<Rectangle>> {
+    
+    interface UserJpaRepository {
+        +findByEmail_Email(email: String): Optional<User>
+        +findByUsername_Username(username: String): Optional<User>
+        +existsByEmail_Email(email: String): boolean
+        +existsByUsername_Username(username: String): boolean
+    }
+    
+    UserJpaRepository .up.|> JpaRepository
+}
+
+package "Controller Layer" <<Rectangle>> {
+    
+    class AuthController {
+        -jwtService: JwtService
+        -authenticationManager: AuthenticationManager
+        +login(request: LoginRequestDTO): ResponseEntity<TokenDTO>
+        +getAuthenticatedUser(authentication: Authentication): ResponseEntity<AuthenticatedUserDTO>
+    }
+    
+    class UserController {
+        -userService: UserService<User, Long>
+        -passwordEncoder: PasswordEncoder
+        +createUser(request: CreateUserRequestDTO): ResponseEntity<UserDTO>
+        +getUserById(id: Long): ResponseEntity<UserDTO>
+        +getUserByEmail(email: String): ResponseEntity<UserDTO>
+        +updateUser(id: Long, request: CreateUserRequestDTO): ResponseEntity<UserDTO>
+        +deleteUser(id: Long): ResponseEntity<Void>
+    }
+}
+
+package "DTO Layer" <<Rectangle>> {
+    
+    class LoginRequestDTO {
+        -email: String
+        -password: String
+    }
+    
+    class CreateUserRequestDTO {
+        -username: String
+        -email: String
+        -password: String
+    }
+    
+    class UserDTO {
+        -id: String
+        -username: String
+        -email: String
+    }
+    
+    class TokenDTO {
+        -token: String
+    }
+    
+    class AuthenticatedUserDTO {
+        -name: String
+        -roles: List<String>
+        +AuthenticatedUserDTO(name: String, authorities: Collection<GrantedAuthority>)
+    }
+    
+    class UserDTOMapper {
+        +{static} toDTO(user: AuthUser<?>): UserDTO
+    }
+    
+    AuthenticatedUserDTO .up.|> AuthenticatedUser
+}
+
+package "Security Configuration" <<Rectangle>> {
+    
+    class SecurityConfig {
+        -jwtAuthFilter: JwtAuthFilter
+        -userDetailsService: UserDetailsService
+        +filterChain(http: HttpSecurity): SecurityFilterChain
+        +authenticationProvider(): DaoAuthenticationProvider
+        +authenticationManager(config: AuthenticationConfiguration): AuthenticationManager
+        +passwordEncoder(): PasswordEncoder
+    }
+    
+    class JwtAuthFilter {
+        -jwtService: JwtService
+        +doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain): void
+        -extractTokenFromRequest(request: HttpServletRequest): String
+    }
+    
+    JwtAuthFilter .up.|> OncePerRequestFilter
+}
+
+package "Auto Configuration" <<Rectangle>> {
+    
+    class AuthAutoConfiguration {
+        +jwtService(): JwtService
+        +userService(userRepository: UserJpaRepository): UserService<User, Long>
+        +userDetailsService(userRepository: UserJpaRepository): UserDetailsServiceImpl
+        +jwtAuthFilter(jwtService: JwtService): JwtAuthFilter
+        +authController(jwtService: JwtService, authManager: AuthenticationManager): AuthController
+        +userController(userService: UserService<User, Long>, passwordEncoder: PasswordEncoder): UserController
+    }
+    
+    class AuthProperties {
+        -enabled: boolean
+        -jwt: Jwt
+        -controllers: Controllers
+    }
+    
+    class "AuthProperties.Jwt" as JwtProps {
+        -secret: String
+        -expiration: long
+    }
+    
+    class "AuthProperties.Controllers" as ControllersProps {
+        -auth: Controller
+        -user: Controller
+    }
+    
+    AuthProperties *-- JwtProps
+    AuthProperties *-- ControllersProps
+}
+
+package "Exception Handling" <<Rectangle>> {
+    
+    class GlobalExceptionHandler {
+        +handleDuplicateResourceException(ex: DuplicateResourceException): ResponseEntity<ErrorResponse>
+        +handleResourceNotFoundException(ex: ResourceNotFoundException): ResponseEntity<ErrorResponse>
+        +handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse>
+        +handleGenericException(ex: Exception): ResponseEntity<ErrorResponse>
+    }
+    
+    class DuplicateResourceException {
+        +DuplicateResourceException(message: String)
+    }
+    
+    class ResourceNotFoundException {
+        +ResourceNotFoundException(message: String)
+    }
+    
+    class ErrorResponse {
+        -message: String
+        -timestamp: LocalDateTime
+    }
+}
+
+' Relationships
+UserServiceImpl --> UserJpaRepository : uses
+UserDetailsServiceImpl --> UserService : uses
+AuthController --> JwtService : uses
+UserController --> UserService : uses
+JwtAuthFilter --> JwtService : uses
+SecurityConfig --> JwtAuthFilter : configures
+UserDTOMapper --> User : maps
+
+' Notes with better styling
+note right of AuthUser #E8F4FD
+  **Generic Interface**
+  Allows custom role types and
+  enables polymorphic behavior
+end note
+
+note right of User #E8F4FD
+  **UserDetails Implementation**
+  Integrates with Spring Security
+  for authentication
+end note
+
+note bottom of Username #E8F4FD
+  **Value Objects**
+  Built-in validation and
+  immutability guarantees
+end note
+
+note bottom of UserServiceImpl #E8F4FD
+  **Generic Service**
+  Supports different User types
+  and ID types
+end note
+
+note top of AuthAutoConfiguration #E8F4FD
+  **Auto-Configuration**
+  Automatically configures beans
+  when starter is included
+end note
+
+note left of JwtAuthFilter #E8F4FD
+  **JWT Security Filter**
+  Handles token validation and
+  authentication in filter chain
+end note
+
+@enduml
