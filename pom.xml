@@ -43,7 +43,7 @@
     <scm>
         <connection>scm:git:git://github.com/RicardoMorim/Auth-Provider.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/RicardoMorim/Auth-Provider.git</developerConnection>
-        <url>https://github.com/RicardoMorim/Auth-Provider</url> <!-- Fixed: removed "Ricardo/" -->
+        <url>https://github.com/RicardoMorim/Auth-Provider</url>
     </scm>
 
     <dependencies>

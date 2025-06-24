@@ -1,6 +1,6 @@
 # Ricardo Auth Spring Boot Starter
 
-[![Maven Central](https://maven-badges.herokuapp.com/maven-central/io.github.ricardomorim/auth-spring-boot-starter/badge.svg)](https://maven-badges.herokuapp.com/maven-central/io.github.ricardomorim/auth-spring-boot-starter)
+[![Maven Central](https://img.shields.io/maven-central/v/io.github.ricardomorim/auth-spring-boot-starter?color=blue&label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.ricardomorim/auth-spring-boot-starter)
 [![GitHub release](https://img.shields.io/github/release/RicardoMorim/Auth-Provider.svg)](https://github.com/RicardoMorim/Auth-Provider/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
