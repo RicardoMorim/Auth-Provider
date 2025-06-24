@@ -4,9 +4,6 @@ import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.dto.AuthenticatedUserDTO;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.dto.TokenDTO;
-
-import java.util.Collection;
-
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
@@ -14,6 +11,8 @@ import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.Collection;
 
 /**
  * The type Auth controller.

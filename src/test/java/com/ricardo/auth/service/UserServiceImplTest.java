@@ -1,7 +1,10 @@
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.repository.UserJpaRepository;
@@ -17,6 +20,9 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * The type User service impl test.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 @Transactional
@@ -33,6 +39,9 @@ class UserServiceImplTest {
 
     private User testUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -43,7 +52,12 @@ class UserServiceImplTest {
         Password password = Password.valueOf("password123", passwordEncoder);
         testUser = new User(username, email, password);
         userRepository.save(testUser);
-    }    @Test
+    }
+
+    /**
+     * Create user should save and return user when email does not exist.
+     */
+    @Test
     void createUser_shouldSaveAndReturnUser_whenEmailDoesNotExist() {
         // Arrange
         Username username = Username.valueOf("newuser");
@@ -61,6 +75,9 @@ class UserServiceImplTest {
         assertTrue(userRepository.existsByEmail("new@example.com"));
     }
 
+    /**
+     * Create user should throw duplicate resource exception when email exists.
+     */
     @Test
     void createUser_shouldThrowDuplicateResourceException_whenEmailExists() {
         // Arrange
@@ -76,6 +93,9 @@ class UserServiceImplTest {
         assertEquals("Email already exists: existing@example.com", exception.getMessage());
     }
 
+    /**
+     * Gets user by id should return user when user exists.
+     */
     @Test
     void getUserById_shouldReturnUser_whenUserExists() {
         // Act
@@ -87,6 +107,9 @@ class UserServiceImplTest {
         assertEquals("existing@example.com", foundUser.getEmail());
     }
 
+    /**
+     * Gets user by id should throw resource not found exception when user does not exist.
+     */
     @Test
     void getUserById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
         // Act & Assert
@@ -95,6 +118,9 @@ class UserServiceImplTest {
         });
     }
 
+    /**
+     * Gets user by email should return user when email exists.
+     */
     @Test
     void getUserByEmail_shouldReturnUser_whenEmailExists() {
         // Act
@@ -106,6 +132,9 @@ class UserServiceImplTest {
         assertEquals("existinguser", foundUser.getUsername());
     }
 
+    /**
+     * Gets user by email should throw resource not found exception when email does not exist.
+     */
     @Test
     void getUserByEmail_shouldThrowResourceNotFoundException_whenEmailDoesNotExist() {
         // Act & Assert
@@ -114,6 +143,9 @@ class UserServiceImplTest {
         });
     }
 
+    /**
+     * User exists should return true when email exists.
+     */
     @Test
     void userExists_shouldReturnTrue_whenEmailExists() {
         // Act
@@ -123,6 +155,9 @@ class UserServiceImplTest {
         assertTrue(exists);
     }
 
+    /**
+     * User exists should return false when email does not exist.
+     */
     @Test
     void userExists_shouldReturnFalse_whenEmailDoesNotExist() {
         // Act
@@ -130,7 +165,12 @@ class UserServiceImplTest {
 
         // Assert
         assertFalse(exists);
-    }    @Test
+    }
+
+    /**
+     * Update user should update user details.
+     */
+    @Test
     void updateUser_shouldUpdateUserDetails() {
         // Arrange
         Username newUsername = Username.valueOf("updateduser");
@@ -148,6 +188,9 @@ class UserServiceImplTest {
         assertEquals("updated@example.com", updatedUser.getEmail());
     }
 
+    /**
+     * Delete user should delete user when user exists.
+     */
     @Test
     void deleteUser_shouldDeleteUser_whenUserExists() {
         // Act
@@ -157,13 +200,21 @@ class UserServiceImplTest {
         assertFalse(userRepository.existsById(testUser.getId()));
     }
 
+    /**
+     * Delete user should throw resource not found exception when user does not exist.
+     */
     @Test
     void deleteUser_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
         // Act & Assert
         assertThrows(ResourceNotFoundException.class, () -> {
             userService.deleteUser(999L);
         });
-    }    @Test
+    }
+
+    /**
+     * Gets all users should return all users.
+     */
+    @Test
     void getAllUsers_shouldReturnAllUsers() {
         // Arrange - Add another user
         Username username = Username.valueOf("seconduser");

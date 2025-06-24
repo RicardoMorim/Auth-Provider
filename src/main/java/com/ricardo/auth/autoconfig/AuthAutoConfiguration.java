@@ -1,6 +1,5 @@
 package com.ricardo.auth.autoconfig;
 
-import com.ricardo.auth.config.SecurityConfig;
 import com.ricardo.auth.controller.AuthController;
 import com.ricardo.auth.controller.UserController;
 import com.ricardo.auth.core.JwtService;
@@ -25,7 +24,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 
 /**
  * Auto-configuration for Ricardo Auth Starter.
- *
+ * <p>
  * This configuration is automatically activated when the starter is on the classpath
  * and can be disabled by setting ricardo.auth.enabled=false
  */
@@ -38,30 +37,60 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 @EnableJpaRepositories(basePackages = "com.ricardo.auth.repository")
 public class AuthAutoConfiguration {
 
+    /**
+     * Jwt service jwt service.
+     *
+     * @return the jwt service
+     */
     @Bean
     @ConditionalOnMissingBean
     public JwtService jwtService() {
         return new JwtServiceImpl();
     }
 
+    /**
+     * User service user service.
+     *
+     * @param userRepository the user repository
+     * @return the user service
+     */
     @Bean
     @ConditionalOnMissingBean
     public UserService<User, Long> userService(UserJpaRepository userRepository) {
         return new UserServiceImpl(userRepository);
     }
 
+    /**
+     * User details service user details service.
+     *
+     * @param userService the user service
+     * @return the user details service
+     */
     @Bean
     @ConditionalOnMissingBean
     public UserDetailsServiceImpl userDetailsService(UserService<User, Long> userService) {
         return new UserDetailsServiceImpl(userService);
     }
 
+    /**
+     * Jwt auth filter jwt auth filter.
+     *
+     * @param jwtService the jwt service
+     * @return the jwt auth filter
+     */
     @Bean
     @ConditionalOnMissingBean
     public JwtAuthFilter jwtAuthFilter(JwtService jwtService) {
         return new JwtAuthFilter(jwtService);
     }
 
+    /**
+     * Auth controller auth controller.
+     *
+     * @param jwtService  the jwt service
+     * @param authManager the auth manager
+     * @return the auth controller
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "auth.enabled", havingValue = "true", matchIfMissing = true)
@@ -69,6 +98,13 @@ public class AuthAutoConfiguration {
         return new AuthController(jwtService, authManager);
     }
 
+    /**
+     * User controller user controller.
+     *
+     * @param userService     the user service
+     * @param passwordEncoder the password encoder
+     * @return the user controller
+     */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "user.enabled", havingValue = "true", matchIfMissing = true)

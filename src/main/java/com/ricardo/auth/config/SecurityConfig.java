@@ -47,8 +47,12 @@ public class SecurityConfig {
     @Bean
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
-    }    /**
+    }
+
+    /**
      * Custom authentication entry point that returns 401 instead of 403.
+     *
+     * @return the authentication entry point
      */
     @Bean
     public AuthenticationEntryPoint authenticationEntryPoint() {

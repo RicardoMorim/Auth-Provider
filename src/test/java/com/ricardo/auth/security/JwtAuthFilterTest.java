@@ -1,13 +1,10 @@
 package com.ricardo.auth.security;
 
 import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.domain.AppRole;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.*;
 import com.ricardo.auth.repository.UserJpaRepository;
 import com.ricardo.auth.service.UserDetailsServiceImpl;
+import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -21,7 +18,6 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import jakarta.servlet.ServletException;
 import java.io.IOException;
 import java.util.List;
 
@@ -54,6 +50,9 @@ class JwtAuthFilterTest {
     private User testUser;
     private String validToken;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         // Clear security context
@@ -80,6 +79,12 @@ class JwtAuthFilterTest {
 
     // ========== VALID TOKEN TESTS ==========
 
+    /**
+     * Do filter internal should authenticate with valid token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldAuthenticateWithValidToken() throws ServletException, IOException {
         // Arrange
@@ -98,6 +103,12 @@ class JwtAuthFilterTest {
         assertTrue(SecurityContextHolder.getContext().getAuthentication().isAuthenticated());
     }
 
+    /**
+     * Do filter internal should set correct authorities.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldSetCorrectAuthorities() throws ServletException, IOException {
         // Arrange
@@ -120,6 +131,12 @@ class JwtAuthFilterTest {
 
     // ========== INVALID TOKEN TESTS ==========
 
+    /**
+     * Do filter internal should not authenticate with invalid token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithInvalidToken() throws ServletException, IOException {
         // Arrange
@@ -136,6 +153,12 @@ class JwtAuthFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /**
+     * Do filter internal should not authenticate with malformed token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithMalformedToken() throws ServletException, IOException {
         // Arrange
@@ -152,6 +175,12 @@ class JwtAuthFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /**
+     * Do filter internal should not authenticate with tampered token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithTamperedToken() throws ServletException, IOException {
         // Arrange
@@ -172,6 +201,12 @@ class JwtAuthFilterTest {
 
     // ========== MISSING/INVALID HEADER TESTS ==========
 
+    /**
+     * Do filter internal should not authenticate without authorization header.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithoutAuthorizationHeader() throws ServletException, IOException {
         // Arrange
@@ -188,6 +223,12 @@ class JwtAuthFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /**
+     * Do filter internal should not authenticate without bearer prefix.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithoutBearerPrefix() throws ServletException, IOException {
         // Arrange
@@ -204,6 +245,12 @@ class JwtAuthFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /**
+     * Do filter internal should not authenticate with wrong prefix.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithWrongPrefix() throws ServletException, IOException {
         // Arrange
@@ -220,6 +267,12 @@ class JwtAuthFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /**
+     * Do filter internal should not authenticate with empty header.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotAuthenticateWithEmptyHeader() throws ServletException, IOException {
         // Arrange
@@ -238,6 +291,12 @@ class JwtAuthFilterTest {
 
     // ========== CASE SENSITIVITY TESTS ==========
 
+    /**
+     * Do filter internal should be case sensitive for bearer prefix.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldBeCaseSensitiveForBearerPrefix() throws ServletException, IOException {
         // Arrange
@@ -254,6 +313,12 @@ class JwtAuthFilterTest {
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
+    /**
+     * Do filter internal should be case sensitive for bearer prefix uppercase.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldBeCaseSensitiveForBearerPrefixUppercase() throws ServletException, IOException {
         // Arrange
@@ -272,6 +337,12 @@ class JwtAuthFilterTest {
 
     // ========== ALREADY AUTHENTICATED TESTS ==========
 
+    /**
+     * Do filter internal should not override existing authentication.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldNotOverrideExistingAuthentication() throws ServletException, IOException {
         // Arrange
@@ -300,6 +371,12 @@ class JwtAuthFilterTest {
 
     // ========== MULTIPLE ROLES TESTS ==========
 
+    /**
+     * Do filter internal should handle multiple roles.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldHandleMultipleRoles() throws ServletException, IOException {
         // Arrange
@@ -335,6 +412,12 @@ class JwtAuthFilterTest {
 
     // ========== SPECIAL CHARACTERS TESTS ==========
 
+    /**
+     * Do filter internal should handle special characters in subject.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldHandleSpecialCharactersInSubject() throws ServletException, IOException {
         // Arrange
@@ -368,6 +451,12 @@ class JwtAuthFilterTest {
 
     // ========== FILTER CHAIN CONTINUATION TESTS ==========
 
+    /**
+     * Do filter internal should continue filter chain with valid token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldContinueFilterChainWithValidToken() throws ServletException, IOException {
         // Arrange
@@ -385,6 +474,12 @@ class JwtAuthFilterTest {
         // Filter chain should have been called (MockFilterChain tracks this)
     }
 
+    /**
+     * Do filter internal should continue filter chain with invalid token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldContinueFilterChainWithInvalidToken() throws ServletException, IOException {
         // Arrange
@@ -402,6 +497,12 @@ class JwtAuthFilterTest {
         // Filter chain should still continue
     }
 
+    /**
+     * Do filter internal should continue filter chain without token.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldContinueFilterChainWithoutToken() throws ServletException, IOException {
         // Arrange
@@ -419,6 +520,12 @@ class JwtAuthFilterTest {
 
     // ========== ERROR HANDLING TESTS ==========
 
+    /**
+     * Do filter internal should handle token extraction errors.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldHandleTokenExtractionErrors() throws ServletException, IOException {
         // Arrange
@@ -439,6 +546,12 @@ class JwtAuthFilterTest {
 
     // ========== WHITESPACE HANDLING TESTS ==========
 
+    /**
+     * Do filter internal should handle whitespace in header.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldHandleWhitespaceInHeader() throws ServletException, IOException {
         // Arrange
@@ -457,6 +570,12 @@ class JwtAuthFilterTest {
 
     // ========== THREAD SAFETY TESTS ==========
 
+    /**
+     * Do filter internal should be concurrently safe.
+     *
+     * @throws ServletException the servlet exception
+     * @throws IOException      the io exception
+     */
     @Test
     void doFilterInternal_shouldBeConcurrentlySafe() throws ServletException, IOException {
         // This test ensures filter doesn't have shared state issues

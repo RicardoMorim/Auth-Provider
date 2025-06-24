@@ -1,7 +1,10 @@
 package com.ricardo.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,8 +20,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * The type Auth controller test.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -37,6 +44,9 @@ class AuthControllerTest {
 
     private User testUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -49,6 +59,11 @@ class AuthControllerTest {
         userRepository.save(testUser);
     }
 
+    /**
+     * Login should return token when credentials are valid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void login_shouldReturnToken_whenCredentialsAreValid() throws Exception {
         // Arrange
@@ -63,6 +78,11 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.token").isNotEmpty());
     }
 
+    /**
+     * Login should return 401 when credentials are invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void login_shouldReturn401_whenCredentialsAreInvalid() throws Exception {
         // Arrange
@@ -75,6 +95,11 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Login should return 401 when user does not exist.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void login_shouldReturn401_whenUserDoesNotExist() throws Exception {
         // Arrange
@@ -87,6 +112,11 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Gets authenticated user should return user details when token is valid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getAuthenticatedUser_shouldReturnUserDetails_whenTokenIsValid() throws Exception {
         // First, login to get a token
@@ -110,6 +140,11 @@ class AuthControllerTest {
                 .andExpect(jsonPath("$.name").value("testuser"));
     }
 
+    /**
+     * Gets authenticated user should return 401 when no token provided.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getAuthenticatedUser_shouldReturn401_whenNoTokenProvided() throws Exception {
         // Act & Assert
@@ -117,6 +152,11 @@ class AuthControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Gets authenticated user should return 401 when token is invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getAuthenticatedUser_shouldReturn401_whenTokenIsInvalid() throws Exception {
         // Act & Assert

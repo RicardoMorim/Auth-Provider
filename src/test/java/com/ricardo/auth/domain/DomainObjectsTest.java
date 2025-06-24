@@ -16,6 +16,9 @@ class DomainObjectsTest {
 
     // ========== EMAIL TESTS ==========
 
+    /**
+     * Email should create valid email.
+     */
     @Test
     void email_shouldCreateValidEmail() {
         // Act
@@ -26,6 +29,9 @@ class DomainObjectsTest {
         assertEquals("test@example.com", email.getEmail());
     }
 
+    /**
+     * Email should reject null value.
+     */
     @Test
     void email_shouldRejectNullValue() {
         // Act & Assert
@@ -33,6 +39,9 @@ class DomainObjectsTest {
         assertEquals("Email cannot be null or empty", exception.getMessage());
     }
 
+    /**
+     * Email should reject empty value.
+     */
     @Test
     void email_shouldRejectEmptyValue() {
         // Act & Assert
@@ -43,6 +52,9 @@ class DomainObjectsTest {
         assertEquals("Invalid email format", exception2.getMessage());
     }
 
+    /**
+     * Email should reject invalid format.
+     */
     @Test
     void email_shouldRejectInvalidFormat() {
         // Act & Assert
@@ -53,6 +65,9 @@ class DomainObjectsTest {
         assertThrows(IllegalArgumentException.class, () -> Email.valueOf("test@@example.com"));
     }
 
+    /**
+     * Email should accept valid formats.
+     */
     @Test
     void email_shouldAcceptValidFormats() {
         // Act & Assert - Should not throw exceptions
@@ -62,6 +77,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Email.valueOf("test123@sub.domain.com"));
     }
 
+    /**
+     * Email should normalize email.
+     */
     @Test
     void email_shouldNormalizeEmail() {
         // Act
@@ -71,6 +89,9 @@ class DomainObjectsTest {
         assertEquals("test@example.com", email.getEmail());
     }
 
+    /**
+     * Email should reject too long email.
+     */
     @Test
     void email_shouldRejectTooLongEmail() {
         // Arrange
@@ -81,6 +102,9 @@ class DomainObjectsTest {
         assertEquals("Email cannot be longer than 254 characters", exception.getMessage());
     }
 
+    /**
+     * Email should validate email regex.
+     */
     @Test
     void email_shouldValidateEmailRegex() {
         // Act & Assert - Invalid characters
@@ -90,6 +114,9 @@ class DomainObjectsTest {
 
     // ========== USERNAME TESTS ==========
 
+    /**
+     * Username should create valid username.
+     */
     @Test
     void username_shouldCreateValidUsername() {
         // Act
@@ -100,6 +127,9 @@ class DomainObjectsTest {
         assertEquals("testuser", username.getUsername());
     }
 
+    /**
+     * Username should reject null value.
+     */
     @Test
     void username_shouldRejectNullValue() {
         // Act & Assert
@@ -107,6 +137,9 @@ class DomainObjectsTest {
         assertEquals("Username cannot be null or empty", exception.getMessage());
     }
 
+    /**
+     * Username should reject empty value.
+     */
     @Test
     void username_shouldRejectEmptyValue() {
         // Act & Assert
@@ -117,6 +150,9 @@ class DomainObjectsTest {
         assertEquals("Username can only contain letters, numbers, dots, underscores, and hyphens", exception2.getMessage());
     }
 
+    /**
+     * Username should reject too short username.
+     */
     @Test
     void username_shouldRejectTooShortUsername() {
         // Act & Assert
@@ -124,6 +160,9 @@ class DomainObjectsTest {
         assertEquals("Username must be at least 3 characters long", exception.getMessage());
     }
 
+    /**
+     * Username should reject too long username.
+     */
     @Test
     void username_shouldRejectTooLongUsername() {
         // Act & Assert
@@ -132,6 +171,9 @@ class DomainObjectsTest {
         assertEquals("Username cannot be longer than 20 characters", exception.getMessage());
     }
 
+    /**
+     * Username should accept valid lengths.
+     */
     @Test
     void username_shouldAcceptValidLengths() {
         // Act & Assert - Should not throw exceptions
@@ -140,6 +182,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Username.valueOf("normaluser"));
     }
 
+    /**
+     * Username should accept valid characters.
+     */
     @Test
     void username_shouldAcceptValidCharacters() {
         // Act & Assert - Should not throw exceptions
@@ -149,6 +194,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Username.valueOf("User123"));
     }
 
+    /**
+     * Username should reject invalid characters.
+     */
     @Test
     void username_shouldRejectInvalidCharacters() {
         // Act & Assert
@@ -159,6 +207,9 @@ class DomainObjectsTest {
         assertEquals("Username can only contain letters, numbers, dots, underscores, and hyphens", exception2.getMessage());
     }
 
+    /**
+     * Username should be equal based on value.
+     */
     @Test
     void username_shouldBeEqualBasedOnValue() {
         // Arrange
@@ -174,6 +225,9 @@ class DomainObjectsTest {
 
     // ========== PASSWORD TESTS ==========
 
+    /**
+     * Password should create valid password.
+     */
     @Test
     void password_shouldCreateValidPassword() {
         // Act
@@ -185,6 +239,9 @@ class DomainObjectsTest {
         assertTrue(passwordEncoder.matches("password123", password.getHashed()));
     }
 
+    /**
+     * Password should reject null value.
+     */
     @Test
     void password_shouldRejectNullValue() {
         // Act & Assert
@@ -192,6 +249,9 @@ class DomainObjectsTest {
         assertEquals("Password hash cannot be null or blank", exception.getMessage());
     }
 
+    /**
+     * Password should reject empty value.
+     */
     @Test
     void password_shouldRejectEmptyValue() {
         // Act & Assert
@@ -202,6 +262,9 @@ class DomainObjectsTest {
         assertEquals("Password hash cannot be null or blank", exception2.getMessage());
     }
 
+    /**
+     * Password should reject too short password.
+     */
     @Test
     void password_shouldRejectTooShortPassword() {
         // Act & Assert
@@ -209,6 +272,9 @@ class DomainObjectsTest {
         assertEquals("Password hash must be at least 6 characters long", exception.getMessage());
     }
 
+    /**
+     * Password should reject too long password.
+     */
     @Test
     void password_shouldRejectTooLongPassword() {
         // Act & Assert
@@ -217,6 +283,9 @@ class DomainObjectsTest {
         assertEquals("Password hash cannot be longer than 60 characters", exception.getMessage());
     }
 
+    /**
+     * Password should accept valid lengths.
+     */
     @Test
     void password_shouldAcceptValidLengths() {
         // Act & Assert - Should not throw exceptions
@@ -225,6 +294,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Password.valueOf("a".repeat(60), passwordEncoder)); // 60 chars (maximum)
     }
 
+    /**
+     * Password should hash password.
+     */
     @Test
     void password_shouldHashPassword() {
         // Arrange
@@ -238,6 +310,9 @@ class DomainObjectsTest {
         assertTrue(passwordEncoder.matches(plainPassword, password.getHashed()));
     }
 
+    /**
+     * Password should produce different hashes for same password.
+     */
     @Test
     void password_shouldProduceDifferentHashesForSamePassword() {
         // Arrange
@@ -253,6 +328,9 @@ class DomainObjectsTest {
         assertTrue(passwordEncoder.matches(plainPassword, password2.getHashed()));
     }
 
+    /**
+     * Password should create from existing hash.
+     */
     @Test
     void password_shouldCreateFromExistingHash() {
         // Arrange
@@ -266,6 +344,9 @@ class DomainObjectsTest {
         assertEquals(existingHash, password.getHashed());
     }
 
+    /**
+     * Password should reject null hash.
+     */
     @Test
     void password_shouldRejectNullHash() {
         // Act & Assert
@@ -275,6 +356,9 @@ class DomainObjectsTest {
 
     // ========== USER TESTS ==========
 
+    /**
+     * User should create valid user.
+     */
     @Test
     void user_shouldCreateValidUser() {
         // Arrange
@@ -290,7 +374,12 @@ class DomainObjectsTest {
         assertEquals("testuser", user.getUsername());
         assertEquals("test@example.com", user.getEmail());
         assertTrue(passwordEncoder.matches("password123", user.getPassword()));
-    }    @Test
+    }
+
+    /**
+     * User should add and manage roles.
+     */
+    @Test
     void user_shouldAddAndManageRoles() {
         // Arrange
         Username username = Username.valueOf("testuser");
@@ -312,7 +401,12 @@ class DomainObjectsTest {
         assertEquals(2, authorities.size());
         assertTrue(authorities.stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
         assertTrue(authorities.stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
-    }    @Test
+    }
+
+    /**
+     * User should get authorities.
+     */
+    @Test
     void user_shouldGetAuthorities() {
         // Arrange
         Username username = Username.valueOf("testuser");
@@ -331,6 +425,9 @@ class DomainObjectsTest {
         assertTrue(authorities.stream().anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
     }
 
+    /**
+     * User should implement user details correctly.
+     */
     @Test
     void user_shouldImplementUserDetailsCorrectly() {
         // Arrange
@@ -350,6 +447,9 @@ class DomainObjectsTest {
 
     // ========== APPROLE TESTS ==========
 
+    /**
+     * App role should have correct authorities.
+     */
     @Test
     void appRole_shouldHaveCorrectAuthorities() {
         // Assert
@@ -357,6 +457,9 @@ class DomainObjectsTest {
         assertEquals("ROLE_ADMIN", AppRole.ADMIN.getAuthority());
     }
 
+    /**
+     * App role should have correct names.
+     */
     @Test
     void appRole_shouldHaveCorrectNames() {
         // Assert
@@ -366,6 +469,9 @@ class DomainObjectsTest {
 
     // ========== EDGE CASES AND BOUNDARY TESTS ==========
 
+    /**
+     * Email should handle maximum valid length.
+     */
     @Test
     void email_shouldHandleMaximumValidLength() {
         // Arrange - 254 characters (maximum allowed)
@@ -375,6 +481,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Email.valueOf(maxEmail));
     }
 
+    /**
+     * Username should handle special characters boundary.
+     */
     @Test
     void username_shouldHandleSpecialCharactersBoundary() {
         // Act & Assert - Test edge cases of allowed characters
@@ -384,6 +493,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Username.valueOf("123"));
     }
 
+    /**
+     * Password should handle special characters.
+     */
     @Test
     void password_shouldHandleSpecialCharacters() {
         // Act & Assert - Passwords with special characters
@@ -391,6 +503,9 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Password.valueOf("🔒secure🔑", passwordEncoder));
     }
 
+    /**
+     * User should handle null roles gracefully.
+     */
     @Test
     void user_shouldHandleNullRolesGracefully() {
         // Arrange
@@ -406,6 +521,9 @@ class DomainObjectsTest {
         assertTrue(user.getRoles().isEmpty());
     }
 
+    /**
+     * User should prevent duplicate roles.
+     */
     @Test
     void user_shouldPreventDuplicateRoles() {
         // Arrange
@@ -423,6 +541,9 @@ class DomainObjectsTest {
         assertTrue(user.getRoles().contains(AppRole.USER));
     }
 
+    /**
+     * Password should match correctly.
+     */
     @Test
     void password_shouldMatchCorrectly() {
         // Arrange
@@ -434,6 +555,9 @@ class DomainObjectsTest {
         assertFalse(password.matches("wrongPassword", passwordEncoder));
     }
 
+    /**
+     * Password should reject null raw password in matches.
+     */
     @Test
     void password_shouldRejectNullRawPasswordInMatches() {
         // Arrange

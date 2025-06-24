@@ -43,7 +43,7 @@
     <scm>
         <connection>scm:git:git://github.com/RicardoMorim/Auth-Provider.git</connection>
         <developerConnection>scm:git:ssh://git@github.com/RicardoMorim/Auth-Provider.git</developerConnection>
-        <url>https://github.com/Ricardo/Auth-Provider</url>
+        <url>https://github.com/RicardoMorim/Auth-Provider</url> <!-- Fixed: removed "Ricardo/" -->
     </scm>
 
     <dependencies>
@@ -125,6 +125,8 @@
             <artifactId>h2</artifactId>
             <scope>test</scope>
         </dependency>
+
+
     </dependencies>
 
     <build>
@@ -189,9 +191,8 @@
                     <skip>true</skip>
                     <excludes>
                         <exclude>
-                            <groupId>*</groupId>
-                            <artifactId>*</artifactId>
-                            <classifier>plain</classifier>
+                            <groupId>org.projectlombok</groupId>
+                            <artifactId>lombok</artifactId>
                         </exclude>
                     </excludes>
                 </configuration>
@@ -211,12 +212,74 @@
         </plugins>
     </build>
 
-    <!-- Distribution Management (Optional - for publishing) -->
+    <!-- Distribution Management (Outside profiles) -->
     <distributionManagement>
         <repository>
             <id>github</id>
-            <name>GitHub Your-Username Apache Maven Packages</name>
+            <name>GitHub RicardoMorim Apache Maven Packages</name>
             <url>https://maven.pkg.github.com/RicardoMorim/Auth-Provider</url>
         </repository>
+        <snapshotRepository>
+            <id>github</id>
+            <name>GitHub RicardoMorim Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/RicardoMorim/Auth-Provider</url>
+        </snapshotRepository>
     </distributionManagement>
+
+    <!-- Profiles for different deployment targets -->
+    <profiles>
+        <!-- GitHub Packages Profile (Default) -->
+        <profile>
+            <id>github</id>
+            <activation>
+                <activeByDefault>true</activeByDefault>
+            </activation>
+            <!-- No additional configuration needed for GitHub -->
+        </profile>
+
+        <!-- Maven Central Profile using NEW Central Publishing Plugin -->
+        <profile>
+            <id>central</id>
+
+            <!-- Override distribution management for Maven Central -->
+            <distributionManagement>
+                <repository>
+                    <id>central</id>
+                    <url>https://central.sonatype.com/api/v1/publisher/deployments</url>
+                </repository>
+            </distributionManagement>
+
+            <build>
+                <plugins>
+                    <!-- GPG Plugin for signing (Maven Central requirement) -->
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-gpg-plugin</artifactId>
+                        <version>3.2.7</version>
+                        <executions>
+                            <execution>
+                                <id>sign-artifacts</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>sign</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                    </plugin>
+
+                    <plugin>
+                        <groupId>org.sonatype.central</groupId>
+                        <artifactId>central-publishing-maven-plugin</artifactId>
+                        <version>0.6.0</version>
+                        <extensions>true</extensions>
+                        <configuration>
+                            <publishingServerId>central</publishingServerId>
+                            <autoPublish>true</autoPublish>
+                            <waitUntil>published</waitUntil>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 </project>

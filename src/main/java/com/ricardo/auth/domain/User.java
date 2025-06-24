@@ -1,6 +1,5 @@
 package com.ricardo.auth.domain;
 
-import com.ricardo.auth.core.Role;
 import jakarta.persistence.*;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;

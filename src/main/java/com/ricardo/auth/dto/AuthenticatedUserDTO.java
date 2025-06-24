@@ -18,7 +18,7 @@ public class AuthenticatedUserDTO implements AuthenticatedUser {
     /**
      * Instantiates a new Authenticated user dto.
      *
-     * @param name       the email
+     * @param name        the email
      * @param authorities the authorities
      */
     public AuthenticatedUserDTO(String name, Collection<? extends GrantedAuthority> authorities) {

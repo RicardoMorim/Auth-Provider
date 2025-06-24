@@ -1,7 +1,10 @@
 package com.ricardo.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -15,10 +18,14 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
+/**
+ * The type User controller test.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -37,11 +44,19 @@ class UserControllerTest {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
     }
 
+    /**
+     * Create user should return 201 when request is valid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn201_whenRequestIsValid() throws Exception {
         // Arrange
@@ -59,6 +74,11 @@ class UserControllerTest {
         assertTrue(userRepository.existsByEmail("new@example.com"));
     }
 
+    /**
+     * Create user should return 409 when email already exists.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn409_whenEmailAlreadyExists() throws Exception {
         // Arrange - Create existing user
@@ -78,6 +98,11 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.message").value("Email already exists: existing@example.com"));
     }
 
+    /**
+     * Create user should return 400 when username is empty.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn400_whenUsernameIsEmpty() throws Exception {
         // Arrange
@@ -90,6 +115,11 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Create user should return 400 when email is empty.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn400_whenEmailIsEmpty() throws Exception {
         // Arrange
@@ -102,6 +132,11 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Create user should return 400 when password is empty.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn400_whenPasswordIsEmpty() throws Exception {
         // Arrange
@@ -114,6 +149,11 @@ class UserControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Create user should return 400 when email is invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn400_whenEmailIsInvalid() throws Exception {
         // Arrange

@@ -89,8 +89,9 @@ public class UserController implements UserApiEndpoint {
     /**
      * Update user response entity.
      *
-     * @param request the request
-     * @param id      the id
+     * @param request        the request
+     * @param id             the id
+     * @param authentication the authentication
      * @return the response entity
      */
     @PutMapping("/update/{id}")
@@ -108,7 +109,8 @@ public class UserController implements UserApiEndpoint {
     /**
      * Delete user response entity.
      *
-     * @param id the id
+     * @param id             the id
+     * @param authentication the authentication
      * @return the response entity
      */
     @DeleteMapping("/delete/{id}")

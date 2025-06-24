@@ -1,8 +1,8 @@
 package com.ricardo.auth.config;
 
-import com.ricardo.auth.dto.ErrorResponse;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
+import com.ricardo.auth.dto.ErrorResponse;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -13,6 +13,9 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 
+/**
+ * The type Global exception handler.
+ */
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
@@ -21,6 +24,10 @@ public class GlobalExceptionHandler {
     /**
      * Handles domain-specific resource not found exceptions.
      * Returns 404 Not Found.
+     *
+     * @param ex      the ex
+     * @param request the request
+     * @return the response entity
      */
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponse> handleResourceNotFoundException(ResourceNotFoundException ex, WebRequest request) {
@@ -31,6 +38,10 @@ public class GlobalExceptionHandler {
     /**
      * Handles domain-specific duplicate resource exceptions.
      * Returns 409 Conflict.
+     *
+     * @param ex      the ex
+     * @param request the request
+     * @return the response entity
      */
     @ExceptionHandler(DuplicateResourceException.class)
     public ResponseEntity<ErrorResponse> handleDuplicateResourceException(DuplicateResourceException ex, WebRequest request) {
@@ -41,6 +52,10 @@ public class GlobalExceptionHandler {
     /**
      * Handles validation exceptions from value objects (e.g., invalid email format).
      * Returns 400 Bad Request.
+     *
+     * @param ex      the ex
+     * @param request the request
+     * @return the response entity
      */
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponse> handleIllegalArgumentException(IllegalArgumentException ex, WebRequest request) {
@@ -51,6 +66,10 @@ public class GlobalExceptionHandler {
     /**
      * Handles access denied exceptions from Spring Security (authorization).
      * Returns 403 Forbidden.
+     *
+     * @param ex      the ex
+     * @param request the request
+     * @return the response entity
      */
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorResponse> handleAccessDeniedException(AccessDeniedException ex, WebRequest request) {
@@ -61,6 +80,10 @@ public class GlobalExceptionHandler {
     /**
      * Handles authentication exceptions from Spring Security (e.g., bad credentials).
      * Returns 401 Unauthorized.
+     *
+     * @param ex      the ex
+     * @param request the request
+     * @return the response entity
      */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex, WebRequest request) {
@@ -71,6 +94,10 @@ public class GlobalExceptionHandler {
     /**
      * Generic fallback handler for all other exceptions.
      * Logs the error and returns 500 Internal Server Error to avoid leaking implementation details.
+     *
+     * @param ex      the ex
+     * @param request the request
+     * @return the response entity
      */
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGlobalException(Exception ex, WebRequest request) {

@@ -1,6 +1,9 @@
 package com.ricardo.auth.repository;
 
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,6 +16,9 @@ import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
+/**
+ * The type User repository test.
+ */
 @DataJpaTest
 @ActiveProfiles("test")
 public class UserRepositoryTest {
@@ -23,6 +29,9 @@ public class UserRepositoryTest {
     @Autowired
     private UserJpaRepository userRepository; // Use the concrete implementation
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         Username username = Username.valueOf("testuser");
@@ -33,6 +42,9 @@ public class UserRepositoryTest {
         entityManager.flush();
     }
 
+    /**
+     * Find by email should return user when email exists.
+     */
     @Test
     void findByEmail_shouldReturnUser_whenEmailExists() {
         // Act
@@ -43,6 +55,9 @@ public class UserRepositoryTest {
         assertThat(foundUser.get().getEmail()).isEqualTo("test@example.com");
     }
 
+    /**
+     * Find by email should return empty when email does not exist.
+     */
     @Test
     void findByEmail_shouldReturnEmpty_whenEmailDoesNotExist() {
         // Act
@@ -52,6 +67,9 @@ public class UserRepositoryTest {
         assertThat(foundUser).isNotPresent();
     }
 
+    /**
+     * Exists by email should return true when email exists.
+     */
     @Test
     void existsByEmail_shouldReturnTrue_whenEmailExists() {
         // Act
@@ -61,6 +79,9 @@ public class UserRepositoryTest {
         assertThat(exists).isTrue();
     }
 
+    /**
+     * Exists by email should return false when email does not exist.
+     */
     @Test
     void existsByEmail_shouldReturnFalse_whenEmailDoesNotExist() {
         // Act

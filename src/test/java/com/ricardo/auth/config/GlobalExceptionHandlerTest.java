@@ -20,7 +20,8 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.WebRequest;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
@@ -41,6 +42,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== DOMAIN EXCEPTION TESTS ==========
 
+    /**
+     * Should handle resource not found exception.
+     */
     @Test
     void shouldHandleResourceNotFoundException() {
         // Arrange
@@ -56,6 +60,9 @@ class GlobalExceptionHandlerTest {
         assertEquals("User not found", response.getBody().getMessage());
     }
 
+    /**
+     * Should handle duplicate resource exception.
+     */
     @Test
     void shouldHandleDuplicateResourceException() {
         // Arrange
@@ -71,6 +78,9 @@ class GlobalExceptionHandlerTest {
         assertEquals("Email already exists", response.getBody().getMessage());
     }
 
+    /**
+     * Should handle illegal argument exception.
+     */
     @Test
     void shouldHandleIllegalArgumentException() {
         // Arrange - This covers validation from domain value objects
@@ -88,6 +98,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== SECURITY EXCEPTION TESTS ==========
 
+    /**
+     * Should handle authentication exception.
+     */
     @Test
     void shouldHandleAuthenticationException() {
         // Arrange
@@ -103,6 +116,9 @@ class GlobalExceptionHandlerTest {
         assertEquals("Authentication Failed: Invalid credentials", response.getBody().getMessage());
     }
 
+    /**
+     * Should handle access denied exception.
+     */
     @Test
     void shouldHandleAccessDeniedException() {
         // Arrange
@@ -120,6 +136,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== GENERIC EXCEPTION TESTS ==========
 
+    /**
+     * Should handle generic exception.
+     */
     @Test
     void shouldHandleGenericException() {
         // Arrange
@@ -137,6 +156,11 @@ class GlobalExceptionHandlerTest {
 
     // ========== INTEGRATION TESTS WITH ACTUAL ENDPOINTS ==========
 
+    /**
+     * Should return not found for non existent user.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldReturnNotFoundForNonExistentUser() throws Exception {
@@ -148,6 +172,11 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").exists());
     }
 
+    /**
+     * Should return bad request for invalid user data.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldReturnBadRequestForInvalidUserData() throws Exception {
         // Arrange - Create user with invalid data
@@ -168,6 +197,11 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").exists());
     }
 
+    /**
+     * Should return conflict for duplicate email.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldReturnConflictForDuplicateEmail() throws Exception {
         // Arrange - Create first user
@@ -194,6 +228,11 @@ class GlobalExceptionHandlerTest {
                 .andExpect(jsonPath("$.message").exists());
     }
 
+    /**
+     * Should return unauthorized for invalid login.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldReturnUnauthorizedForInvalidLogin() throws Exception {
         // Arrange
@@ -215,6 +254,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== ERROR MESSAGE FORMATTING TESTS ==========
 
+    /**
+     * Should return properly formatted error response.
+     */
     @Test
     void shouldReturnProperlyFormattedErrorResponse() {
         // Arrange
@@ -235,6 +277,9 @@ class GlobalExceptionHandlerTest {
         assertFalse(errorResponse.getMessage().isEmpty());
     }
 
+    /**
+     * Should handle null exception message.
+     */
     @Test
     void shouldHandleNullExceptionMessage() {
         // Arrange
@@ -250,6 +295,9 @@ class GlobalExceptionHandlerTest {
         assertNotNull(response.getBody().getMessage());
     }
 
+    /**
+     * Should handle empty exception message.
+     */
     @Test
     void shouldHandleEmptyExceptionMessage() {
         // Arrange
@@ -266,6 +314,11 @@ class GlobalExceptionHandlerTest {
 
     // ========== CONTENT TYPE TESTS ==========
 
+    /**
+     * Should return json content type.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldReturnJsonContentType() throws Exception {
@@ -277,6 +330,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== EDGE CASE TESTS ==========
 
+    /**
+     * Should handle very long error messages.
+     */
     @Test
     void shouldHandleVeryLongErrorMessages() {
         // Arrange
@@ -293,6 +349,9 @@ class GlobalExceptionHandlerTest {
         assertEquals(longMessage, response.getBody().getMessage());
     }
 
+    /**
+     * Should handle special characters in error messages.
+     */
     @Test
     void shouldHandleSpecialCharactersInErrorMessages() {
         // Arrange
@@ -311,6 +370,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== SECURITY INTEGRATION TESTS ==========
 
+    /**
+     * Should not expose internal details.
+     */
     @Test
     void shouldNotExposeInternalDetails() {
         // Arrange
@@ -329,6 +391,9 @@ class GlobalExceptionHandlerTest {
         assertNotEquals("Internal database connection failed with sensitive info", response.getBody().getMessage());
     }
 
+    /**
+     * Should handle multiple exception types.
+     */
     @Test
     void shouldHandleMultipleExceptionTypes() {
         // Test that different exception types return different status codes
@@ -353,6 +418,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== DOMAIN VALUE OBJECT VALIDATION TESTS ==========
 
+    /**
+     * Should handle email validation error.
+     */
     @Test
     void shouldHandleEmailValidationError() {
         // Arrange - IllegalArgumentException thrown by Email.valueOf()
@@ -368,6 +436,9 @@ class GlobalExceptionHandlerTest {
         assertEquals("Invalid email format: not-an-email", response.getBody().getMessage());
     }
 
+    /**
+     * Should handle username validation error.
+     */
     @Test
     void shouldHandleUsernameValidationError() {
         // Arrange - IllegalArgumentException thrown by Username.valueOf()
@@ -383,6 +454,9 @@ class GlobalExceptionHandlerTest {
         assertEquals("Username must be at least 3 characters long", response.getBody().getMessage());
     }
 
+    /**
+     * Should handle password validation error.
+     */
     @Test
     void shouldHandlePasswordValidationError() {
         // Arrange - IllegalArgumentException thrown by Password.valueOf()
@@ -400,6 +474,9 @@ class GlobalExceptionHandlerTest {
 
     // ========== AUTHENTICATION MESSAGE FORMAT TESTS ==========
 
+    /**
+     * Should format authentication error messages.
+     */
     @Test
     void shouldFormatAuthenticationErrorMessages() {
         // Arrange
@@ -415,6 +492,9 @@ class GlobalExceptionHandlerTest {
         assertEquals("Authentication Failed: Bad credentials", response.getBody().getMessage());
     }
 
+    /**
+     * Should use fixed access denied message.
+     */
     @Test
     void shouldUseFixedAccessDeniedMessage() {
         // Arrange

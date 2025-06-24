@@ -15,12 +15,18 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+/**
+ * The type Jwt service impl test.
+ */
 @ExtendWith(MockitoExtension.class)
 class JwtServiceImplTest {
 
     @InjectMocks
     private JwtServiceImpl jwtService;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         // Use a valid Base64 encoded secret key that is long enough for the HS256 algorithm
@@ -30,6 +36,9 @@ class JwtServiceImplTest {
         jwtService.init(); // Manually call PostConstruct method
     }
 
+    /**
+     * Generate token should create valid token.
+     */
     @Test
     void generateToken_shouldCreateValidToken() {
         // Arrange
@@ -45,6 +54,9 @@ class JwtServiceImplTest {
         assertThat(jwtService.extractRoles(token)).contains("ROLE_USER");
     }
 
+    /**
+     * Is token valid should return true for valid token.
+     */
     @Test
     void isTokenValid_shouldReturnTrue_forValidToken() {
         // Arrange
@@ -54,6 +66,9 @@ class JwtServiceImplTest {
         assertTrue(jwtService.isTokenValid(token));
     }
 
+    /**
+     * Is token valid should return false for invalid token.
+     */
     @Test
     void isTokenValid_shouldReturnFalse_forInvalidToken() {
         // Act & Assert

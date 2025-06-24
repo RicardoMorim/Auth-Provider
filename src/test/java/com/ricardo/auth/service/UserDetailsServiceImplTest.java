@@ -37,6 +37,9 @@ class UserDetailsServiceImplTest {
 
     private User testUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -52,6 +55,9 @@ class UserDetailsServiceImplTest {
 
     // ========== SUCCESSFUL USER LOADING TESTS ==========
 
+    /**
+     * Load user by username should return user details for valid email.
+     */
     @Test
     void loadUserByUsername_shouldReturnUserDetailsForValidEmail() {
         // Act
@@ -64,6 +70,9 @@ class UserDetailsServiceImplTest {
         assertNotNull(userDetails.getAuthorities());
     }
 
+    /**
+     * Load user by username should return correct authorities.
+     */
     @Test
     void loadUserByUsername_shouldReturnCorrectAuthorities() {
         // Arrange - Add roles to user
@@ -87,6 +96,9 @@ class UserDetailsServiceImplTest {
         assertTrue(hasAdminRole);
     }
 
+    /**
+     * Load user by username should return user with correct account status.
+     */
     @Test
     void loadUserByUsername_shouldReturnUserWithCorrectAccountStatus() {
         // Act
@@ -101,6 +113,9 @@ class UserDetailsServiceImplTest {
 
     // ========== USER NOT FOUND TESTS ==========
 
+    /**
+     * Load user by username should throw exception for non existent email.
+     */
     @Test
     void loadUserByUsername_shouldThrowExceptionForNonExistentEmail() {
         // Act & Assert
@@ -109,6 +124,9 @@ class UserDetailsServiceImplTest {
         });
     }
 
+    /**
+     * Load user by username should throw exception for null email.
+     */
     @Test
     void loadUserByUsername_shouldThrowExceptionForNullEmail() {
         // Act & Assert
@@ -117,6 +135,9 @@ class UserDetailsServiceImplTest {
         });
     }
 
+    /**
+     * Load user by username should throw exception for empty email.
+     */
     @Test
     void loadUserByUsername_shouldThrowExceptionForEmptyEmail() {
         // Act & Assert
@@ -131,6 +152,9 @@ class UserDetailsServiceImplTest {
 
     // ========== CASE SENSITIVITY TESTS ==========
 
+    /**
+     * Load user by username should be case sensitive.
+     */
     @Test
     void loadUserByUsername_shouldBeCaseSensitive() {
         // Act & Assert - Email should be case sensitive
@@ -145,6 +169,9 @@ class UserDetailsServiceImplTest {
 
     // ========== MULTIPLE USERS TESTS ==========
 
+    /**
+     * Load user by username should load correct user when multiple exist.
+     */
     @Test
     void loadUserByUsername_shouldLoadCorrectUserWhenMultipleExist() {
         // Arrange - Create additional users
@@ -181,6 +208,9 @@ class UserDetailsServiceImplTest {
 
     // ========== USER WITH NO ROLES TESTS ==========
 
+    /**
+     * Load user by username should handle user with no roles.
+     */
     @Test
     void loadUserByUsername_shouldHandleUserWithNoRoles() {
         // Act - testUser has no roles by default
@@ -194,6 +224,9 @@ class UserDetailsServiceImplTest {
 
     // ========== SPECIAL CHARACTER TESTS ==========
 
+    /**
+     * Load user by username should handle emails with special characters.
+     */
     @Test
     void loadUserByUsername_shouldHandleEmailsWithSpecialCharacters() {
         // Arrange - Create user with special characters in email
@@ -214,6 +247,9 @@ class UserDetailsServiceImplTest {
 
     // ========== WHITESPACE HANDLING TESTS ==========
 
+    /**
+     * Load user by username should handle whitespace in email.
+     */
     @Test
     void loadUserByUsername_shouldHandleWhitespaceInEmail() {
         // Act & Assert - Should not find user with whitespace
@@ -232,6 +268,9 @@ class UserDetailsServiceImplTest {
 
     // ========== PERFORMANCE TESTS ==========
 
+    /**
+     * Load user by username should load user quickly.
+     */
     @Test
     void loadUserByUsername_shouldLoadUserQuickly() {
         // This test ensures the service performs well
@@ -248,6 +287,9 @@ class UserDetailsServiceImplTest {
         assertTrue(duration < 1000, "User loading should complete within 1 second"); // Performance check
     }
 
+    /**
+     * Load user by username should handle multiple consecutive calls.
+     */
     @Test
     void loadUserByUsername_shouldHandleMultipleConsecutiveCalls() {
         // Act - Call multiple times to ensure no state issues
@@ -264,6 +306,9 @@ class UserDetailsServiceImplTest {
 
     // ========== ERROR MESSAGE TESTS ==========
 
+    /**
+     * Load user by username should provide informative error message.
+     */
     @Test
     void loadUserByUsername_shouldProvideInformativeErrorMessage() {
         // Act & Assert
@@ -279,6 +324,9 @@ class UserDetailsServiceImplTest {
 
     // ========== INTEGRATION WITH REPOSITORY TESTS ==========
 
+    /**
+     * Load user by username should reflect database changes.
+     */
     @Test
     void loadUserByUsername_shouldReflectDatabaseChanges() {
         // Arrange - Load user initially
@@ -300,6 +348,9 @@ class UserDetailsServiceImplTest {
 
     // ========== TRANSACTIONAL BEHAVIOR TESTS ==========
 
+    /**
+     * Load user by username should work within transaction.
+     */
     @Test
     void loadUserByUsername_shouldWorkWithinTransaction() {
         // This test ensures the service works correctly within Spring transactions

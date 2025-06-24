@@ -1,10 +1,6 @@
 package com.ricardo.auth.dto;
 
-import com.ricardo.auth.domain.AppRole;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,6 +20,9 @@ class DtoAndMappingTest {
     private PasswordEncoder passwordEncoder;
     private User testUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
@@ -39,6 +38,9 @@ class DtoAndMappingTest {
 
     // ========== CreateUserRequestDTO TESTS ==========
 
+    /**
+     * Create user request dto should create with valid data.
+     */
     @Test
     void createUserRequestDTO_shouldCreateWithValidData() {
         // Act
@@ -51,6 +53,9 @@ class DtoAndMappingTest {
         assertEquals("password123", dto.getPassword());
     }
 
+    /**
+     * Create user request dto should handle null values.
+     */
     @Test
     void createUserRequestDTO_shouldHandleNullValues() {
         // Act & Assert - Should be able to create DTO with nulls (validation happens at service layer)
@@ -62,6 +67,9 @@ class DtoAndMappingTest {
         assertNull(dto.getPassword());
     }
 
+    /**
+     * Create user request dto should handle empty strings.
+     */
     @Test
     void createUserRequestDTO_shouldHandleEmptyStrings() {
         // Act
@@ -74,6 +82,9 @@ class DtoAndMappingTest {
         assertEquals("", dto.getPassword());
     }
 
+    /**
+     * Create user request dto should handle whitespace.
+     */
     @Test
     void createUserRequestDTO_shouldHandleWhitespace() {
         // Act
@@ -87,6 +98,9 @@ class DtoAndMappingTest {
 
     // ========== LoginRequestDTO TESTS ==========
 
+    /**
+     * Login request dto should create with valid data.
+     */
     @Test
     void loginRequestDTO_shouldCreateWithValidData() {
         // Act
@@ -98,6 +112,9 @@ class DtoAndMappingTest {
         assertEquals("password123", dto.getPassword());
     }
 
+    /**
+     * Login request dto should handle null values.
+     */
     @Test
     void loginRequestDTO_shouldHandleNullValues() {
         // Act
@@ -109,6 +126,9 @@ class DtoAndMappingTest {
         assertNull(dto.getPassword());
     }
 
+    /**
+     * Login request dto should handle empty values.
+     */
     @Test
     void loginRequestDTO_shouldHandleEmptyValues() {
         // Act
@@ -121,6 +141,9 @@ class DtoAndMappingTest {
 
     // ========== TokenDTO TESTS ==========
 
+    /**
+     * Token dto should create with valid token.
+     */
     @Test
     void tokenDTO_shouldCreateWithValidToken() {
         // Arrange
@@ -134,6 +157,9 @@ class DtoAndMappingTest {
         assertEquals(token, dto.getToken());
     }
 
+    /**
+     * Token dto should handle null token.
+     */
     @Test
     void tokenDTO_shouldHandleNullToken() {
         // Act
@@ -144,6 +170,9 @@ class DtoAndMappingTest {
         assertNull(dto.getToken());
     }
 
+    /**
+     * Token dto should handle empty token.
+     */
     @Test
     void tokenDTO_shouldHandleEmptyToken() {
         // Act
@@ -155,6 +184,9 @@ class DtoAndMappingTest {
 
     // ========== UserDTO TESTS ==========
 
+    /**
+     * User dto should create with valid data.
+     */
     @Test
     void userDTO_shouldCreateWithValidData() {
         // Act
@@ -167,6 +199,9 @@ class DtoAndMappingTest {
         assertEquals("test@example.com", dto.getEmail());
     }
 
+    /**
+     * User dto should handle null values.
+     */
     @Test
     void userDTO_shouldHandleNullValues() {
         // Act
@@ -179,6 +214,9 @@ class DtoAndMappingTest {
         assertNull(dto.getEmail());
     }
 
+    /**
+     * User dto should support setters.
+     */
     @Test
     void userDTO_shouldSupportSetters() {
         // Arrange
@@ -195,7 +233,10 @@ class DtoAndMappingTest {
         assertEquals("test@example.com", dto.getEmail());
     }
 
-    // ========== AuthenticatedUserDTO TESTS ==========
+    /**
+     * Authenticated user dto should create with valid data.
+     */
+// ========== AuthenticatedUserDTO TESTS ==========
     @Test
     void authenticatedUserDTO_shouldCreateWithValidData() {
         // Arrange
@@ -215,6 +256,9 @@ class DtoAndMappingTest {
         assertTrue(dto.getRoles().contains("ROLE_ADMIN"));
     }
 
+    /**
+     * Authenticated user dto should handle empty authorities.
+     */
     @Test
     void authenticatedUserDTO_shouldHandleEmptyAuthorities() {
         // Act
@@ -225,6 +269,9 @@ class DtoAndMappingTest {
         assertTrue(dto.getRoles().isEmpty());
     }
 
+    /**
+     * Authenticated user dto should handle null email.
+     */
     @Test
     void authenticatedUserDTO_shouldHandleNullEmail() {
         // Act
@@ -237,6 +284,9 @@ class DtoAndMappingTest {
 
     // ========== UserDTOMapper TESTS ==========
 
+    /**
+     * User dto mapper should map user to dto.
+     */
     @Test
     void userDTOMapper_shouldMapUserToDTO() {
         // Act
@@ -249,6 +299,9 @@ class DtoAndMappingTest {
         assertEquals("test@example.com", dto.getEmail());
     }
 
+    /**
+     * User dto mapper should handle null user.
+     */
     @Test
     void userDTOMapper_shouldHandleNullUser() {
         // Act
@@ -258,6 +311,9 @@ class DtoAndMappingTest {
         assertNull(dto);
     }
 
+    /**
+     * User dto mapper should map user with no id.
+     */
     @Test
     void userDTOMapper_shouldMapUserWithNoId() {
         // Arrange - Create user without setting ID (before save)
@@ -279,6 +335,9 @@ class DtoAndMappingTest {
 
     // ========== ErrorResponse TESTS ==========
 
+    /**
+     * Error response should create with message.
+     */
     @Test
     void errorResponse_shouldCreateWithMessage() {
         // Act
@@ -289,6 +348,9 @@ class DtoAndMappingTest {
         assertEquals("Test error message", error.getMessage());
     }
 
+    /**
+     * Error response should handle null message.
+     */
     @Test
     void errorResponse_shouldHandleNullMessage() {
         // Act
@@ -299,6 +361,9 @@ class DtoAndMappingTest {
         assertNull(error.getMessage());
     }
 
+    /**
+     * Error response should handle empty message.
+     */
     @Test
     void errorResponse_shouldHandleEmptyMessage() {
         // Act
@@ -310,6 +375,9 @@ class DtoAndMappingTest {
 
     // ========== DTO SERIALIZATION TESTS ==========
 
+    /**
+     * Create user request dto should be serializable.
+     */
     @Test
     void createUserRequestDTO_shouldBeSerializable() {
         // This test ensures DTOs can be properly serialized/deserialized
@@ -321,6 +389,9 @@ class DtoAndMappingTest {
         assertNotNull(dto.getPassword());
     }
 
+    /**
+     * User dto should be serializable.
+     */
     @Test
     void userDTO_shouldBeSerializable() {
         UserDTO dto = new UserDTO("1", "testuser", "test@example.com");
@@ -331,6 +402,9 @@ class DtoAndMappingTest {
         assertNotNull(dto.getEmail());
     }
 
+    /**
+     * Token dto should be serializable.
+     */
     @Test
     void tokenDTO_shouldBeSerializable() {
         TokenDTO dto = new TokenDTO("sample.jwt.token");
@@ -341,6 +415,9 @@ class DtoAndMappingTest {
 
     // ========== DTO VALIDATION BOUNDARY TESTS ==========
 
+    /**
+     * Create user request dto should handle very long values.
+     */
     @Test
     void createUserRequestDTO_shouldHandleVeryLongValues() {
         // Arrange
@@ -355,7 +432,12 @@ class DtoAndMappingTest {
         assertEquals(longUsername, dto.getUsername());
         assertEquals(longEmail, dto.getEmail());
         assertEquals(longPassword, dto.getPassword());
-    }    @Test
+    }
+
+    /**
+     * Authenticated user dto should handle special characters in email.
+     */
+    @Test
     void authenticatedUserDTO_shouldHandleSpecialCharactersInEmail() {
         // Arrange
         String emailWithSpecialChars = "test+tag@münchen.de";
@@ -367,6 +449,9 @@ class DtoAndMappingTest {
         assertEquals(emailWithSpecialChars, dto.getName());
     }
 
+    /**
+     * Authenticated user dto should handle many roles.
+     */
     @Test
     void authenticatedUserDTO_shouldHandleManyRoles() {
         // Arrange
@@ -392,6 +477,9 @@ class DtoAndMappingTest {
 
     // ========== DTO EQUALITY TESTS ==========
 
+    /**
+     * User dto should support equality.
+     */
     @Test
     void userDTO_shouldSupportEquality() {
         // Arrange

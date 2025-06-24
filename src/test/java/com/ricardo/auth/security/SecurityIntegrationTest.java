@@ -2,11 +2,7 @@ package com.ricardo.auth.security;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.domain.AppRole;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.dto.TokenDTO;
@@ -27,11 +23,13 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
-import static org.hamcrest.Matchers.*;
-import static org.junit.jupiter.api.Assertions.*;
 
+/**
+ * The type Security integration test.
+ */
 @SpringBootTest
 @AutoConfigureMockMvc
 @ActiveProfiles("test")
@@ -56,6 +54,9 @@ class SecurityIntegrationTest {
     private User testUser;
     private User adminUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
@@ -81,6 +82,11 @@ class SecurityIntegrationTest {
 
     // ========== PUBLIC ENDPOINT TESTS ==========
 
+    /**
+     * Should allow public access to login.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldAllowPublicAccessToLogin() throws Exception {
         // Arrange
@@ -95,6 +101,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Should allow public access to user creation.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldAllowPublicAccessToUserCreation() throws Exception {
         // Arrange
@@ -111,12 +122,22 @@ class SecurityIntegrationTest {
 
     // ========== AUTHENTICATION TESTS ==========
 
+    /**
+     * Should deny access to me endpoint for anonymous user.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldDenyAccessToMeEndpointForAnonymousUser() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Should allow access to me endpoint for authenticated user.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(username = "test@user.com", roles = {"USER"})
         // Simula um utilizador autenticado
@@ -125,6 +146,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Should successfully login and return token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldSuccessfullyLoginAndReturnToken() throws Exception {
         // Arrange
@@ -145,6 +171,11 @@ class SecurityIntegrationTest {
         assertTrue(jwtService.isTokenValid(tokenDto.getToken()));
     }
 
+    /**
+     * Should reject invalid credentials.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldRejectInvalidCredentials() throws Exception {
         // Arrange
@@ -159,6 +190,11 @@ class SecurityIntegrationTest {
 
     // ========== JWT TOKEN TESTS ==========
 
+    /**
+     * Should authenticate with valid jwt token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldAuthenticateWithValidJwtToken() throws Exception {
         // Arrange - Generate valid token
@@ -175,6 +211,11 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.roles").isArray());
     }
 
+    /**
+     * Should reject invalid jwt token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldRejectInvalidJwtToken() throws Exception {
         // Arrange
@@ -186,6 +227,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Should reject malformed jwt token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldRejectMalformedJwtToken() throws Exception {
         // Arrange - Create malformed token
@@ -197,6 +243,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Should reject token without bearer prefix.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldRejectTokenWithoutBearerPrefix() throws Exception {
         // Arrange - Generate valid token but send without Bearer prefix
@@ -211,6 +262,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Should reject empty authorization header.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldRejectEmptyAuthorizationHeader() throws Exception {
         // Act & Assert
@@ -219,6 +275,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Should reject request without authorization header.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldRejectRequestWithoutAuthorizationHeader() throws Exception {
         // Act & Assert
@@ -226,7 +287,12 @@ class SecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
-    // ========== ROLE-BASED ACCESS CONTROL TESTS ==========
+    /**
+     * Should not allow access to delete for admin.
+     *
+     * @throws Exception the exception
+     */
+// ========== ROLE-BASED ACCESS CONTROL TESTS ==========
     @Test
     @WithMockUser(roles = "USER")
     // Simula um utilizador com a role user
@@ -247,6 +313,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Should allow access to delete for admin.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
         // Simula um utilizador com a role admin
@@ -267,6 +338,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isNoContent());
     }
 
+    /**
+     * Should allow user role to access user endpoints.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldAllowUserRoleToAccessUserEndpoints() throws Exception {
         // Arrange - Generate token for user role
@@ -281,6 +357,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Should allow admin role to access admin endpoints.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldAllowAdminRoleToAccessAdminEndpoints() throws Exception {
         // Arrange - Generate token for admin role
@@ -295,6 +376,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Should deny user role access to admin endpoints.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldDenyUserRoleAccessToAdminEndpoints() throws Exception {
         // Arrange - Generate token for user role
@@ -309,6 +395,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Should deny access with tampered token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldDenyAccessWithTamperedToken() throws Exception {
         // This test simulates a tampered token (invalid signature)
@@ -325,6 +416,11 @@ class SecurityIntegrationTest {
 
     // ========== AUTHORIZATION EDGE CASES ==========
 
+    /**
+     * Should handle token with invalid roles.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleTokenWithInvalidRoles() throws Exception {
         // Arrange - Generate token with invalid role
@@ -344,6 +440,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Should handle multiple roles.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleMultipleRoles() throws Exception {
         // Arrange - User with both USER and ADMIN roles
@@ -370,6 +471,11 @@ class SecurityIntegrationTest {
 
     // ========== HTTP METHOD SECURITY TESTS ==========
 
+    /**
+     * Should secure all http methods for protected endpoints.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldSecureAllHttpMethodsForProtectedEndpoints() throws Exception {
         // Test that all HTTP methods require authentication for protected endpoints
@@ -398,6 +504,11 @@ class SecurityIntegrationTest {
 
     // ========== ERROR HANDLING TESTS ==========
 
+    /**
+     * Should return json error for unauthorized requests.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldReturnJsonErrorForUnauthorizedRequests() throws Exception {
         // Act & Assert
@@ -407,6 +518,11 @@ class SecurityIntegrationTest {
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
 
+    /**
+     * Should return json error for forbidden requests.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldReturnJsonErrorForForbiddenRequests() throws Exception {
         // Arrange - Generate token for user role
@@ -424,6 +540,11 @@ class SecurityIntegrationTest {
 
     // ========== INTEGRATION WORKFLOW TESTS ==========
 
+    /**
+     * Should complete full authentication workflow.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldCompleteFullAuthenticationWorkflow() throws Exception {
         // Step 1: Login and get token
@@ -450,6 +571,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Should complete full admin workflow.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldCompleteFullAdminWorkflow() throws Exception {
         // Step 1: Login as admin and get token
@@ -477,6 +603,11 @@ class SecurityIntegrationTest {
 
     // ========== BOUNDARY AND EDGE CASE TESTS ==========
 
+    /**
+     * Should handle very long tokens.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleVeryLongTokens() throws Exception {
         // Test with extremely long but valid token
@@ -492,6 +623,11 @@ class SecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Should handle special characters in token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleSpecialCharactersInToken() throws Exception {
         // Test with special characters in subject
@@ -507,6 +643,11 @@ class SecurityIntegrationTest {
                 .andExpect(jsonPath("$.name").value(specialSubject));
     }
 
+    /**
+     * Should handle case insensitive bearer header.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleCaseInsensitiveBearerHeader() throws Exception {
         // Arrange
