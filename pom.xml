@@ -234,24 +234,16 @@
             <activation>
                 <activeByDefault>true</activeByDefault>
             </activation>
-            <!-- No additional configuration needed for GitHub -->
+            <!-- Uses the default distributionManagement section -->
         </profile>
 
-        <!-- Maven Central Profile using NEW Central Publishing Plugin -->
+        <!-- Maven Central Profile using Central Publishing Plugin -->
         <profile>
             <id>central</id>
 
-            <!-- Override distribution management for Maven Central -->
-            <distributionManagement>
-                <repository>
-                    <id>central</id>
-                    <url>https://central.sonatype.com/api/v1/publisher/deployments</url>
-                </repository>
-            </distributionManagement>
-
             <build>
                 <plugins>
-                    <!-- GPG Plugin for signing (Maven Central requirement) -->
+                    <!-- GPG Plugin for signing -->
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-gpg-plugin</artifactId>
@@ -265,8 +257,16 @@
                                 </goals>
                             </execution>
                         </executions>
+                        <configuration>
+                            <keyname>7879E4142C5BAE22A5E1C3D0D6D0A6FA3396EFD8</keyname>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
                     </plugin>
 
+                    <!-- Central Publishing Plugin (Replaces old Nexus plugin) -->
                     <plugin>
                         <groupId>org.sonatype.central</groupId>
                         <artifactId>central-publishing-maven-plugin</artifactId>
@@ -276,6 +276,9 @@
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
+                            <!-- Add these for better Windows compatibility -->
+                            <checksums>required</checksums>
+                            <deploymentName>auth-spring-boot-starter-${project.version}</deploymentName>
                         </configuration>
                     </plugin>
                 </plugins>

@@ -1,6 +1,7 @@
 package com.ricardo.auth.autoconfig;
 
 import org.hibernate.cfg.Environment;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
@@ -31,19 +32,20 @@ public class AuthProperties {
         /**
          * JWT secret key (Base64 encoded)
          */
-        private String secret = Environment.getProperties().getProperty("jwt.secret");
+        @Value("${jwt.secret}")
+        private String secret;
 
         /**
          * JWT expiration time in milliseconds
          */
-        private long expiration = 604800000L; // 7 days
+        @Value("${jwt.expiration:604800000}") // 7 dias em ms
+        private long expiration;
 
         /**
          * Gets secret.
          *
          * @return the secret
          */
-// Getters and setters
         public String getSecret() { return secret; }
 
         /**
@@ -130,7 +132,6 @@ public class AuthProperties {
      *
      * @return the boolean
      */
-// Main getters and setters
     public boolean isEnabled() { return enabled; }
 
     /**
