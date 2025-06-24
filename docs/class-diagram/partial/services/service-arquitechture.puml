@@ -1,0 +1,26 @@
+@startuml Auth Starter - Service Architecture
+
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam noteBackgroundColor #88A4DD
+skinparam noteBorderColor #2C5282
+
+title Ricardo Auth Starter - Service Architecture
+
+interface "UserService<T, ID>" as UserService
+interface JwtService
+class UserServiceImpl
+class JwtServiceImpl
+class AuthAutoConfiguration
+
+UserServiceImpl .up.|> UserService
+JwtServiceImpl .up.|> JwtService
+AuthAutoConfiguration --> UserService : creates
+AuthAutoConfiguration --> JwtService : creates
+
+note top of AuthAutoConfiguration
+  **Spring Boot Auto-Configuration**
+  Zero-configuration setup
+end note
+
+@enduml
