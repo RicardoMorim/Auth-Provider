@@ -195,7 +195,8 @@ class DtoAndMappingTest {
         assertEquals("test@example.com", dto.getEmail());
     }
 
-    // ========== AuthenticatedUserDTO TESTS ==========    @Test
+    // ========== AuthenticatedUserDTO TESTS ==========
+    @Test
     void authenticatedUserDTO_shouldCreateWithValidData() {
         // Arrange
         List<SimpleGrantedAuthority> authorities = List.of(
