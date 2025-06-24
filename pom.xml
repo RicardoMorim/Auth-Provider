@@ -11,7 +11,7 @@
 
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.0.1</version>
+    <version>1.0.2</version>
     <packaging>jar</packaging>
 
     <name>Ricardo Auth Spring Boot Starter</name>
@@ -258,10 +258,12 @@
                             </execution>
                         </executions>
                         <configuration>
-                            <keyname>7879E4142C5BAE22A5E1C3D0D6D0A6FA3396EFD8</keyname>
+                            <!-- Remove keyname from here, let it use default -->
                             <gpgArguments>
                                 <arg>--pinentry-mode</arg>
                                 <arg>loopback</arg>
+                                <arg>--batch</arg>
+                                <arg>--yes</arg>
                             </gpgArguments>
                         </configuration>
                     </plugin>
@@ -276,9 +278,6 @@
                             <publishingServerId>central</publishingServerId>
                             <autoPublish>true</autoPublish>
                             <waitUntil>published</waitUntil>
-                            <!-- Add these for better Windows compatibility -->
-                            <checksums>required</checksums>
-                            <deploymentName>auth-spring-boot-starter-${project.version}</deploymentName>
                         </configuration>
                     </plugin>
                 </plugins>

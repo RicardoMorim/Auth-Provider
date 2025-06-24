@@ -85,7 +85,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Databases**: H2, PostgreSQL, MySQL, MariaDB (via JPA)
 - **Build Tools**: Maven 3.6+
 
-## [1.0.1] - 2025-01-15
+## [1.0.1] - 2025-06-24
 
 ### Added
 - **Comprehensive Documentation Suite**: Complete documentation overhaul with detailed guides
@@ -159,6 +159,15 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - New configuration options are optional and have sensible defaults
 - Existing applications will continue to work without changes
 
+## [1.0.2] - 2025-06-24
+
+### Added
+- **Fixed errors for proper Maven publishing**: Corrected SCM URLs and improved POM configuration
+
+### Migration Notes
+- No migration required from v1.0.1
+- Existing applications will continue to work without changes
+
 ## [Unreleased]
 
 ### Planned Features
@@ -178,6 +187,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ### Breaking Changes (Future Versions)
 > No breaking changes planned for 1.x series. Major version increments will be used for breaking changes.
+
 
 
 ## Version Support Policy
