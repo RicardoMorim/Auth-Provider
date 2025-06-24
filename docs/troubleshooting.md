@@ -9,6 +9,7 @@ This guide helps you diagnose and resolve common issues when using the Ricardo A
 #### JWT Secret Not Configured
 
 **Error:**
+
 ```
 ***************************
 APPLICATION FAILED TO START
@@ -22,6 +23,7 @@ Configure the JWT secret in your application.yml or set the RICARDO_AUTH_JWT_SEC
 ```
 
 **Solution:**
+
 ```yaml
 ricardo:
   auth:
@@ -30,6 +32,7 @@ ricardo:
 ```
 
 Or set environment variable:
+
 ```bash
 export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
 ```
@@ -37,6 +40,7 @@ export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
 #### Missing JPA Dependencies
 
 **Error:**
+
 ```
 ***************************
 APPLICATION FAILED TO START
@@ -55,20 +59,22 @@ Consider the following:
 Add JPA and database dependencies to your `pom.xml`:
 
 ```xml
+
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-data-jpa</artifactId>
 </dependency>
 
-<!-- For development -->
+        <!-- For development -->
 <dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <scope>runtime</scope>
+<groupId>com.h2database</groupId>
+<artifactId>h2</artifactId>
+<scope>runtime</scope>
 </dependency>
 ```
 
 And configure datasource:
+
 ```yaml
 spring:
   datasource:
@@ -81,6 +87,7 @@ spring:
 #### Bean Creation Errors
 
 **Error:**
+
 ```
 Error creating bean with name 'authAutoConfiguration': 
 Injection of autowired dependencies failed
@@ -88,6 +95,7 @@ Injection of autowired dependencies failed
 
 **Solution:**
 Ensure all required dependencies are present and properly configured. Check for:
+
 - Missing `@SpringBootApplication` annotation
 - Conflicting bean definitions
 - Circular dependencies
@@ -130,10 +138,11 @@ Ensure all required dependencies are present and properly configured. Check for:
 #### JWT Token Not Working
 
 **Error:**
+
 ```json
 {
-    "error": "Unauthorized",
-    "message": "JWT token is missing or invalid"
+  "error": "Unauthorized",
+  "message": "JWT token is missing or invalid"
 }
 ```
 
@@ -173,12 +182,14 @@ Ensure all required dependencies are present and properly configured. Check for:
 #### CORS Issues
 
 **Error:**
+
 ```
 Access to fetch at 'http://localhost:8080/api/auth/login' from origin 'http://localhost:3000' 
 has been blocked by CORS policy
 ```
 
 **Solution:**
+
 ```yaml
 spring:
   web:
@@ -190,10 +201,12 @@ spring:
 ```
 
 Or configure programmatically:
+
 ```java
+
 @Configuration
 public class CorsConfig {
-    
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
@@ -201,7 +214,7 @@ public class CorsConfig {
         configuration.setAllowedMethods(Arrays.asList("GET", "POST", "PUT", "DELETE", "OPTIONS"));
         configuration.setAllowedHeaders(Arrays.asList("*"));
         configuration.setAllowCredentials(true);
-        
+
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
         return source;
@@ -214,6 +227,7 @@ public class CorsConfig {
 #### Table 'USER' doesn't exist
 
 **Error:**
+
 ```
 Table "USER" not found; SQL statement:
 select user0_.id as id1_0_, user0_.email as email2_0_ from user user0_ where user0_.email=?
@@ -260,11 +274,13 @@ select user0_.id as id1_0_, user0_.email as email2_0_ from user user0_ where use
 #### Connection Pool Issues
 
 **Error:**
+
 ```
 Connection is not available, request timed out after 30000ms.
 ```
 
 **Solution:**
+
 ```yaml
 spring:
   datasource:
@@ -281,18 +297,21 @@ spring:
 #### Tests Fail with Bean Creation Errors
 
 **Error:**
+
 ```
 No qualifying bean of type 'javax.sql.DataSource' available
 ```
 
 **Solution:**
+
 ```java
+
 @SpringBootTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @TestPropertySource(properties = {
-    "ricardo.auth.jwt.secret=test-secret-key-for-testing-purposes-only",
-    "spring.datasource.url=jdbc:h2:mem:testdb",
-    "spring.jpa.hibernate.ddl-auto=create-drop"
+        "ricardo.auth.jwt.secret=test-secret-key-for-testing-purposes-only",
+        "spring.datasource.url=jdbc:h2:mem:testdb",
+        "spring.jpa.hibernate.ddl-auto=create-drop"
 })
 class AuthIntegrationTest {
     // Test code
@@ -304,27 +323,29 @@ class AuthIntegrationTest {
 **Problem:** Can't authenticate in tests
 
 **Solution:**
+
 ```java
+
 @Test
 @WithMockUser(roles = "USER")
 public void testProtectedEndpoint() throws Exception {
     mockMvc.perform(get("/api/auth/me"))
-           .andExpect(status().isOk());
+            .andExpect(status().isOk());
 }
 
 // Or with custom user
 @Test
 public void testWithCustomUser() throws Exception {
     String token = generateTestToken("test@example.com", "USER");
-    
+
     mockMvc.perform(get("/api/auth/me")
-           .header("Authorization", "Bearer " + token))
-           .andExpect(status().isOk());
+                    .header("Authorization", "Bearer " + token))
+            .andExpect(status().isOk());
 }
 
 private String generateTestToken(String email, String role) {
-    Collection<GrantedAuthority> authorities = 
-        Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
+    Collection<GrantedAuthority> authorities =
+            Collections.singletonList(new SimpleGrantedAuthority("ROLE_" + role));
     return jwtService.generateToken(email, authorities);
 }
 ```
@@ -334,10 +355,12 @@ private String generateTestToken(String email, String role) {
 #### Slow Authentication Responses
 
 **Symptoms:**
+
 - Login takes > 2 seconds
 - High CPU usage during authentication
 
 **Diagnosis:**
+
 ```yaml
 # Enable performance logging
 logging:
@@ -376,6 +399,7 @@ logging:
 #### Memory Leaks
 
 **Symptoms:**
+
 - Increasing memory usage over time
 - OutOfMemoryError
 
@@ -400,6 +424,7 @@ logging:
 #### SSL/TLS Certificate Issues
 
 **Error:**
+
 ```
 SSL handshake failed: certificate verification failed
 ```
@@ -421,6 +446,7 @@ SSL handshake failed: certificate verification failed
 **Problem:** Sessions not persisting across servers
 
 **Solution:**
+
 ```yaml
 # Use stateless JWT authentication
 ricardo:
@@ -468,6 +494,7 @@ management:
 ```
 
 Access health information:
+
 ```bash
 curl http://localhost:8080/actuator/health
 curl http://localhost:8080/actuator/beans
@@ -483,7 +510,7 @@ function debugJWT(token) {
         const parts = token.split('.');
         const header = JSON.parse(atob(parts[0]));
         const payload = JSON.parse(atob(parts[1].replace(/-/g, '+').replace(/_/g, '/')));
-        
+
         console.log('Header:', header);
         console.log('Payload:', payload);
         console.log('Issued:', new Date(payload.iat * 1000));
@@ -502,16 +529,20 @@ debugJWT('eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...');
 
 ```sql
 -- Check user existence
-SELECT id, username, email, created_at FROM users WHERE email = 'user@example.com';
+SELECT id, username, email, created_at
+FROM users
+WHERE email = 'user@example.com';
 
 -- Check user roles
-SELECT u.email, ur.role 
-FROM users u 
-LEFT JOIN user_roles ur ON u.id = ur.user_id 
+SELECT u.email, ur.role
+FROM users u
+         LEFT JOIN user_roles ur ON u.id = ur.user_id
 WHERE u.email = 'user@example.com';
 
 -- Check password hash
-SELECT email, password FROM users WHERE email = 'user@example.com';
+SELECT email, password
+FROM users
+WHERE email = 'user@example.com';
 ```
 
 ### 5. Network Debugging
@@ -553,35 +584,36 @@ management:
 ### Custom Metrics
 
 ```java
+
 @Component
 public class AuthMetrics {
-    
+
     private final Counter loginAttempts;
     private final Counter successfulLogins;
     private final Timer loginDuration;
-    
+
     public AuthMetrics(MeterRegistry meterRegistry) {
         this.loginAttempts = Counter.builder("auth.login.attempts")
-            .description("Total login attempts")
-            .register(meterRegistry);
-            
+                .description("Total login attempts")
+                .register(meterRegistry);
+
         this.successfulLogins = Counter.builder("auth.login.success")
-            .description("Successful logins")
-            .register(meterRegistry);
-            
+                .description("Successful logins")
+                .register(meterRegistry);
+
         this.loginDuration = Timer.builder("auth.login.duration")
-            .description("Login duration")
-            .register(meterRegistry);
+                .description("Login duration")
+                .register(meterRegistry);
     }
-    
+
     public void recordLoginAttempt() {
         loginAttempts.increment();
     }
-    
+
     public void recordSuccessfulLogin() {
         successfulLogins.increment();
     }
-    
+
     public Timer.Sample startLoginTimer() {
         return Timer.start();
     }
@@ -591,11 +623,13 @@ public class AuthMetrics {
 ## Getting Help
 
 ### 1. Check Documentation
+
 - [Configuration Guide](configuration-guide.md)
 - [API Reference](api-reference.md)
 - [Security Guide](security-guide.md)
 
 ### 2. Enable Verbose Logging
+
 ```yaml
 logging:
   level:
@@ -604,9 +638,11 @@ logging:
 ```
 
 ### 3. Create Minimal Reproduction
+
 When reporting issues, create a minimal example that reproduces the problem:
 
 ```java
+
 @SpringBootApplication
 public class MinimalReproduction {
     public static void main(String[] args) {
@@ -616,15 +652,16 @@ public class MinimalReproduction {
 ```
 
 ### 4. Community Support
+
 - [GitHub Issues](https://github.com/RicardoMorim/Auth-Provider/issues)
 - [Stack Overflow](https://stackoverflow.com/questions/tagged/ricardo-auth-starter)
 
 ### 5. Version Compatibility
+
 Ensure you're using compatible versions:
 
 | Spring Boot | Ricardo Auth Starter | Java |
-|-------------|---------------------|------|
-| 3.5.x       | 1.0.0              | 21+  |
-| 3.4.x       | 1.0.0              | 17+  |
+|-------------|----------------------|------|
+| 3.5.x       | 1.0.0                | 21+  |
 
 Remember to always check the changelog and migration guides when upgrading versions.

@@ -5,6 +5,7 @@ Complete API reference for the Ricardo Auth Spring Boot Starter endpoints.
 ## Base URL
 
 All endpoints are relative to your application's base URL:
+
 ```
 http://localhost:8080  # Development
 https://yourdomain.com # Production
@@ -13,6 +14,7 @@ https://yourdomain.com # Production
 ## Authentication
 
 Most endpoints require authentication via JWT token in the Authorization header:
+
 ```
 Authorization: Bearer <your-jwt-token>
 ```
@@ -26,44 +28,51 @@ Authenticate a user and receive a JWT token.
 #### Request
 
 **Headers:**
+
 ```
 Content-Type: application/json
 ```
 
 **Body:**
+
 ```json
 {
-    "email": "string",     // Required: User's email address
-    "password": "string"   // Required: User's password
+  "email": "string",
+  // Required: User's email address
+  "password": "string"
+  // Required: User's password
 }
 ```
 
 #### Response
 
 **Success (200 OK):**
+
 ```json
 {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
 }
 ```
 
 **Error (401 Unauthorized):**
+
 ```json
 {
-    "error": "Unauthorized",
-    "message": "Invalid credentials",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/auth/login"
+  "error": "Unauthorized",
+  "message": "Invalid credentials",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/login"
 }
 ```
 
 **Error (400 Bad Request):**
+
 ```json
 {
-    "error": "Bad Request",
-    "message": "Email and password are required",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/auth/login"
+  "error": "Bad Request",
+  "message": "Email and password are required",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/login"
 }
 ```
 
@@ -85,6 +94,7 @@ Get information about the currently authenticated user.
 #### Request
 
 **Headers:**
+
 ```
 Authorization: Bearer <token>
 ```
@@ -92,22 +102,24 @@ Authorization: Bearer <token>
 #### Response
 
 **Success (200 OK):**
+
 ```json
 {
-    "username": "user@example.com",
-    "authorities": [
-        "ROLE_USER"
-    ]
+  "username": "user@example.com",
+  "authorities": [
+    "ROLE_USER"
+  ]
 }
 ```
 
 **Error (401 Unauthorized):**
+
 ```json
 {
-    "error": "Unauthorized",
-    "message": "JWT token is missing or invalid",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/auth/me"
+  "error": "Unauthorized",
+  "message": "JWT token is missing or invalid",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/me"
 }
 ```
 
@@ -127,47 +139,55 @@ Create a new user account.
 #### Request
 
 **Headers:**
+
 ```
 Content-Type: application/json
 ```
 
 **Body:**
+
 ```json
 {
-    "username": "string",  // Required: Unique username
-    "email": "string",     // Required: Valid email address (unique)
-    "password": "string"   // Required: Password (will be encrypted)
+  "username": "string",
+  // Required: Unique username
+  "email": "string",
+  // Required: Valid email address (unique)
+  "password": "string"
+  // Required: Password (will be encrypted)
 }
 ```
 
 #### Response
 
 **Success (201 Created):**
+
 ```json
 {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com"
 }
 ```
 
 **Error (400 Bad Request):**
+
 ```json
 {
-    "error": "Bad Request",
-    "message": "Username already exists",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/create"
+  "error": "Bad Request",
+  "message": "Username already exists",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/create"
 }
 ```
 
 **Error (400 Bad Request - Email exists):**
+
 ```json
 {
-    "error": "Bad Request",
-    "message": "Email already exists",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/create"
+  "error": "Bad Request",
+  "message": "Email already exists",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/create"
 }
 ```
 
@@ -190,31 +210,35 @@ Get user information by ID.
 #### Request
 
 **Headers:**
+
 ```
 Authorization: Bearer <token>
 ```
 
 **Path Parameters:**
+
 - `id` (number): User ID
 
 #### Response
 
 **Success (200 OK):**
+
 ```json
 {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com"
 }
 ```
 
 **Error (404 Not Found):**
+
 ```json
 {
-    "error": "Not Found",
-    "message": "User not found with id: 999",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/999"
+  "error": "Not Found",
+  "message": "User not found with id: 999",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/999"
 }
 ```
 
@@ -232,31 +256,35 @@ Get user information by email address.
 #### Request
 
 **Headers:**
+
 ```
 Authorization: Bearer <token>
 ```
 
 **Path Parameters:**
+
 - `email` (string): User email address
 
 #### Response
 
 **Success (200 OK):**
+
 ```json
 {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com"
 }
 ```
 
 **Error (404 Not Found):**
+
 ```json
 {
-    "error": "Not Found",
-    "message": "User not found with email: nonexistent@example.com",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/email/nonexistent@example.com"
+  "error": "Not Found",
+  "message": "User not found with email: nonexistent@example.com",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/email/nonexistent@example.com"
 }
 ```
 
@@ -274,11 +302,13 @@ Check if a user exists by email address.
 #### Request
 
 **Path Parameters:**
+
 - `email` (string): Email address to check
 
 #### Response
 
 **Success (200 OK):**
+
 ```json
 true
 ```
@@ -304,41 +334,49 @@ Update user information.
 #### Request
 
 **Headers:**
+
 ```
 Authorization: Bearer <token>
 Content-Type: application/json
 ```
 
 **Path Parameters:**
+
 - `id` (number): User ID to update
 
 **Body:**
+
 ```json
 {
-    "username": "string",  // Optional: New username
-    "email": "string",     // Optional: New email
-    "password": "string"   // Optional: New password
+  "username": "string",
+  // Optional: New username
+  "email": "string",
+  // Optional: New email
+  "password": "string"
+  // Optional: New password
 }
 ```
 
 #### Response
 
 **Success (200 OK):**
+
 ```json
 {
-    "id": 1,
-    "username": "johnsmith",
-    "email": "johnsmith@example.com"
+  "id": 1,
+  "username": "johnsmith",
+  "email": "johnsmith@example.com"
 }
 ```
 
 **Error (403 Forbidden):**
+
 ```json
 {
-    "error": "Forbidden",
-    "message": "Access denied: You can only update your own profile",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/update/1"
+  "error": "Forbidden",
+  "message": "Access denied: You can only update your own profile",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/update/1"
 }
 ```
 
@@ -363,37 +401,42 @@ Delete a user account.
 #### Request
 
 **Headers:**
+
 ```
 Authorization: Bearer <token>
 ```
 
 **Path Parameters:**
+
 - `id` (number): User ID to delete
 
 #### Response
 
 **Success (204 No Content):**
+
 ```
 (Empty response body)
 ```
 
 **Error (404 Not Found):**
+
 ```json
 {
-    "error": "Not Found",
-    "message": "User not found with id: 999",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/delete/999"
+  "error": "Not Found",
+  "message": "User not found with id: 999",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/delete/999"
 }
 ```
 
 **Error (403 Forbidden):**
+
 ```json
 {
-    "error": "Forbidden",
-    "message": "Access denied: You can only delete your own profile",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/delete/1"
+  "error": "Forbidden",
+  "message": "Access denied: You can only delete your own profile",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/delete/1"
 }
 ```
 
@@ -412,26 +455,30 @@ All error responses follow this structure:
 
 ```json
 {
-    "error": "string",      // HTTP status text
-    "message": "string",    // Detailed error message
-    "timestamp": "string",  // ISO 8601 timestamp
-    "path": "string"        // Request path that caused the error
+  "error": "string",
+  // HTTP status text
+  "message": "string",
+  // Detailed error message
+  "timestamp": "string",
+  // ISO 8601 timestamp
+  "path": "string"
+  // Request path that caused the error
 }
 ```
 
 ### HTTP Status Codes
 
-| Status Code | Description | Common Causes |
-|-------------|-------------|---------------|
-| 200 | OK | Successful GET requests |
-| 201 | Created | Successful POST requests |
-| 204 | No Content | Successful DELETE requests |
-| 400 | Bad Request | Invalid request data, validation errors |
-| 401 | Unauthorized | Missing or invalid JWT token, wrong credentials |
-| 403 | Forbidden | Insufficient permissions |
-| 404 | Not Found | Resource doesn't exist |
-| 409 | Conflict | Resource already exists (username/email taken) |
-| 500 | Internal Server Error | Server-side errors |
+| Status Code | Description           | Common Causes                                   |
+|-------------|-----------------------|-------------------------------------------------|
+| 200         | OK                    | Successful GET requests                         |
+| 201         | Created               | Successful POST requests                        |
+| 204         | No Content            | Successful DELETE requests                      |
+| 400         | Bad Request           | Invalid request data, validation errors         |
+| 401         | Unauthorized          | Missing or invalid JWT token, wrong credentials |
+| 403         | Forbidden             | Insufficient permissions                        |
+| 404         | Not Found             | Resource doesn't exist                          |
+| 409         | Conflict              | Resource already exists (username/email taken)  |
+| 500         | Internal Server Error | Server-side errors                              |
 
 ### Validation Errors
 
@@ -439,20 +486,20 @@ When request validation fails, you'll receive detailed error information:
 
 ```json
 {
-    "error": "Bad Request",
-    "message": "Validation failed",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "path": "/api/users/create",
-    "fieldErrors": [
-        {
-            "field": "email",
-            "message": "must be a well-formed email address"
-        },
-        {
-            "field": "password",
-            "message": "must not be blank"
-        }
-    ]
+  "error": "Bad Request",
+  "message": "Validation failed",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/create",
+  "fieldErrors": [
+    {
+      "field": "email",
+      "message": "must be a well-formed email address"
+    },
+    {
+      "field": "password",
+      "message": "must not be blank"
+    }
+  ]
 }
 ```
 
@@ -461,12 +508,13 @@ When request validation fails, you'll receive detailed error information:
 The API may implement rate limiting. When rate limited, you'll receive:
 
 **Response (429 Too Many Requests):**
+
 ```json
 {
-    "error": "Too Many Requests",
-    "message": "Rate limit exceeded. Try again in 60 seconds.",
-    "timestamp": "2024-01-15T10:30:00Z",
-    "retryAfter": 60
+  "error": "Too Many Requests",
+  "message": "Rate limit exceeded. Try again in 60 seconds.",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "retryAfter": 60
 }
 ```
 
@@ -476,10 +524,16 @@ JWT tokens contain the following claims:
 
 ```json
 {
-    "sub": "user@example.com",     // Subject (username/email)
-    "iat": 1516239022,             // Issued at (timestamp)
-    "exp": 1516843822,             // Expiration (timestamp)
-    "authorities": ["ROLE_USER"]   // User roles/authorities
+  "sub": "user@example.com",
+  // Subject (username/email)
+  "iat": 1516239022,
+  // Issued at (timestamp)
+  "exp": 1516843822,
+  // Expiration (timestamp)
+  "authorities": [
+    "ROLE_USER"
+  ]
+  // User roles/authorities
 }
 ```
 
@@ -489,81 +543,99 @@ You can import the following Postman collection to test the API:
 
 ```json
 {
-    "info": {
-        "name": "Ricardo Auth API",
-        "description": "API collection for Ricardo Auth Spring Boot Starter"
+  "info": {
+    "name": "Ricardo Auth API",
+    "description": "API collection for Ricardo Auth Spring Boot Starter"
+  },
+  "item": [
+    {
+      "name": "Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password\"\n}"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "login"
+          ]
+        }
+      }
     },
-    "item": [
-        {
-            "name": "Login",
-            "request": {
-                "method": "POST",
-                "header": [
-                    {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                    }
-                ],
-                "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password\"\n}"
-                },
-                "url": {
-                    "raw": "{{baseUrl}}/api/auth/login",
-                    "host": ["{{baseUrl}}"],
-                    "path": ["api", "auth", "login"]
-                }
-            }
-        },
-        {
-            "name": "Get Current User",
-            "request": {
-                "method": "GET",
-                "header": [
-                    {
-                        "key": "Authorization",
-                        "value": "Bearer {{token}}"
-                    }
-                ],
-                "url": {
-                    "raw": "{{baseUrl}}/api/auth/me",
-                    "host": ["{{baseUrl}}"],
-                    "path": ["api", "auth", "me"]
-                }
-            }
-        },
-        {
-            "name": "Create User",
-            "request": {
-                "method": "POST",
-                "header": [
-                    {
-                        "key": "Content-Type",
-                        "value": "application/json"
-                    }
-                ],
-                "body": {
-                    "mode": "raw",
-                    "raw": "{\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"securepassword123\"\n}"
-                },
-                "url": {
-                    "raw": "{{baseUrl}}/api/users/create",
-                    "host": ["{{baseUrl}}"],
-                    "path": ["api", "users", "create"]
-                }
-            }
+    {
+      "name": "Get Current User",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Authorization",
+            "value": "Bearer {{token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/api/auth/me",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "auth",
+            "me"
+          ]
         }
-    ],
-    "variable": [
-        {
-            "key": "baseUrl",
-            "value": "http://localhost:8080"
+      }
+    },
+    {
+      "name": "Create User",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"securepassword123\"\n}"
         },
-        {
-            "key": "token",
-            "value": ""
+        "url": {
+          "raw": "{{baseUrl}}/api/users/create",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "users",
+            "create"
+          ]
         }
-    ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:8080"
+    },
+    {
+      "key": "token",
+      "value": ""
+    }
+  ]
 }
 ```
 
@@ -584,9 +656,9 @@ class AuthClient {
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ email, password })
+            body: JSON.stringify({email, password})
         });
-        
+
         if (response.ok) {
             const data = await response.json();
             this.token = data.token;
@@ -601,7 +673,7 @@ class AuthClient {
                 'Authorization': `Bearer ${this.token}`
             }
         });
-        
+
         if (response.ok) {
             return await response.json();
         }
