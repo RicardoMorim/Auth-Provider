@@ -28,7 +28,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.0.0</version>
+    <version>{Latest version release}</version>
 </dependency>
 ```
 
