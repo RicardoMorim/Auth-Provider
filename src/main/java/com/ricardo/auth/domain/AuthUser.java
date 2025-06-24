@@ -62,4 +62,11 @@ public interface AuthUser<R extends Role> extends UserDetails {
      * @param role the role
      */
     void addRole(R role);
+
+    /**
+     * Remove role.
+     *
+     * @param role the role
+     */
+    void removeRole(R role);
 }

@@ -134,4 +134,11 @@ public class User implements AuthUser<AppRole> {
             this.roles.add(role);
         }
     }
+
+    @Override
+    public void removeRole(AppRole role) {
+        if (role != null) {
+            this.roles.remove(role);
+        }
+    }
 }
