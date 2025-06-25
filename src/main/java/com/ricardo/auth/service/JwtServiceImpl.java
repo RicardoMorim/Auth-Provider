@@ -29,6 +29,11 @@ public class JwtServiceImpl implements JwtService {
 
     private Key key;
 
+    /**
+     * Instantiates a new Jwt service.
+     *
+     * @param authProperties the auth properties
+     */
     public JwtServiceImpl(AuthProperties authProperties) {
         this.secret = authProperties.getJwt().getSecret();
         this.expiration = authProperties.getJwt().getExpiration();

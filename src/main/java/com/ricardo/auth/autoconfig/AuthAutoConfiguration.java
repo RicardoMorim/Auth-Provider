@@ -43,6 +43,7 @@ public class AuthAutoConfiguration {
     /**
      * Jwt service jwt service.
      *
+     * @param authProperties the auth properties
      * @return the jwt service
      */
     @Bean
@@ -54,15 +55,15 @@ public class AuthAutoConfiguration {
     /**
      * User service user service.
      *
-     * @param userRepository the user repository
+     * @param userRepository        the user repository
+     * @param passwordPolicyService the password policy service
      * @return the user service
      */
     @Bean
     @ConditionalOnMissingBean(name = "userService")
     public UserService<User, Long> defaultUserService(
-            DefaultUserJpaRepository userRepository,
-            PasswordPolicyService passwordPolicyService) {
-        return new UserServiceImpl<>(userRepository, passwordPolicyService);
+            DefaultUserJpaRepository userRepository) {
+        return new UserServiceImpl<>(userRepository);
     }
 
 
@@ -103,6 +104,13 @@ public class AuthAutoConfiguration {
     public AuthController authController(JwtService jwtService, AuthenticationManager authManager) {
         return new AuthController(jwtService, authManager);
     }
+
+    /**
+     * Password policy service password policy service.
+     *
+     * @param authProperties the auth properties
+     * @return the password policy service
+     */
     @Bean
     @ConditionalOnMissingBean
     public PasswordPolicyService passwordPolicyService(AuthProperties authProperties) {
@@ -112,8 +120,9 @@ public class AuthAutoConfiguration {
     /**
      * User controller user controller.
      *
-     * @param userService     the user service
-     * @param passwordEncoder the password encoder
+     * @param userService           the user service
+     * @param passwordEncoder       the password encoder
+     * @param passwordPolicyService the password policy service
      * @return the user controller
      */
     @Bean

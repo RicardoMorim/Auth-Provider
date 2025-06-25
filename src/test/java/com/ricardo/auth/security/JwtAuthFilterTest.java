@@ -1,10 +1,13 @@
 package com.ricardo.auth.security;
 
-import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.domain.*;
-import com.ricardo.auth.repository.UserJpaRepository;
-import com.ricardo.auth.service.UserDetailsServiceImpl;
-import jakarta.servlet.ServletException;
+import java.io.IOException;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,10 +21,16 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.io.IOException;
-import java.util.List;
+import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.AppRole;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.repository.UserJpaRepository;
 
-import static org.junit.jupiter.api.Assertions.*;
+import jakarta.servlet.ServletException;
 
 /**
  * Integration tests for JwtAuthFilter.
@@ -39,13 +48,13 @@ class JwtAuthFilterTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserDetailsServiceImpl userDetailsService;
-
-    @Autowired
-    private UserJpaRepository userRepository;
+    private UserJpaRepository<User, Long> userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private PasswordPolicyService passwordPolicyService;
 
     private User testUser;
     private String validToken;
@@ -65,7 +74,7 @@ class JwtAuthFilterTest {
         testUser = new User(
             Username.valueOf("testuser"),
             Email.valueOf("test@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
         testUser = userRepository.save(testUser);
@@ -424,7 +433,7 @@ class JwtAuthFilterTest {
         User specialUser = new User(
             Username.valueOf("specialuser"),
             Email.valueOf("test+tag@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         specialUser.addRole(AppRole.USER);
         userRepository.save(specialUser);

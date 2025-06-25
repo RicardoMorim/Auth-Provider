@@ -11,12 +11,28 @@ import java.nio.file.Paths;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * The type Common password helper.
+ */
 public class CommonPasswordHelper {
 
+    /**
+     * Load common passwords set.
+     *
+     * @param resourcePath the resource path
+     * @return the set
+     */
     public static Set<String> loadCommonPasswords(String resourcePath) {
         return loadCommonPasswords(resourcePath, CommonPasswordHelper.class);
     }
 
+    /**
+     * Load common passwords set.
+     *
+     * @param resourcePath the resource path
+     * @param contextClass the context class
+     * @return the set
+     */
     public static Set<String> loadCommonPasswords(String resourcePath, Class<?> contextClass) {
         // Try different resource loading strategies in order
         return tryLoadFromMultipleSources(resourcePath, contextClass);
@@ -112,6 +128,13 @@ public class CommonPasswordHelper {
         );
     }
 
+    /**
+     * Is common password boolean.
+     *
+     * @param password        the password
+     * @param commonPasswords the common passwords
+     * @return the boolean
+     */
     public static boolean isCommonPassword(String password, Set<String> commonPasswords) {
         return commonPasswords.contains(password.toLowerCase());
     }

@@ -2,6 +2,9 @@ package com.ricardo.auth.core;
 
 import java.util.Set;
 
+/**
+ * The interface Password policy service.
+ */
 public interface PasswordPolicyService {
 
     /**

@@ -1,15 +1,24 @@
 package com.ricardo.auth.dto;
 
-import com.ricardo.auth.domain.*;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.*;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.AppRole;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.test.util.TestPasswordPolicyService;
 
 /**
  * Tests for DTOs and mapping functionality.
@@ -18,6 +27,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class DtoAndMappingTest {
 
     private PasswordEncoder passwordEncoder;
+    private PasswordPolicyService passwordPolicyService;
     private User testUser;
 
     /**
@@ -26,11 +36,12 @@ class DtoAndMappingTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
+        passwordPolicyService = new TestPasswordPolicyService();
         
         testUser = new User(
             Username.valueOf("testuser"),
             Email.valueOf("test@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
         testUser.addRole(AppRole.ADMIN);
@@ -320,7 +331,7 @@ class DtoAndMappingTest {
         User unsavedUser = new User(
             Username.valueOf("newuser"),
             Email.valueOf("new@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
 
         // Act

@@ -1,12 +1,8 @@
 package com.ricardo.auth.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.domain.*;
-import com.ricardo.auth.dto.CreateUserRequestDTO;
-import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.dto.TokenDTO;
-import com.ricardo.auth.repository.UserJpaRepository;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -19,13 +15,28 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.AppRole;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.dto.CreateUserRequestDTO;
+import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.dto.TokenDTO;
+import com.ricardo.auth.repository.UserJpaRepository;
 
 /**
  * The type Security integration test.
@@ -46,7 +57,10 @@ class SecurityIntegrationTest {
     private PasswordEncoder passwordEncoder;
 
     @Autowired
-    private UserJpaRepository userRepository;
+    private PasswordPolicyService passwordPolicyService;
+
+    @Autowired
+    private UserJpaRepository<User, Long> userRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -65,19 +79,19 @@ class SecurityIntegrationTest {
         testUser = new User(
                 Username.valueOf("testuser"),
                 Email.valueOf("test@example.com"),
-                Password.valueOf("password123", passwordEncoder)
+                Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
-        testUser = userRepository.save(testUser);
+        userRepository.save(testUser);
 
         // Create admin user
         adminUser = new User(
                 Username.valueOf("adminuser"),
                 Email.valueOf("admin@example.com"),
-                Password.valueOf("password123", passwordEncoder)
+                Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         adminUser.addRole(AppRole.ADMIN);
-        adminUser = userRepository.save(adminUser);
+        userRepository.save(adminUser);
     }
 
     // ========== PUBLIC ENDPOINT TESTS ==========

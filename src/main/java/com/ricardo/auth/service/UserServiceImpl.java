@@ -1,13 +1,10 @@
 package com.ricardo.auth.service;
 
-import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.AuthUser;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.repository.UserJpaRepository;
 import com.ricardo.auth.repository.UserRepository;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -23,18 +20,15 @@ import java.util.Optional;
 @Service
 public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U, ID> {
 
-    private final UserJpaRepository<U, ID> userRepository;
-
-    PasswordPolicyService passwordService;
+    private final UserRepository<U, ID> userRepository;
 
     /**
      * Instantiates a new User service.
      *
      * @param userRepository the user repository
      */
-    public UserServiceImpl(UserJpaRepository<U, ID> userRepository, PasswordPolicyService passwordService) {
+    public UserServiceImpl(UserRepository<U, ID> userRepository) {
         this.userRepository = userRepository;
-        this.passwordService = passwordService;
     }
 
     @Override
@@ -45,7 +39,7 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
 
     @Override
     public U createUser(U user) {
-        if (userRepository.existsByEmail_Email(user.getEmail())) {
+        if (userRepository.existsByEmail(user.getEmail())) {
             throw new DuplicateResourceException("Email already exists: " + user.getEmail());
         }
         return userRepository.save(user);

@@ -46,8 +46,9 @@ public class Password implements Serializable {
      * Encodes the password using the provided PasswordEncoder.
      * Validates the password length and format before encoding.
      *
-     * @param password        the raw password to be hashed
-     * @param passwordEncoder the PasswordEncoder to use for hashing
+     * @param password              the raw password to be hashed
+     * @param passwordEncoder       the PasswordEncoder to use for hashing
+     * @param passwordPolicyService the password policy service
      * @return a new instance of Password with the hashed value
      */
     public static Password valueOf(String password, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) {

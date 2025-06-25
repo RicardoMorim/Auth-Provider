@@ -1,11 +1,11 @@
 package com.ricardo.auth.service;
 
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
-import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.repository.UserJpaRepository;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -15,7 +15,13 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
+import com.ricardo.auth.repository.UserJpaRepository;
 
 /**
  * Integration tests for UserDetailsServiceImpl.
@@ -30,10 +36,13 @@ class UserDetailsServiceImplTest {
     private UserDetailsServiceImpl userDetailsService;
 
     @Autowired
-    private UserJpaRepository userRepository;
+    private UserJpaRepository<User, Long> userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private PasswordPolicyService passwordPolicyService;
 
     private User testUser;
 
@@ -48,7 +57,7 @@ class UserDetailsServiceImplTest {
         testUser = new User(
             Username.valueOf("testuser"),
             Email.valueOf("test@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         testUser = userRepository.save(testUser);
     }
@@ -178,7 +187,7 @@ class UserDetailsServiceImplTest {
         User user2 = new User(
             Username.valueOf("user2"),
             Email.valueOf("user2@example.com"),
-            Password.valueOf("password456", passwordEncoder)
+            Password.valueOf("password456", passwordEncoder, passwordPolicyService)
         );
         user2.addRole(com.ricardo.auth.domain.AppRole.ADMIN);
         userRepository.save(user2);
@@ -186,7 +195,7 @@ class UserDetailsServiceImplTest {
         User user3 = new User(
             Username.valueOf("user3"),
             Email.valueOf("user3@example.com"),
-            Password.valueOf("password789", passwordEncoder)
+            Password.valueOf("password789", passwordEncoder, passwordPolicyService)
         );
         userRepository.save(user3);
 
@@ -233,7 +242,7 @@ class UserDetailsServiceImplTest {
         User specialUser = new User(
             Username.valueOf("specialuser"),
             Email.valueOf("test+tag@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
         );
         userRepository.save(specialUser);
 

@@ -26,8 +26,9 @@ public class UserController implements UserApiEndpoint {
     /**
      * Instantiates a new User controller.
      *
-     * @param userService     the user service
-     * @param passwordEncoder the password encoder
+     * @param userService           the user service
+     * @param passwordEncoder       the password encoder
+     * @param passwordPolicyService the password policy service
      */
     public UserController(UserService<User, Long> userService, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService)  {
         this.userService = userService;

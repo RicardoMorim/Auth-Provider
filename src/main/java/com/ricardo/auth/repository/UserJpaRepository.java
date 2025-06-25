@@ -9,13 +9,43 @@ import java.util.Optional;
 /**
  * JPA repository for User entities.
  * This provides the concrete implementation of UserRepository for User entities.
+ *
+ * @param <U>  the type parameter
+ * @param <ID> the type parameter
  */
 @Repository
 public interface UserJpaRepository<U extends AuthUser<?>, ID> extends UserRepository<U, ID>, JpaRepository<U, ID> {
-    // JPA generated methods
+    /**
+     * Find by email email optional.
+     *
+     * @param email the email
+     * @return the optional
+     */
+// JPA generated methods
     Optional<U> findByEmail_Email(String email);
+
+    /**
+     * Find by username username optional.
+     *
+     * @param username the username
+     * @return the optional
+     */
     Optional<U> findByUsername_Username(String username);
+
+    /**
+     * Exists by email email boolean.
+     *
+     * @param email the email
+     * @return the boolean
+     */
     boolean existsByEmail_Email(String email);
+
+    /**
+     * Exists by username username boolean.
+     *
+     * @param username the username
+     * @return the boolean
+     */
     boolean existsByUsername_Username(String username);
 
     @Override

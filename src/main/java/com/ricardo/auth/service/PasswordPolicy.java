@@ -10,6 +10,9 @@ import java.util.Set;
 import static com.ricardo.auth.helper.CommonPasswordHelper.isCommonPassword;
 import static com.ricardo.auth.helper.CommonPasswordHelper.loadCommonPasswords;
 
+/**
+ * The type Password policy.
+ */
 @Service
 public class PasswordPolicy implements PasswordPolicyService {
     private final boolean requireUpperCase;
@@ -23,6 +26,11 @@ public class PasswordPolicy implements PasswordPolicyService {
     private final Set<String> commonPasswords;
 
 
+    /**
+     * Instantiates a new Password policy.
+     *
+     * @param authProperties the auth properties
+     */
     public PasswordPolicy(AuthProperties authProperties) {
         this.requireDigit = authProperties.getPasswordPolicy().isRequireDigits();
         this.requireUpperCase = authProperties.getPasswordPolicy().isRequireUppercase();
