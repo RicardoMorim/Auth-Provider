@@ -1,5 +1,6 @@
 package com.ricardo.auth.controller;
 
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
@@ -20,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 public class UserController implements UserApiEndpoint {
     private final PasswordEncoder passwordEncoder;
     private final UserService<User, Long> userService;
+    private final PasswordPolicyService passwordPolicyService;
 
     /**
      * Instantiates a new User controller.
@@ -27,9 +29,10 @@ public class UserController implements UserApiEndpoint {
      * @param userService     the user service
      * @param passwordEncoder the password encoder
      */
-    public UserController(UserService<User, Long> userService, PasswordEncoder passwordEncoder) {
+    public UserController(UserService<User, Long> userService, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService)  {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
+        this.passwordPolicyService = passwordPolicyService;
     }
 
     /**
@@ -42,7 +45,7 @@ public class UserController implements UserApiEndpoint {
     public ResponseEntity<UserDTO> createUser(@RequestBody CreateUserRequestDTO request) {
         Username name = Username.valueOf(request.getUsername());
         Email email = Email.valueOf(request.getEmail());
-        Password password = Password.valueOf(request.getPassword(), passwordEncoder);
+        Password password = Password.valueOf(request.getPassword(), passwordEncoder, passwordPolicyService);
 
         User user = new User(name, email, password);
         user.addRole(AppRole.USER);
@@ -99,7 +102,7 @@ public class UserController implements UserApiEndpoint {
     public ResponseEntity<UserDTO> updateUser(@RequestBody CreateUserRequestDTO request, @PathVariable Long id, Authentication authentication) {
         Username name = Username.valueOf(request.getUsername());
         Email email = Email.valueOf(request.getEmail());
-        Password passwordInstance = Password.valueOf(request.getPassword(), passwordEncoder);
+        Password passwordInstance = Password.valueOf(request.getPassword(), passwordEncoder, passwordPolicyService);
 
         User userDetails = new User(name, email, passwordInstance);
         User updatedUser = userService.updateUser(id, userDetails);

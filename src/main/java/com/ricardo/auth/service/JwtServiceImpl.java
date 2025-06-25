@@ -1,5 +1,6 @@
 package com.ricardo.auth.service;
 
+import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.JwtService;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -22,13 +23,24 @@ import java.util.stream.Collectors;
 @Service
 public class JwtServiceImpl implements JwtService {
 
-    @Value("${jwt.secret}")
     private String secret;
 
-    @Value("${jwt.expiration:604800000}") // 7 dias em ms
     private long expiration;
 
     private Key key;
+
+    public JwtServiceImpl(AuthProperties authProperties) {
+        this.secret = authProperties.getJwt().getSecret();
+        this.expiration = authProperties.getJwt().getExpiration();
+
+        // Validate secret is provided
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException(
+                    "JWT secret is required but not configured. " +
+                            "Please set 'ricardo.auth.jwt.secret' property."
+            );
+        }
+    }
 
     /**
      * Init.
