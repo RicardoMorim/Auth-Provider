@@ -1,5 +1,6 @@
 package com.ricardo.auth.repository;
 
+
 import com.ricardo.auth.domain.AuthUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
@@ -8,30 +9,48 @@ import org.springframework.data.repository.NoRepositoryBean;
 import java.util.Optional;
 
 /**
- * Interface de repositório base para operações de utilizador de autenticação.
- * Os repositórios de utilizador personalizados devem estender esta interface.
+ * Base repository interface for authentication user operations.
+ * Custom user repositories should extend this interface.
  *
- * @param <U>  O tipo da entidade do utilizador, que deve implementar AuthUser.
- * @param <ID> O tipo do ID da entidade do utilizador.
+ * @param <U>  The user entity type, which must implement AuthUser.
+ * @param <ID> The user entity ID type.
  */
 @NoRepositoryBean
 public interface UserRepository<U extends AuthUser<?>, ID> extends JpaRepository<U, ID> {
 
     /**
      * Find by email string (queries the embedded Email object's email field).
+     * Implementation could use JPA generated methods (these are just for naming consistency).
      *
      * @param email the email string
      * @return the optional user
      */
-    @Query("SELECT u FROM #{#entityName} u WHERE u.email.email = :email")
     Optional<U> findByEmail(String email);
 
     /**
+     * Find by username string (queries the embedded Username object's username field).
+     * Implementation could use JPA generated methods (these are just for naming consistency).
+     *
+     * @param username the username string
+     * @return the optional user
+     */
+    Optional<U> findByUsername(String username);
+
+    /**
      * Check if user exists by email string.
+     * Implementation could use JPA generated methods (these are just for naming consistency).
      *
      * @param email the email string
      * @return true if exists
      */
-    @Query("SELECT CASE WHEN COUNT(u) > 0 THEN true ELSE false END FROM #{#entityName} u WHERE u.email.email = :email")
     boolean existsByEmail(String email);
+
+    /**
+     * Check if user exists by username string.
+     * Implementation could use JPA generated methods (these are just for naming consistency).
+     *
+     * @param username the username string
+     * @return true if exists
+     */
+    boolean existsByUsername(String username);
 }
