@@ -419,6 +419,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Email: ricardomorim05@gmail.com
 - Portfolio: [ricardoportfolio.vercel.app](https://ricardoportfolio.vercel.app)
 - GitHub: [@RicardoMorim](https://github.com/RicardoMorim)
+- LinkedIn: [Ricardo Morim](https://www.linkedin.com/in/ricardo-morim-208368251/)
 
 ---
 
