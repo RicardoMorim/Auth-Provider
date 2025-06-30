@@ -167,6 +167,59 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 ### Migration Notes
 - No migration required from v1.0.1
 - Existing applications will continue to work without changes
+- 
+## [1.1.0] - 2024-01-15
+
+### 🔒 Added - Password Policy System
+- **Comprehensive Password Validation**: Configurable password strength requirements
+  - Minimum/maximum length validation
+  - Character type requirements (uppercase, lowercase, digits, special characters)
+  - Customizable special character sets
+  - Common password prevention with built-in protection list
+- **Password Policy Configuration**: Full control over password requirements via `ricardo.auth.password-policy`
+- **Enhanced Error Messages**: Detailed validation feedback for password policy violations
+- **Environment-Specific Policies**: Different password requirements for development vs production
+
+### 📚 Documentation Improvements
+- **Restructured README**: Clearer quick start guide with step-by-step instructions
+- **Improved Navigation**: Better organized documentation index with role-based guides
+- **Enhanced Examples**: More practical, real-world usage examples with complete code
+- **Better Troubleshooting**: Emergency quick fixes section with searchable error messages
+- **Configuration Clarity**: Simplified configuration guide with quick setup options
+- **Password Policy Guide**: Comprehensive documentation for new password policy features
+
+### 🔧 Technical Improvements
+- **Bean Configuration**: Improved auto-configuration to prevent bean creation conflicts
+- **Repository Architecture**: Better separation with `@NoRepositoryBean` annotations
+- **Test Coverage**: Updated all tests to use password policy compliant passwords
+- **Error Handling**: Enhanced error responses for password policy violations
+
+### 🏗 Breaking Changes
+- **Password Requirements**: Existing passwords may need to meet new policy requirements
+- **Default Password Policy**: Minimum 8 characters with character type requirements enabled by default
+
+### ⚙️ New Configuration Options
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 8                    # Default minimum length
+      max-length: 128                  # Default maximum length
+      require-uppercase: true          # Require A-Z characters
+      require-lowercase: true          # Require a-z characters
+      require-digits: true             # Require 0-9 characters
+      require-special-chars: true      # Require special characters
+      special-characters: "!@#$%^&*"   # Allowed special characters
+      prevent-common-passwords: true   # Block common passwords
+      common-passwords-file: "/commonpasswords.txt" # Custom password list
+```
+
+### 🔄 Migration Guide
+- **Existing Users**: Current users with weak passwords can still log in but will need to update passwords on next change
+- **New Users**: All new user registrations must meet the configured password policy
+- **Custom Policies**: Configure `ricardo.auth.password-policy.min-length: 6` for backwards compatibility
+
+---
 
 ## [Unreleased]
 

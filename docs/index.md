@@ -1,34 +1,70 @@
 # Documentation Index
 
-Welcome to the Ricardo Auth Spring Boot Starter documentation. This index will help you find the information you need.
+Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps you find exactly what you need.
 
-## Quick Start
+## 🚀 New to Ricardo Auth?
 
-New to the starter? Start here:
+**Start here for a smooth onboarding experience:**
 
-1. **[README](../README.md)** - Overview, installation, and quick start guide
-2. **[Configuration Guide](configuration-guide.md)** - Basic configuration setup
-3. **[API Reference](api-reference.md)** - Available endpoints and usage
+1. **[Getting Started](getting-started.md)** - 5-minute setup guide with step-by-step instructions
+2. **[README](../README.md)** - Overview and quick reference
+3. **[Configuration Guide](configuration-guide.md)** - Customize for your needs
+4. **[Examples](examples.md)** - See real-world implementations
 
-## User Guides
+## 📚 Documentation by Purpose
 
-### For Developers
+### 🛠 **Setting Up & Configuring**
+| Guide | What You'll Learn | Time Needed |
+|-------|-------------------|-------------|
+| **[Configuration Guide](configuration-guide.md)** | All configuration options, environment setup | 10 min |
+| **[Security Guide](security-guide.md)** | Production security, password policies, JWT best practices | 15 min |
 
-| Guide | Description | When to Use |
-|-------|-------------|-------------|
-| **[Configuration Guide](configuration-guide.md)** | Complete configuration reference | Setting up the starter |
-| **[API Reference](api-reference.md)** | REST API documentation | Integrating with frontend |
-| **[Security Guide](security-guide.md)** | Security best practices | Production deployment |
-| **[Examples](examples.md)** | Real-world usage examples | Learning implementation patterns |
-| **[Troubleshooting](troubleshooting.md)** | Common issues and solutions | Debugging problems |
+### 🔗 **Using the API**
+| Guide | What You'll Learn | Time Needed |
+|-------|-------------------|-------------|
+| **[API Reference](api-reference.md)** | All endpoints, request/response examples, error codes | 10 min |
+| **[Examples](examples.md)** | Complete project examples for different use cases | 20 min |
 
-### For Operations
+### 🐛 **Solving Problems**
+| Guide | What You'll Learn | Time Needed |
+|-------|-------------------|-------------|
+| **[Troubleshooting](troubleshooting.md)** | Common errors, debugging tips, performance tuning | 5 min |
 
-| Guide | Description | When to Use |
-|-------|-------------|-------------|
-| **[Security Guide](security-guide.md)** | Production security setup | Deploying to production |
-| **[Configuration Guide](configuration-guide.md)** | Environment configuration | Setting up different environments |
-| **[Troubleshooting](troubleshooting.md)** | Monitoring and debugging | Operational issues |
+## 🎯 Documentation by Your Role
+
+### **Developers**
+*Building applications with Ricardo Auth*
+
+**Essential Reading:**
+1. [Quick Start](../README.md#quick-start) - Get running in 5 minutes
+2. [Configuration Guide](configuration-guide.md) - Customize for your needs
+3. [API Reference](api-reference.md) - Integrate with your frontend
+4. [Examples](examples.md) - Copy proven patterns
+
+**Optional but Useful:**
+- [Security Guide](security-guide.md) - Understand security features
+- [Troubleshooting](troubleshooting.md) - Debug common issues
+
+### **DevOps/Operations**
+*Deploying and maintaining Ricardo Auth*
+
+**Essential Reading:**
+1. [Security Guide](security-guide.md) - Production security setup
+2. [Configuration Guide](configuration-guide.md) - Environment configuration
+3. [Troubleshooting](troubleshooting.md) - Monitor and debug
+
+**Optional but Useful:**
+- [Examples](examples.md) - Understand implementation patterns
+
+### **QA/Testers**
+*Testing applications that use Ricardo Auth*
+
+**Essential Reading:**
+1. [API Reference](api-reference.md) - Understand all endpoints
+2. [Examples](examples.md) - See expected behaviors
+
+**Optional but Useful:**
+- [Troubleshooting](troubleshooting.md) - Understand error scenarios
 
 ## By Use Case
 

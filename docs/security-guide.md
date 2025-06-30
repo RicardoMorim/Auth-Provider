@@ -162,6 +162,102 @@ String hashedPassword = passwordEncoder.encode(plainTextPassword);
 String password = "plaintext"; // Stored in database
 ```
 
+## Password Policy System
+
+### Overview
+
+The Ricardo Auth Starter includes a comprehensive password policy system that enforces configurable password requirements to enhance security.
+
+### Password Requirements
+
+#### Default Policy
+
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 10
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+```
+
+#### Security Benefits
+
+1. **Length Requirements**: Longer passwords exponentially increase brute-force difficulty
+2. **Character Diversity**: Mixed character types prevent dictionary attacks
+3. **Common Password Prevention**: Blocks easily guessable passwords
+4. **Configurable Policies**: Adapt requirements to your security needs
+
+### Implementation Details
+
+#### Password Validation Process
+
+1. **Length Check**: Validates minimum and maximum length
+2. **Character Requirements**: Checks for required character types
+3. **Common Password Check**: Compares against known weak passwords
+4. **Custom Validation**: Extensible for additional rules
+
+#### Built-in Common Passwords
+
+The system includes 10,000+ common passwords including:
+- Dictionary words
+- Common patterns (123456, password, etc.)
+- Keyboard patterns (qwerty, asdf, etc.)
+- Name variations
+- Date patterns
+
+### Best Practices
+
+#### Production Configuration
+
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 12              # Enterprise standard
+      max-length: 64              # Prevent DoS via long passwords
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      special-characters: "!@#$%^&*()_+-=[]{}|;:,.<>?"
+      prevent-common-passwords: true
+```
+
+#### User Experience Tips
+
+1. **Clear Error Messages**: Specific feedback helps users create compliant passwords
+2. **Password Strength Indicators**: Show real-time validation in frontend
+3. **Password Generation**: Offer secure password generation
+4. **Progressive Enhancement**: Start with basic requirements, increase gradually
+
+### Compliance
+
+The password policy system helps meet compliance requirements:
+
+- **NIST 800-63B**: Supports length and complexity requirements
+- **OWASP**: Follows password security guidelines
+- **GDPR**: Implements "security by design" principles
+- **SOC 2**: Supports access control requirements
+
+### Monitoring
+
+Track password policy effectiveness:
+
+```yaml
+logging:
+  level:
+    com.ricardo.auth.service.PasswordPolicy: INFO
+```
+
+Monitor these metrics:
+- Password policy violation rates
+- Common password attempt frequency
+- Password strength distribution
+
 ## Role-Based Access Control (RBAC)
 
 ### Default Roles
