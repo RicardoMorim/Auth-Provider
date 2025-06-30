@@ -18,6 +18,9 @@ class PasswordPolicyTest {
     private PasswordPolicyService passwordPolicyService;
     private AuthProperties authProperties;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         authProperties = new AuthProperties();
@@ -35,6 +38,9 @@ class PasswordPolicyTest {
 
     // ========== VALID PASSWORD TESTS ==========
 
+    /**
+     * Validate password should return true when password meets all requirements.
+     */
     @Test
     void validatePassword_shouldReturnTrue_whenPasswordMeetsAllRequirements() {
         // Act & Assert - Should not throw exceptions
@@ -50,6 +56,9 @@ class PasswordPolicyTest {
 
     // ========== LENGTH VALIDATION TESTS ==========
 
+    /**
+     * Validate password should throw exception when password too short.
+     */
     @Test
     void validatePassword_shouldThrowException_whenPasswordTooShort() {
         // Act & Assert - Should throw IllegalArgumentException with meaningful message
@@ -66,6 +75,9 @@ class PasswordPolicyTest {
         assertTrue(exception3.getMessage().contains("at least 8 characters"));
     }
 
+    /**
+     * Validate password should throw exception when password too long.
+     */
     @Test
     void validatePassword_shouldThrowException_whenPasswordTooLong() {
         // Arrange
@@ -77,6 +89,9 @@ class PasswordPolicyTest {
         assertTrue(exception.getMessage().contains("must not exceed 60 characters"));
     }
 
+    /**
+     * Validate password should return true when password at boundaries.
+     */
     @Test
     void validatePassword_shouldReturnTrue_whenPasswordAtBoundaries() {
         // Act & Assert - Exactly 8 characters (minimum)
@@ -91,6 +106,9 @@ class PasswordPolicyTest {
 
     // ========== CHARACTER REQUIREMENT TESTS ==========
 
+    /**
+     * Validate password should throw exception when missing uppercase.
+     */
     @Test
     void validatePassword_shouldThrowException_whenMissingUppercase() {
         // Act & Assert
@@ -103,6 +121,9 @@ class PasswordPolicyTest {
         assertTrue(exception2.getMessage().contains("uppercase letter"));
     }
 
+    /**
+     * Validate password should throw exception when missing lowercase.
+     */
     @Test
     void validatePassword_shouldThrowException_whenMissingLowercase() {
         // Act & Assert
@@ -115,6 +136,9 @@ class PasswordPolicyTest {
         assertTrue(exception2.getMessage().contains("lowercase letter"));
     }
 
+    /**
+     * Validate password should throw exception when missing digits.
+     */
     @Test
     void validatePassword_shouldThrowException_whenMissingDigits() {
         // Act & Assert
@@ -127,6 +151,11 @@ class PasswordPolicyTest {
         assertTrue(exception2.getMessage().contains("digit"));
     }
 
+    /**
+     * Validate password should throw exception when password is common.
+     *
+     * @param commonPassword the common password
+     */
     @ParameterizedTest
     @ValueSource(strings = {
             "password",           // Common password
@@ -145,6 +174,9 @@ class PasswordPolicyTest {
 
     // ========== NULL AND EMPTY TESTS ==========
 
+    /**
+     * Validate password should throw exception when password is null.
+     */
     @Test
     void validatePassword_shouldThrowException_whenPasswordIsNull() {
         // Act & Assert
@@ -154,6 +186,9 @@ class PasswordPolicyTest {
                 exception.getMessage().contains("characters"));
     }
 
+    /**
+     * Validate password should throw exception when password is empty.
+     */
     @Test
     void validatePassword_shouldThrowException_whenPasswordIsEmpty() {
         // Act & Assert
@@ -170,6 +205,9 @@ class PasswordPolicyTest {
 
     // ========== SPECIAL CHARACTERS TESTS ==========
 
+    /**
+     * Validate password should throw exception when special char required but missing.
+     */
     @Test
     void validatePassword_shouldThrowException_whenSpecialCharRequiredButMissing() {
         // Arrange - Enable special characters requirement
@@ -189,6 +227,9 @@ class PasswordPolicyTest {
         assertTrue(passwordPolicyService.validatePassword("MyPass1@"));
     }
 
+    /**
+     * Validate password should ignore special char requirement when disabled.
+     */
     @Test
     void validatePassword_shouldIgnoreSpecialCharRequirement_whenDisabled() {
         // Arrange - Disable special characters requirement (default in setup)
@@ -203,6 +244,9 @@ class PasswordPolicyTest {
 
     // ========== CONFIGURATION TESTS ==========
 
+    /**
+     * Validate password should respect custom min length.
+     */
     @Test
     void validatePassword_shouldRespectCustomMinLength() {
         // Arrange
@@ -227,6 +271,9 @@ class PasswordPolicyTest {
         assertTrue(passwordPolicyService.validatePassword("ValidPasswo1"));
     }
 
+    /**
+     * Validate password should allow disabling requirements.
+     */
     @Test
     void validatePassword_shouldAllowDisablingRequirements() {
         // Arrange - Disable all character requirements
@@ -251,6 +298,9 @@ class PasswordPolicyTest {
 
     // ========== GENERATE PASSWORD TESTS ==========
 
+    /**
+     * Generate secure password should create valid password.
+     */
     @Test
     void generateSecurePassword_shouldCreateValidPassword() {
         // Act
@@ -263,6 +313,9 @@ class PasswordPolicyTest {
         assertTrue(generatedPassword.length() >= 8);
     }
 
+    /**
+     * Generate secure password should create different passwords.
+     */
     @Test
     void generateSecurePassword_shouldCreateDifferentPasswords() {
         // Act
@@ -275,6 +328,9 @@ class PasswordPolicyTest {
 
     // ========== EDGE CASES ==========
 
+    /**
+     * Validate password should handle unicode characters.
+     */
     @Test
     void validatePassword_shouldHandleUnicodeCharacters() {
         // Act & Assert
@@ -288,6 +344,9 @@ class PasswordPolicyTest {
         assertTrue(passwordPolicyService.validatePassword("ValidP🔒ss123"));
     }
 
+    /**
+     * Validate password should handle whitespace.
+     */
     @Test
     void validatePassword_shouldHandleWhitespace() {
         // Act & Assert
@@ -302,6 +361,9 @@ class PasswordPolicyTest {
                 () -> passwordPolicyService.validatePassword("ValP123 "));
     }
 
+    /**
+     * Constructor should throw exception when invalid configuration.
+     */
     @Test
     void constructor_shouldThrowException_whenInvalidConfiguration() {
         // Arrange
@@ -313,6 +375,9 @@ class PasswordPolicyTest {
         });
     }
 
+    /**
+     * Constructor should throw exception when max length less than min length.
+     */
     @Test
     void constructor_shouldThrowException_whenMaxLengthLessThanMinLength() {
         // Arrange
@@ -325,6 +390,9 @@ class PasswordPolicyTest {
         });
     }
 
+    /**
+     * Constructor should load common passwords when file exists.
+     */
     @Test
     void constructor_shouldLoadCommonPasswords_whenFileExists() {
         // Arrange
@@ -340,6 +408,9 @@ class PasswordPolicyTest {
                 exception.getMessage().contains("security requirements"));
     }
 
+    /**
+     * Constructor should handle missing common passwords file gracefully.
+     */
     @Test
     void constructor_shouldHandleMissingCommonPasswordsFile_gracefully() {
         // Arrange

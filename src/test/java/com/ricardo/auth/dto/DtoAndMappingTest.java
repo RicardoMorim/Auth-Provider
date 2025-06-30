@@ -1,11 +1,7 @@
 package com.ricardo.auth.dto;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -13,14 +9,11 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
-
-import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.AppRole;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Tests for DTOs and mapping functionality.

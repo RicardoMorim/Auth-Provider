@@ -3,7 +3,6 @@ package com.ricardo.auth.repository;
 import com.ricardo.auth.domain.AuthUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
-import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
@@ -14,7 +13,6 @@ import java.util.Optional;
  * @param <U>  the type parameter
  * @param <ID> the type parameter
  */
-
 @NoRepositoryBean
 public interface UserJpaRepository<U extends AuthUser<?>, ID> extends UserRepository<U, ID>, JpaRepository<U, ID> {
     /**

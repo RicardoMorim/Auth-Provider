@@ -1,12 +1,12 @@
 package com.ricardo.auth.autoconfig;
 
-import org.springframework.boot.context.properties.ConfigurationProperties;
-
 import lombok.Getter;
 import lombok.Setter;
+import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration properties for Ricardo Auth Starter
+ * This class enables IDE auto-completion on the application.properties file and allows users to configure the settings without needing to write code.
  */
 @ConfigurationProperties(prefix = "ricardo.auth")
 public class AuthProperties {
@@ -191,7 +191,6 @@ public class AuthProperties {
      *
      * @return the boolean
      */
-// Main getters and setters
     public boolean isEnabled() { return enabled; }
 
     /**

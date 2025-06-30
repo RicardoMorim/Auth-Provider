@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.*;
 
 /**
  * The type User controller.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 @RestController
 @RequestMapping("/api/users")

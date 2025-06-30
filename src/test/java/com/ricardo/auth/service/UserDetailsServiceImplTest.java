@@ -1,12 +1,11 @@
 package com.ricardo.auth.service;
 
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertThrows;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.Email;
+import com.ricardo.auth.domain.Password;
+import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,13 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
-import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.repository.UserJpaRepository;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for UserDetailsServiceImpl.

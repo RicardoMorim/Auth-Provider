@@ -7,7 +7,6 @@ import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.User;
 import com.ricardo.auth.repository.DefaultUserJpaRepository;
-import com.ricardo.auth.repository.UserJpaRepository;
 import com.ricardo.auth.security.JwtAuthFilter;
 import com.ricardo.auth.service.JwtServiceImpl;
 import com.ricardo.auth.service.PasswordPolicy;
@@ -55,7 +54,7 @@ public class AuthAutoConfiguration {
     /**
      * User service user service.
      *
-     * @param userRepository        the user repository
+     * @param userRepository the user repository
      * @return the user service
      */
     @Bean

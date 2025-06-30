@@ -16,6 +16,7 @@ import java.util.Collection;
 
 /**
  * The type Auth controller.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 @RestController
 @RequestMapping("/api/auth")

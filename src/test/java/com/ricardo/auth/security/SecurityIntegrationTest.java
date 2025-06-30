@@ -1,9 +1,12 @@
 package com.ricardo.auth.security;
 
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.*;
+import com.ricardo.auth.dto.CreateUserRequestDTO;
+import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.dto.TokenDTO;
 import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -17,28 +20,13 @@ import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.AppRole;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
-import com.ricardo.auth.dto.CreateUserRequestDTO;
-import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.dto.TokenDTO;
-import com.ricardo.auth.repository.UserJpaRepository;
+import java.util.List;
+
+import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * The type Security integration test.

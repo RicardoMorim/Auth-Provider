@@ -24,6 +24,9 @@ class JwtServiceIntegrationTest {
     @Autowired
     private JwtService jwtService;
 
+    /**
+     * Generate token should create valid token.
+     */
     @Test
     void generateToken_shouldCreateValidToken() {
         // Arrange
@@ -39,6 +42,9 @@ class JwtServiceIntegrationTest {
         assertThat(jwtService.extractRoles(token)).contains("ROLE_USER");
     }
 
+    /**
+     * Is token valid should return true for valid token.
+     */
     @Test
     void isTokenValid_shouldReturnTrue_forValidToken() {
         // Arrange
@@ -48,6 +54,9 @@ class JwtServiceIntegrationTest {
         assertTrue(jwtService.isTokenValid(token));
     }
 
+    /**
+     * Is token valid should return false for invalid token.
+     */
     @Test
     void isTokenValid_shouldReturnFalse_forInvalidToken() {
         // Act & Assert

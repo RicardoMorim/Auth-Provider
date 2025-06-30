@@ -7,6 +7,7 @@ import java.util.List;
 
 /**
  * The interface Jwt service.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 public interface JwtService {
     /**

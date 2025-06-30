@@ -54,12 +54,20 @@ class UserControllerTest {
     @Autowired
     private JwtService jwtService;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         // Clean database before each test
         userRepository.deleteAll();
     }
 
+    /**
+     * Create user should return 201 when request is valid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn201_whenRequestIsValid() throws Exception {
         // Arrange
@@ -80,6 +88,11 @@ class UserControllerTest {
         assertEquals("newUser", createdUser.getUsername());
     }
 
+    /**
+     * Create user should return 409 when email already exists.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn409_whenEmailAlreadyExists() throws Exception {
         // Arrange - Create user first
@@ -104,6 +117,11 @@ class UserControllerTest {
         assertEquals(1, userRepository.count());
     }
 
+    /**
+     * Create user should return 400 when request is invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn400_whenRequestIsInvalid() throws Exception {
         // Arrange - Invalid request data
@@ -120,6 +138,11 @@ class UserControllerTest {
         assertEquals(0, userRepository.count());
     }
 
+    /**
+     * Create user should return 400 when password policy violated.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldReturn400_whenPasswordPolicyViolated() throws Exception {
         // Arrange - Password that violates policy (too short, based on your test config)
@@ -136,6 +159,11 @@ class UserControllerTest {
         assertEquals(0, userRepository.count());
     }
 
+    /**
+     * Create user should hash password correctly.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void createUser_shouldHashPasswordCorrectly() throws Exception {
         // Arrange

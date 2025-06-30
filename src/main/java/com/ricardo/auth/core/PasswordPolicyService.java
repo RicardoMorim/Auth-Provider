@@ -1,9 +1,8 @@
 package com.ricardo.auth.core;
 
-import java.util.Set;
-
 /**
  * The interface Password policy service.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 public interface PasswordPolicyService {
 

@@ -27,7 +27,7 @@ ricardo:
       require-digits: true
       require-special-chars: true
       prevent-common-passwords: true
-      max-length: 60
+      max-length: 60 # 60 characters for the test environment use a reasonable limit in production
 
 # Logging Configuration
 logging:

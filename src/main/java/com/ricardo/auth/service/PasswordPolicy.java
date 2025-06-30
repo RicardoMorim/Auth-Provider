@@ -2,7 +2,6 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.PasswordPolicyService;
-import org.springframework.stereotype.Service;
 
 import java.util.Collections;
 import java.util.Set;
@@ -12,6 +11,7 @@ import static com.ricardo.auth.helper.CommonPasswordHelper.loadCommonPasswords;
 
 /**
  * The type Password policy.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 public class PasswordPolicy implements PasswordPolicyService {
     private final boolean requireUpperCase;

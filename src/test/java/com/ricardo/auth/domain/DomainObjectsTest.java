@@ -17,7 +17,6 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for domain value objects and business logic.
  * Tests validation rules, edge cases, and business constraints.
  */
-
 @SpringBootTest
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
@@ -593,6 +592,9 @@ class DomainObjectsTest {
 
     }
 
+    /**
+     * Password should integrate with password policy.
+     */
     @Test
     void password_shouldIntegrateWithPasswordPolicy() {
         // Arrange

@@ -6,13 +6,13 @@ import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.repository.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
-import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Optional;
 
 /**
  * The type User service.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  *
  * @param <U>  the type parameter
  * @param <ID> the type parameter

@@ -8,9 +8,7 @@ import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.stereotype.Service;
 
 import java.security.Key;
 import java.util.*;
@@ -19,6 +17,8 @@ import java.util.stream.Collectors;
 
 /**
  * The type Jwt service.
+ * * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
+ *
  */
 public class JwtServiceImpl implements JwtService {
 

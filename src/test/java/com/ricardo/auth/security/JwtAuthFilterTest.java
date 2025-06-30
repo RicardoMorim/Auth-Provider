@@ -1,15 +1,10 @@
 package com.ricardo.auth.security;
 
-import java.io.IOException;
-import java.util.List;
-
-import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
-
+import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.domain.*;
 import com.ricardo.auth.repository.DefaultUserJpaRepository;
+import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,16 +18,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.AppRole;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
-import com.ricardo.auth.repository.UserJpaRepository;
+import java.io.IOException;
+import java.util.List;
 
-import jakarta.servlet.ServletException;
+import static org.junit.jupiter.api.Assertions.*;
 
 /**
  * Integration tests for JwtAuthFilter.

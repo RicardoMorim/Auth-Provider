@@ -50,6 +50,7 @@ public class Password implements Serializable {
      * @param passwordEncoder       the PasswordEncoder to use for hashing
      * @param passwordPolicyService the password policy service
      * @return a new instance of Password with the hashed value
+     * @throws IllegalArgumentException the illegal argument exception
      */
     public static Password valueOf(String password, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) throws IllegalArgumentException {
         passwordPolicyService.validatePassword(password);
