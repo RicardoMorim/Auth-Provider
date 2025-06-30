@@ -168,7 +168,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - No migration required from v1.0.1
 - Existing applications will continue to work without changes
 - 
-## [1.1.0] - 2024-01-15
+## [1.1.0] - 2025-06-30
 
 ### 🔒 Added - Password Policy System
 - **Comprehensive Password Validation**: Configurable password strength requirements
