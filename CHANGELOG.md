@@ -229,7 +229,7 @@ ricardo:
 - **Multi-Factor Authentication**: TOTP and SMS-based 2FA
 - **Rate Limiting**: Built-in rate limiting for authentication endpoints
 - **Audit Logging**: Comprehensive security event logging
-- **Password Policy**: Configurable password complexity requirements
+- ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
 - **Account Management**: Email verification, password reset, account locking
 - **Redis Cache**: Caching integration for improved performance
 - **Metrics Integration**: Micrometer metrics for monitoring
