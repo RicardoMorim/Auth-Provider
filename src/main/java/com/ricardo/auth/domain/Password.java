@@ -51,10 +51,8 @@ public class Password implements Serializable {
      * @param passwordPolicyService the password policy service
      * @return a new instance of Password with the hashed value
      */
-    public static Password valueOf(String password, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) {
-        if (!passwordPolicyService.validatePassword(password)) {
-            throw new IllegalArgumentException("Password does not meet the required policy");
-        }
+    public static Password valueOf(String password, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) throws IllegalArgumentException {
+        passwordPolicyService.validatePassword(password);
 
         String hashedPassword = passwordEncoder.encode(password);
 

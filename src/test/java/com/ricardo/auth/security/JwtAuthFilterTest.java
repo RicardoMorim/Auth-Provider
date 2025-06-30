@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -48,7 +50,7 @@ class JwtAuthFilterTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserJpaRepository<User, Long> userRepository;
+    private DefaultUserJpaRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -74,7 +76,7 @@ class JwtAuthFilterTest {
         testUser = new User(
             Username.valueOf("testuser"),
             Email.valueOf("test@example.com"),
-            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
+            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
         testUser = userRepository.save(testUser);
@@ -433,7 +435,7 @@ class JwtAuthFilterTest {
         User specialUser = new User(
             Username.valueOf("specialuser"),
             Email.valueOf("test+tag@example.com"),
-            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
+            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         specialUser.addRole(AppRole.USER);
         userRepository.save(specialUser);

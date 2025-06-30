@@ -17,7 +17,6 @@ import java.util.Optional;
  * @param <U>  the type parameter
  * @param <ID> the type parameter
  */
-@Service
 public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U, ID> {
 
     private final UserRepository<U, ID> userRepository;

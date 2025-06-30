@@ -209,7 +209,7 @@ class GlobalExceptionHandlerTest {
             {
                 "username": "testuser",
                 "email": "test@example.com",
-                "password": "password123"
+                "password": "Password@123"
             }
             """;
 

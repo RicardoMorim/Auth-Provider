@@ -10,7 +10,6 @@ import org.springframework.stereotype.Service;
 /**
  * The type User details service.
  */
-@Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserService<User, Long> userService;

@@ -56,7 +56,6 @@ public class AuthAutoConfiguration {
      * User service user service.
      *
      * @param userRepository        the user repository
-     * @param passwordPolicyService the password policy service
      * @return the user service
      */
     @Bean

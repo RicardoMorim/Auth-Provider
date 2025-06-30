@@ -13,7 +13,6 @@ import static com.ricardo.auth.helper.CommonPasswordHelper.loadCommonPasswords;
 /**
  * The type Password policy.
  */
-@Service
 public class PasswordPolicy implements PasswordPolicyService {
     private final boolean requireUpperCase;
     private final boolean requireLowerCase;
@@ -60,14 +59,18 @@ public class PasswordPolicy implements PasswordPolicyService {
 
 
     @Override
-    public boolean validatePassword(String password) {
+    public boolean validatePassword(String passwordInput) {
+        String password = passwordInput != null ? passwordInput.trim() : null;
+        if (password == null || password.length() < minLength) {
+            throw new IllegalArgumentException("Password must be at least " + minLength + " characters long.");
+        }
 
-        if (password == null || password.length() < minLength || password.length() > maxLength) {
-            return false;
+        if (password.length() > maxLength) {
+            throw new IllegalArgumentException("Password must not exceed " + maxLength + " characters.");
         }
 
         if (preventCommonPasswords && isCommonPassword(password, this.commonPasswords)) {
-            return false;
+            throw new IllegalArgumentException("Password is too common and does not meet security requirements.");
         }
 
         boolean hasUpperCase = !requireUpperCase;
@@ -86,6 +89,24 @@ public class PasswordPolicy implements PasswordPolicyService {
                 hasSpecialChar = true;
             }
         }
+
+        if (requireUpperCase && !hasUpperCase) {
+            throw new IllegalArgumentException("Password must contain at least one uppercase letter.");
+        }
+
+        if (requireLowerCase && !hasLowerCase) {
+            throw new IllegalArgumentException("Password must contain at least one lowercase letter.");
+        }
+
+        if (requireDigit && !hasDigit) {
+            throw new IllegalArgumentException("Password must contain at least one digit.");
+        }
+
+        if (requireSpecialChar && !hasSpecialChar) {
+            throw new IllegalArgumentException("Password must contain at least one special character: " + specialCharacters);
+        }
+
+        // If all conditions are met, return true
         return hasUpperCase && hasLowerCase && hasDigit && hasSpecialChar;
     }
 

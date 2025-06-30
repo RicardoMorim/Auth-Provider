@@ -27,7 +27,7 @@ public class UserRepositoryTest {
     private TestEntityManager entityManager;
 
     @Autowired
-    private UserJpaRepository userRepository; // Use the concrete implementation
+    private DefaultUserJpaRepository userRepository;
 
     /**
      * Sets up.

@@ -8,6 +8,8 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -18,15 +20,18 @@ import com.ricardo.auth.domain.Email;
 import com.ricardo.auth.domain.Password;
 import com.ricardo.auth.domain.User;
 import com.ricardo.auth.domain.Username;
-import com.ricardo.auth.test.util.TestPasswordPolicyService;
+import org.springframework.test.context.ActiveProfiles;
 
 /**
  * Tests for DTOs and mapping functionality.
  * Ensures data transfer objects work correctly and mappings are accurate.
  */
+@SpringBootTest
+@ActiveProfiles("test")
 class DtoAndMappingTest {
 
     private PasswordEncoder passwordEncoder;
+    @Autowired
     private PasswordPolicyService passwordPolicyService;
     private User testUser;
 
@@ -36,12 +41,11 @@ class DtoAndMappingTest {
     @BeforeEach
     void setUp() {
         passwordEncoder = new BCryptPasswordEncoder();
-        passwordPolicyService = new TestPasswordPolicyService();
-        
+
         testUser = new User(
-            Username.valueOf("testuser"),
-            Email.valueOf("test@example.com"),
-            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
+                Username.valueOf("testuser"),
+                Email.valueOf("test@example.com"),
+                Password.valueOf("TestPass@123!", passwordEncoder, passwordPolicyService) // ✅ Policy-compliant password
         );
         testUser.addRole(AppRole.USER);
         testUser.addRole(AppRole.ADMIN);
@@ -54,14 +58,14 @@ class DtoAndMappingTest {
      */
     @Test
     void createUserRequestDTO_shouldCreateWithValidData() {
-        // Act
-        CreateUserRequestDTO dto = new CreateUserRequestDTO("testuser", "test@example.com", "password123");
+        // Act - Use policy-compliant password in test data
+        CreateUserRequestDTO dto = new CreateUserRequestDTO("testuser", "test@example.com", "TestPass@123!");
 
         // Assert
         assertNotNull(dto);
         assertEquals("testuser", dto.getUsername());
         assertEquals("test@example.com", dto.getEmail());
-        assertEquals("password123", dto.getPassword());
+        assertEquals("TestPass@123!", dto.getPassword());
     }
 
     /**
@@ -71,7 +75,7 @@ class DtoAndMappingTest {
     void createUserRequestDTO_shouldHandleNullValues() {
         // Act & Assert - Should be able to create DTO with nulls (validation happens at service layer)
         CreateUserRequestDTO dto = new CreateUserRequestDTO(null, null, null);
-        
+
         assertNotNull(dto);
         assertNull(dto.getUsername());
         assertNull(dto.getEmail());
@@ -114,13 +118,13 @@ class DtoAndMappingTest {
      */
     @Test
     void loginRequestDTO_shouldCreateWithValidData() {
-        // Act
-        LoginRequestDTO dto = new LoginRequestDTO("test@example.com", "password123");
+        // Act - Use policy-compliant password
+        LoginRequestDTO dto = new LoginRequestDTO("test@example.com", "TestPass@123!");
 
         // Assert
         assertNotNull(dto);
         assertEquals("test@example.com", dto.getEmail());
-        assertEquals("password123", dto.getPassword());
+        assertEquals("TestPass@123!", dto.getPassword());
     }
 
     /**
@@ -252,8 +256,8 @@ class DtoAndMappingTest {
     void authenticatedUserDTO_shouldCreateWithValidData() {
         // Arrange
         List<SimpleGrantedAuthority> authorities = List.of(
-            new SimpleGrantedAuthority("ROLE_USER"),
-            new SimpleGrantedAuthority("ROLE_ADMIN")
+                new SimpleGrantedAuthority("ROLE_USER"),
+                new SimpleGrantedAuthority("ROLE_ADMIN")
         );
 
         // Act
@@ -329,9 +333,9 @@ class DtoAndMappingTest {
     void userDTOMapper_shouldMapUserWithNoId() {
         // Arrange - Create user without setting ID (before save)
         User unsavedUser = new User(
-            Username.valueOf("newuser"),
-            Email.valueOf("new@example.com"),
-            Password.valueOf("password123", passwordEncoder, passwordPolicyService)
+                Username.valueOf("newuser"),
+                Email.valueOf("new@example.com"),
+                Password.valueOf("SecurePass@456!", passwordEncoder, passwordPolicyService) // ✅ Policy-compliant password
         );
 
         // Act
@@ -392,8 +396,8 @@ class DtoAndMappingTest {
     @Test
     void createUserRequestDTO_shouldBeSerializable() {
         // This test ensures DTOs can be properly serialized/deserialized
-        CreateUserRequestDTO dto = new CreateUserRequestDTO("testuser", "test@example.com", "password123");
-        
+        CreateUserRequestDTO dto = new CreateUserRequestDTO("testuser", "test@example.com", "ValidPass@789!");
+
         // Assert basic properties exist (would work with JSON serialization)
         assertNotNull(dto.getUsername());
         assertNotNull(dto.getEmail());
@@ -406,7 +410,7 @@ class DtoAndMappingTest {
     @Test
     void userDTO_shouldBeSerializable() {
         UserDTO dto = new UserDTO("1", "testuser", "test@example.com");
-        
+
         // Assert basic properties exist
         assertNotNull(dto.getId());
         assertNotNull(dto.getUsername());
@@ -419,7 +423,7 @@ class DtoAndMappingTest {
     @Test
     void tokenDTO_shouldBeSerializable() {
         TokenDTO dto = new TokenDTO("sample.jwt.token");
-        
+
         // Assert basic properties exist
         assertNotNull(dto.getToken());
     }
@@ -452,7 +456,7 @@ class DtoAndMappingTest {
     void authenticatedUserDTO_shouldHandleSpecialCharactersInEmail() {
         // Arrange
         String emailWithSpecialChars = "test+tag@münchen.de";
-        
+
         // Act
         AuthenticatedUserDTO dto = new AuthenticatedUserDTO(emailWithSpecialChars, List.of());
 
@@ -467,11 +471,11 @@ class DtoAndMappingTest {
     void authenticatedUserDTO_shouldHandleManyRoles() {
         // Arrange
         List<SimpleGrantedAuthority> manyRoles = List.of(
-            new SimpleGrantedAuthority("ROLE_USER"),
-            new SimpleGrantedAuthority("ROLE_ADMIN"),
-            new SimpleGrantedAuthority("ROLE_MODERATOR"),
-            new SimpleGrantedAuthority("ROLE_VIP"),
-            new SimpleGrantedAuthority("ROLE_CUSTOM")
+                new SimpleGrantedAuthority("ROLE_USER"),
+                new SimpleGrantedAuthority("ROLE_ADMIN"),
+                new SimpleGrantedAuthority("ROLE_MODERATOR"),
+                new SimpleGrantedAuthority("ROLE_VIP"),
+                new SimpleGrantedAuthority("ROLE_CUSTOM")
         );
 
         // Act

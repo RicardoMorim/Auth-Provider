@@ -3,6 +3,8 @@ package com.ricardo.auth.security;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
+
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -60,7 +62,7 @@ class SecurityIntegrationTest {
     private PasswordPolicyService passwordPolicyService;
 
     @Autowired
-    private UserJpaRepository<User, Long> userRepository;
+    private DefaultUserJpaRepository userRepository;
 
     @Autowired
     private JwtService jwtService;
@@ -79,7 +81,7 @@ class SecurityIntegrationTest {
         testUser = new User(
                 Username.valueOf("testuser"),
                 Email.valueOf("test@example.com"),
-                Password.valueOf("password123", passwordEncoder, passwordPolicyService)
+                Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
         userRepository.save(testUser);
@@ -88,7 +90,7 @@ class SecurityIntegrationTest {
         adminUser = new User(
                 Username.valueOf("adminuser"),
                 Email.valueOf("admin@example.com"),
-                Password.valueOf("password123", passwordEncoder, passwordPolicyService)
+                Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         adminUser.addRole(AppRole.ADMIN);
         userRepository.save(adminUser);
@@ -124,7 +126,7 @@ class SecurityIntegrationTest {
     void shouldAllowPublicAccessToUserCreation() throws Exception {
         // Arrange
         CreateUserRequestDTO createRequest = new CreateUserRequestDTO(
-                "newuser", "newuser@example.com", "password123"
+                "newuser", "newuser@example.com", "Password@123"
         );
 
         // Act & Assert
@@ -168,7 +170,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldSuccessfullyLoginAndReturnToken() throws Exception {
         // Arrange
-        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "password123");
+        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "Password@123");
 
         // Act & Assert
         MvcResult result = mockMvc.perform(post("/api/auth/login")
@@ -314,7 +316,7 @@ class SecurityIntegrationTest {
 
         // create a user to delete
         CreateUserRequestDTO createRequest = new CreateUserRequestDTO(
-                "testusera", "testusera@gmail.com", "password123"
+                "testusera", "testusera@gmail.com", "Password@123"
         );
 
         // save the user to the database
@@ -339,7 +341,7 @@ class SecurityIntegrationTest {
 
         // create a user to delete
         CreateUserRequestDTO createRequest = new CreateUserRequestDTO(
-                "testuserabc", "testuserabc@gmail.com", "password123"
+                "testuserabc", "testuserabc@gmail.com", "Password@123"
         );
 
         // save the user to the database
@@ -562,7 +564,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldCompleteFullAuthenticationWorkflow() throws Exception {
         // Step 1: Login and get token
-        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "password123");
+        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "Password@123");
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
@@ -593,7 +595,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldCompleteFullAdminWorkflow() throws Exception {
         // Step 1: Login as admin and get token
-        LoginRequestDTO loginRequest = new LoginRequestDTO("admin@example.com", "password123");
+        LoginRequestDTO loginRequest = new LoginRequestDTO("admin@example.com", "Password@123");
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)

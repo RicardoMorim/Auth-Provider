@@ -20,7 +20,6 @@ import java.util.stream.Collectors;
 /**
  * The type Jwt service.
  */
-@Service
 public class JwtServiceImpl implements JwtService {
 
     private String secret;

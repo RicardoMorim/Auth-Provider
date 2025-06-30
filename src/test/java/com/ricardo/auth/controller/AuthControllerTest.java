@@ -6,6 +6,7 @@ import com.ricardo.auth.domain.Password;
 import com.ricardo.auth.domain.User;
 import com.ricardo.auth.domain.Username;
 import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import com.ricardo.auth.repository.UserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -37,7 +38,7 @@ class AuthControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;    @Autowired
-    private UserJpaRepository userRepository;
+    private DefaultUserJpaRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
