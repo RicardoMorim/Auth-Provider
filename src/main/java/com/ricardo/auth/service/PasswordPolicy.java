@@ -3,6 +3,7 @@ package com.ricardo.auth.service;
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.PasswordPolicyService;
 
+import java.security.SecureRandom;
 import java.util.Collections;
 import java.util.Set;
 
@@ -23,6 +24,8 @@ public class PasswordPolicy implements PasswordPolicyService {
     private final int maxLength;
     private final boolean preventCommonPasswords;
     private final Set<String> commonPasswords;
+
+    private final SecureRandom secureRandom = new SecureRandom();
 
 
     /**
@@ -112,37 +115,85 @@ public class PasswordPolicy implements PasswordPolicyService {
 
     @Override
     public String generateSecurePassword() {
-        String LowerCasecharacters = "abcdefghijklmnopqrstuvwxyz";
-        String UpperCasecharacters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        String digits = "0123456789";
-        String specialCharacters = "!@#$%^&*()-_=+[]{}|;:',.<>?";
-
-        String[] allCharacters = {
-                LowerCasecharacters, UpperCasecharacters, digits, specialCharacters
-        };
-
         StringBuilder password = new StringBuilder();
 
-        // Ensure at least one character from each category
-        password.append(LowerCasecharacters.charAt((int) (Math.random() * LowerCasecharacters.length())));
-        password.append(UpperCasecharacters.charAt((int) (Math.random() * UpperCasecharacters.length())));
-        password.append(digits.charAt((int) (Math.random() * digits.length())));
-        password.append(specialCharacters.charAt((int) (Math.random() * specialCharacters.length())));
-
-        // Fill the rest of the password with random characters from all categories
-        for (int i = 4; i < 12; i++) { // Total length of 12 characters
-            String randomCategory = allCharacters[(int) (Math.random() * allCharacters.length)];
-            password.append(randomCategory.charAt((int) (Math.random() * randomCategory.length())));
+        // Ensure at least one character from each required category
+        if (requireLowerCase) {
+            String lowerCase = "abcdefghijklmnopqrstuvwxyz";
+            password.append(lowerCase.charAt(secureRandom.nextInt(lowerCase.length())));
         }
 
-        // Shuffle the characters to ensure randomness
-        StringBuilder shuffledPassword = new StringBuilder();
-        while (!password.isEmpty()) {
-            int index = (int) (Math.random() * password.length());
-            shuffledPassword.append(password.charAt(index));
-            password.deleteCharAt(index);
+        if (requireUpperCase) {
+            String upperCase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+            password.append(upperCase.charAt(secureRandom.nextInt(upperCase.length())));
         }
 
-        return shuffledPassword.toString();
+        if (requireDigit) {
+            String digits = "0123456789";
+            password.append(digits.charAt(secureRandom.nextInt(digits.length())));
+        }
+
+        if (requireSpecialChar) {
+            password.append(specialCharacters.charAt(secureRandom.nextInt(specialCharacters.length())));
+        }
+
+        // Fill the rest with random characters
+        String allChars = buildAllCharacters();
+        while (password.length() < minLength) {
+            password.append(allChars.charAt(secureRandom.nextInt(allChars.length())));
+        }
+
+        // Shuffle the password to avoid predictable patterns
+        return shufflePassword(password.toString());
+    }
+
+
+    /**
+     * Builds a string containing all allowed characters based on the password policy requirements.
+     *
+     * @return a string containing all allowed characters for password generation
+     */
+    private String buildAllCharacters() {
+        StringBuilder allChars = new StringBuilder();
+
+        if (requireLowerCase) {
+            allChars.append("abcdefghijklmnopqrstuvwxyz");
+        }
+
+        if (requireUpperCase) {
+            allChars.append("ABCDEFGHIJKLMNOPQRSTUVWXYZ");
+        }
+
+        if (requireDigit) {
+            allChars.append("0123456789");
+        }
+
+        if (requireSpecialChar) {
+            allChars.append(specialCharacters);
+        }
+
+        // If no requirements are set, include all character types
+        if (allChars.isEmpty()) {
+            allChars.append("abcdefghijklmnopqrstuvwxyz")
+                    .append("ABCDEFGHIJKLMNOPQRSTUVWXYZ")
+                    .append("0123456789")
+                    .append(specialCharacters != null ? specialCharacters : "!@#$%^&*");
+        }
+
+        return allChars.toString();
+    }
+
+    private String shufflePassword(String password) {
+        StringBuilder result = new StringBuilder(password);
+
+        // Fisher-Yates shuffle algorithm with SecureRandom
+        for (int i = result.length() - 1; i > 0; i--) {
+            int j = secureRandom.nextInt(i + 1);
+            char temp = result.charAt(i);
+            result.setCharAt(i, result.charAt(j));
+            result.setCharAt(j, temp);
+        }
+
+        return result.toString();
     }
 }
