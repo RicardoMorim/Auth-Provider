@@ -10,6 +10,8 @@
 name: Build and Test
 permissions:
   contents: read
+  security-events: write
+
 
 on:
   push:
