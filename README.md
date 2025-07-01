@@ -46,7 +46,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>{Latest version release}</version>
 </dependency>
 ```
 
@@ -81,7 +81,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>{latest version release}</version>
 </dependency>
 ```
 
@@ -551,6 +551,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 - Email: ricardomorim05@gmail.com
 - Portfolio: [ricardoportfolio.vercel.app](https://ricardoportfolio.vercel.app)
 - GitHub: [@RicardoMorim](https://github.com/RicardoMorim)
+- LinkedIn: [Ricardo Morim](https://www.linkedin.com/in/ricardo-morim-208368251/)
 
 ---
 
