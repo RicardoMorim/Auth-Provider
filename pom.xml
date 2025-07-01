@@ -262,9 +262,11 @@
                             <gpgArguments>
                                 <arg>--pinentry-mode</arg>
                                 <arg>loopback</arg>
-                                <arg>--batch</arg>
+                                <arg>--batch</arg>        
+                                <arg>--no-tty</arg>        
                                 <arg>--yes</arg>
                             </gpgArguments>
+                            <passphrase>${GPG_PASSPHRASE}</passphrase>
                         </configuration>
                     </plugin>
 
