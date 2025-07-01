@@ -6,7 +6,7 @@ import com.ricardo.auth.domain.Password;
 import com.ricardo.auth.domain.User;
 import com.ricardo.auth.domain.Username;
 import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.repository.UserJpaRepository;
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -37,7 +37,7 @@ class AuthControllerTest {
 
     @Autowired
     private ObjectMapper objectMapper;    @Autowired
-    private UserJpaRepository userRepository;
+    private DefaultUserJpaRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;

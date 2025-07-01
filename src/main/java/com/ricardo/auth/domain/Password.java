@@ -1,5 +1,6 @@
 package com.ricardo.auth.domain;
 
+import com.ricardo.auth.core.PasswordPolicyService;
 import jakarta.persistence.Embeddable;
 import lombok.Getter;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -45,22 +46,14 @@ public class Password implements Serializable {
      * Encodes the password using the provided PasswordEncoder.
      * Validates the password length and format before encoding.
      *
-     * @param password        the raw password to be hashed
-     * @param passwordEncoder the PasswordEncoder to use for hashing
+     * @param password              the raw password to be hashed
+     * @param passwordEncoder       the PasswordEncoder to use for hashing
+     * @param passwordPolicyService the password policy service
      * @return a new instance of Password with the hashed value
+     * @throws IllegalArgumentException the illegal argument exception
      */
-    public static Password valueOf(String password, PasswordEncoder passwordEncoder) {
-        if (password == null || password.isBlank()) {
-            throw new IllegalArgumentException("Password hash cannot be null or blank");
-        }
-
-        if (password.length() > 60) {
-            throw new IllegalArgumentException("Password hash cannot be longer than 60 characters");
-        }
-
-        if (password.length() < 6) {
-            throw new IllegalArgumentException("Password hash must be at least 6 characters long");
-        }
+    public static Password valueOf(String password, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) throws IllegalArgumentException {
+        passwordPolicyService.validatePassword(password);
 
         String hashedPassword = passwordEncoder.encode(password);
 

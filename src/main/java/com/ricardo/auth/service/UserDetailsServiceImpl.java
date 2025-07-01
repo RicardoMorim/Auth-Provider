@@ -5,12 +5,11 @@ import com.ricardo.auth.domain.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.stereotype.Service;
 
 /**
  * The type User details service.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
-@Service
 public class UserDetailsServiceImpl implements UserDetailsService {
 
     private final UserService<User, Long> userService;

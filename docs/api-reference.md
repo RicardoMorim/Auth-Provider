@@ -134,7 +134,7 @@ curl -X GET http://localhost:8080/api/auth/me \
 
 ### POST /api/users/create
 
-Create a new user account.
+Create a new user account with password policy validation.
 
 #### Request
 
@@ -149,13 +149,21 @@ Content-Type: application/json
 ```json
 {
   "username": "string",
-  // Required: Unique username
-  "email": "string",
+  // Required: Unique username (3-50 characters)
+  "email": "string", 
   // Required: Valid email address (unique)
   "password": "string"
-  // Required: Password (will be encrypted)
+  // Required: Password meeting policy requirements
 }
 ```
+
+**Password Requirements with default settings:**
+- Minimum 10 characters (configurable)
+- At least one uppercase letter
+- At least one lowercase letter  
+- At least one numeric digit
+- At least one special character: `!@#$%^&*()`
+- Not in common passwords list
 
 #### Response
 
@@ -169,7 +177,18 @@ Content-Type: application/json
 }
 ```
 
-**Error (400 Bad Request):**
+**Error (400 Bad Request) - Password Policy Violation:**
+
+```json
+{
+  "error": "Bad Request",
+  "message": "Password must contain at least one uppercase letter",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/users/create"
+}
+```
+
+**Error (400 Bad Request - Username exists):**
 
 ```json
 {
@@ -198,10 +217,21 @@ curl -X POST http://localhost:8080/api/users/create \
   -H "Content-Type: application/json" \
   -d '{
     "username": "johndoe",
-    "email": "john@example.com",
-    "password": "securepassword123"
+    "email": "john@example.com", 
+    "password": "SecurePass@123!"
   }'
 ```
+
+**Valid Password Examples:**
+- `MySecure@Pass123!`
+- `StrongP@ssw0rd`
+- `Secure123!@#`
+
+**Invalid Password Examples:**
+- `password123` (no uppercase, no special chars)
+- `PASSWORD123` (no lowercase)
+- `MyPassword` (no digits, no special chars)
+- `123456` (too common)
 
 ### GET /api/users/{id}
 

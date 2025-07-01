@@ -1,0 +1,119 @@
+@startuml Auth Starter - Security Flow
+
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #6C757D
+skinparam noteBackgroundColor #E8F4FD
+skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
+
+title Ricardo Auth Starter - Security Architecture & Flow (v1.1.0)
+
+package "Security Components" {
+    class JwtAuthFilter {
+        -jwtService: JwtService
+        +doFilterInternal()
+        -extractTokenFromRequest()
+    }
+    
+    class SecurityConfig {
+        +filterChain(HttpSecurity): SecurityFilterChain
+        +authenticationProvider(): DaoAuthenticationProvider
+        +passwordEncoder(): PasswordEncoder
+    }
+    
+    class JwtServiceImpl {
+        +generateToken(): String
+        +validateToken(): Boolean
+        +extractEmail(): String
+    }
+    
+    class UserDetailsServiceImpl {
+        +loadUserByUsername(): UserDetails
+    }
+    
+    ' 🆕 ADD: Password Policy Service
+    interface PasswordPolicyService {
+        +validatePassword(password: String): void
+        +generateSecurePassword(): String
+    }
+    
+    class PasswordPolicy {
+        +validatePassword(password: String): void
+        +generateSecurePassword(): String
+    }
+}
+
+package "Controllers" {
+    class AuthController {
+        +login(): ResponseEntity<TokenDTO>
+        +getAuthenticatedUser(): ResponseEntity<AuthenticatedUserDTO>
+    }
+    
+    ' 🆕 UPDATED: UserController now uses PasswordPolicyService
+    class UserController {
+        -passwordPolicyService: PasswordPolicyService
+        +createUser(): ResponseEntity<UserDTO>
+        +updateUser(): ResponseEntity<UserDTO>
+    }
+}
+
+package "Domain Layer" {
+    class Password {
+        +valueOf(raw: String, encoder: PasswordEncoder, policyService: PasswordPolicyService): Password
+    }
+}
+
+package "Spring Security" <<Rectangle>> {
+    interface OncePerRequestFilter
+    interface UserDetailsService
+    interface AuthenticationManager
+}
+
+' Relationships
+JwtAuthFilter .up.|> OncePerRequestFilter
+UserDetailsServiceImpl .up.|> UserDetailsService
+PasswordPolicy .up.|> PasswordPolicyService
+SecurityConfig --> JwtAuthFilter : configures
+SecurityConfig --> UserDetailsServiceImpl : uses
+AuthController --> JwtServiceImpl : uses
+AuthController --> AuthenticationManager : uses
+JwtAuthFilter --> JwtServiceImpl : validates tokens
+UserDetailsServiceImpl --> UserService : loads user data
+
+' 🆕 NEW: Password Policy Integration
+UserController --> PasswordPolicyService : uses for validation
+Password --> PasswordPolicyService : validates with
+
+note right of JwtAuthFilter #E8F4FD
+  **Filter Chain Integration**
+  Intercepts requests and
+  validates JWT tokens
+end note
+
+note top of SecurityConfig #E8F4FD
+  **Spring Security Configuration**
+  Configures authentication
+  and authorization rules
+end note
+
+note bottom of AuthController #E8F4FD
+  **Authentication Endpoints**
+  Handles login and user
+  authentication flow
+end note
+
+note right of UserController #E8F4FD
+  **🆕 Password Policy Integration (v1.1.0)**
+  Validates passwords during
+  user creation and updates
+end note
+
+note left of Password #E8F4FD
+  **🆕 Policy-Aware Value Object (v1.1.0)**
+  Password validation happens
+  at domain object creation
+end note
+
+@enduml

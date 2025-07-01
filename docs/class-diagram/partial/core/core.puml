@@ -1,0 +1,102 @@
+@startuml Auth Starter - Domain Model
+
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #6C757D
+skinparam noteBackgroundColor #E8F4FD
+skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
+
+title Ricardo Auth Starter - Domain Model (v1.1.0)
+
+interface "AuthUser<T>" as AuthUser {
+    +getId(): Long
+    +getEmail(): String
+    +getUsername(): String
+    +getRoles(): Set<T>
+    +getAuthorities(): Collection<GrantedAuthority>
+}
+
+class User {
+    -id: Long
+    -username: Username
+    -email: Email
+    -password: Password
+    -roles: Set<AppRole>
+    +User(username: Username, email: Email, password: Password)
+}
+
+class Username {
+    -username: String
+    +valueOf(username: String): Username
+    +getUsername(): String
+}
+
+class Email {
+    -email: String
+    +valueOf(email: String): Email
+    +getEmail(): String
+}
+
+class Password {
+    -hashed: String
+    +valueOf(raw: String, encoder: PasswordEncoder, policyService: PasswordPolicyService): Password
+    +fromHash(hashedPassword: String): Password
+    +matches(raw: String, encoder: PasswordEncoder): boolean
+}
+
+enum AppRole {
+    USER
+    ADMIN
+    +getAuthority(): String
+}
+
+interface PasswordPolicyService {
+    +validatePassword(password: String): void
+    +generateSecurePassword(): String
+}
+
+class PasswordPolicy {
+    -minLength: int
+    -maxLength: int
+    -requireUppercase: boolean
+    -requireLowercase: boolean
+    -requireDigits: boolean
+    -requireSpecialChars: boolean
+    -specialCharacters: String
+    -preventCommonPasswords: boolean
+    -commonPasswords: Set<String>
+    +validatePassword(password: String): void
+    +generateSecurePassword(): String
+    -validateLength(password: String): void
+    -validateCharacterRequirements(password: String): void
+    -validateCommonPassword(password: String): void
+}
+
+User .up.|> AuthUser
+User *-- Username : contains
+User *-- Email : contains
+User *-- Password : contains
+User o-- AppRole : has many
+PasswordPolicy .up.|> PasswordPolicyService
+Password --> PasswordPolicyService : validates with
+
+note right of AuthUser #E8F4FD
+  **Polymorphic Design**
+  Generic interface allows
+  custom role types
+end note
+
+note bottom of Username #E8F4FD
+  **Value Objects**
+  Immutable with validation
+end note
+
+note right of PasswordPolicy #E8F4FD
+  **🆕 Password Policy (v1.1.0)**
+  Configurable password validation
+  with security requirements
+end note
+
+@enduml

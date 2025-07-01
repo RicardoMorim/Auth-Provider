@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 /**
  * The type Jwt auth filter.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {

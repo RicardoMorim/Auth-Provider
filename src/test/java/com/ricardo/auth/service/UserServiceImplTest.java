@@ -1,5 +1,6 @@
 package com.ricardo.auth.service;
 
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.Email;
 import com.ricardo.auth.domain.Password;
@@ -7,7 +8,7 @@ import com.ricardo.auth.domain.User;
 import com.ricardo.auth.domain.Username;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.repository.UserJpaRepository;
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -32,10 +33,13 @@ class UserServiceImplTest {
     private UserService<User, Long> userService;
 
     @Autowired
-    private UserJpaRepository userRepository;
+    private DefaultUserJpaRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private PasswordPolicyService passwordPolicyService;
 
     private User testUser;
 
@@ -49,7 +53,7 @@ class UserServiceImplTest {
         // Create a test user
         Username username = Username.valueOf("existinguser");
         Email email = Email.valueOf("existing@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         testUser = new User(username, email, password);
         userRepository.save(testUser);
     }
@@ -62,7 +66,7 @@ class UserServiceImplTest {
         // Arrange
         Username username = Username.valueOf("newuser");
         Email email = Email.valueOf("new@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User newUser = new User(username, email, password);
 
         // Act
@@ -83,7 +87,7 @@ class UserServiceImplTest {
         // Arrange
         Username username = Username.valueOf("anotheruser");
         Email email = Email.valueOf("existing@example.com"); // Same email as setup
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User duplicateUser = new User(username, email, password);
 
         // Act & Assert
@@ -175,7 +179,7 @@ class UserServiceImplTest {
         // Arrange
         Username newUsername = Username.valueOf("updateduser");
         Email newEmail = Email.valueOf("updated@example.com");
-        Password newPassword = Password.valueOf("newpassword123", passwordEncoder);
+        Password newPassword = Password.valueOf("newPassword@123", passwordEncoder, passwordPolicyService);
         User userDetails = new User(newUsername, newEmail, newPassword);
 
         // Act
@@ -219,7 +223,7 @@ class UserServiceImplTest {
         // Arrange - Add another user
         Username username = Username.valueOf("seconduser");
         Email email = Email.valueOf("second@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User secondUser = new User(username, email, password);
         userRepository.save(secondUser);
 

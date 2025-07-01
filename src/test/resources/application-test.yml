@@ -15,10 +15,19 @@ spring:
     console:
       enabled: true
 
-# JWT Configuration for Testing
-jwt:
-  secret: testSecretKeyForTestingPurposesOnlyNotForProduction
-  expiration: 604800000
+ricardo:
+  auth:
+    jwt:
+      secret: "dGVzdGtleWZvcnRlc3RpbmdwdXJwb3Nlc29ubHkxMjM0NTY3ODkw"
+      expiration: 3600000
+    password-policy:
+      min-length: 10
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+      max-length: 60 # 60 characters for the test environment use a reasonable limit in production
 
 # Logging Configuration
 logging:
