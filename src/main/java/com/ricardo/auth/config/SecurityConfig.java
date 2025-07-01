@@ -1,7 +1,5 @@
 package com.ricardo.auth.config;
 
-import com.ricardo.auth.security.JwtAuthFilter;
-import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -16,6 +14,10 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+
+import com.ricardo.auth.security.JwtAuthFilter;
+
+import jakarta.servlet.http.HttpServletResponse;
 
 /**
  * The type Security config.
@@ -72,6 +74,12 @@ public class SecurityConfig {
      */
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+        // SECURITY NOTE: CSRF protection disabled for JWT-based stateless API
+        // This is safe because:
+        // 1. No session cookies (SessionCreationPolicy.STATELESS)
+        // 2. JWT tokens require explicit Authorization header
+        // 3. Malicious sites cannot access JWT tokens due to browser security
+        // 4. No traditional form-based authentication endpoints
         return http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Apenas login e registo são públicos
