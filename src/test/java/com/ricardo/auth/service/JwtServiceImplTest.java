@@ -1,12 +1,11 @@
 package com.ricardo.auth.service;
 
-import org.junit.jupiter.api.BeforeEach;
+import com.ricardo.auth.core.JwtService;
 import org.junit.jupiter.api.Test;
-import org.junit.jupiter.api.extension.ExtendWith;
-import org.mockito.InjectMocks;
-import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
-import org.springframework.test.util.ReflectionTestUtils;
+import org.springframework.test.context.ActiveProfiles;
 
 import java.util.Collections;
 import java.util.List;
@@ -16,25 +15,14 @@ import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
- * The type Jwt service impl test.
+ * Integration tests for JwtService.
  */
-@ExtendWith(MockitoExtension.class)
-class JwtServiceImplTest {
+@SpringBootTest
+@ActiveProfiles("test")
+class JwtServiceIntegrationTest {
 
-    @InjectMocks
-    private JwtServiceImpl jwtService;
-
-    /**
-     * Sets up.
-     */
-    @BeforeEach
-    void setUp() {
-        // Use a valid Base64 encoded secret key that is long enough for the HS256 algorithm
-        String secret = "dGVzdHNlY3JldGtleWZvcnRlc3RpbmdwdXJwb3Nlc29ubHkxMjM0NTY=";
-        ReflectionTestUtils.setField(jwtService, "secret", secret);
-        ReflectionTestUtils.setField(jwtService, "expiration", 3600000L); // 1 hour
-        jwtService.init(); // Manually call PostConstruct method
-    }
+    @Autowired
+    private JwtService jwtService;
 
     /**
      * Generate token should create valid token.

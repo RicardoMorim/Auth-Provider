@@ -3,11 +3,13 @@ package com.ricardo.auth.autoconfig;
 import com.ricardo.auth.controller.AuthController;
 import com.ricardo.auth.controller.UserController;
 import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.User;
-import com.ricardo.auth.repository.UserJpaRepository;
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import com.ricardo.auth.security.JwtAuthFilter;
 import com.ricardo.auth.service.JwtServiceImpl;
+import com.ricardo.auth.service.PasswordPolicy;
 import com.ricardo.auth.service.UserDetailsServiceImpl;
 import com.ricardo.auth.service.UserServiceImpl;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -40,12 +42,13 @@ public class AuthAutoConfiguration {
     /**
      * Jwt service jwt service.
      *
+     * @param authProperties the auth properties
      * @return the jwt service
      */
     @Bean
     @ConditionalOnMissingBean
-    public JwtService jwtService() {
-        return new JwtServiceImpl();
+    public JwtService jwtService(AuthProperties authProperties) {
+        return new JwtServiceImpl(authProperties);
     }
 
     /**
@@ -55,10 +58,12 @@ public class AuthAutoConfiguration {
      * @return the user service
      */
     @Bean
-    @ConditionalOnMissingBean
-    public UserService<User, Long> userService(UserJpaRepository userRepository) {
-        return new UserServiceImpl(userRepository);
+    @ConditionalOnMissingBean(name = "userService")
+    public UserService<User, Long> defaultUserService(
+            DefaultUserJpaRepository userRepository) {
+        return new UserServiceImpl<>(userRepository);
     }
+
 
     /**
      * User details service user details service.
@@ -99,16 +104,31 @@ public class AuthAutoConfiguration {
     }
 
     /**
+     * Password policy service password policy service.
+     *
+     * @param authProperties the auth properties
+     * @return the password policy service
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    public PasswordPolicyService passwordPolicyService(AuthProperties authProperties) {
+        return new PasswordPolicy(authProperties);
+    }
+
+    /**
      * User controller user controller.
      *
-     * @param userService     the user service
-     * @param passwordEncoder the password encoder
+     * @param userService           the user service
+     * @param passwordEncoder       the password encoder
+     * @param passwordPolicyService the password policy service
      * @return the user controller
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "user.enabled", havingValue = "true", matchIfMissing = true)
-    public UserController userController(UserService<User, Long> userService, PasswordEncoder passwordEncoder) {
-        return new UserController(userService, passwordEncoder);
+    public UserController userController(UserService<User, Long> userService, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) {
+        return new UserController(userService, passwordEncoder, passwordPolicyService);
     }
+
+
 }

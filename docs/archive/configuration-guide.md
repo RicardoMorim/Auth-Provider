@@ -1,6 +1,38 @@
 # Configuration Guide
 
-This guide provides detailed information about configuring the Ricardo Auth Spring Boot Starter.
+This guide shows you **exactly how to configure** Ricardo Auth for your specific needs.
+
+## 🚀 Quick Setup (2 minutes)
+
+**Minimum required configuration to get started:**
+
+```yaml
+ricardo:
+  auth:
+    jwt:
+      secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
+```
+
+That's it! Ricardo Auth will use sensible defaults for everything else.
+
+## 📋 Configuration Checklist
+
+**✅ Required:**
+- [ ] JWT secret key configured
+- [ ] Database dependency added (`spring-boot-starter-data-jpa`)
+- [ ] Database configured (`application.yml`)
+
+**🎯 Recommended for Production:**
+- [ ] Environment variables for secrets
+- [ ] Password policy configured
+- [ ] Database connection pooling
+- [ ] Logging levels set appropriately
+
+**⚙️ Optional Customizations:**
+- [ ] Custom token expiration
+- [ ] Disabled endpoints you don't need
+- [ ] Custom password policies
+- [ ] CORS configuration
 
 ## Configuration Properties
 
@@ -326,6 +358,130 @@ spring:
   jpa:
     hibernate:
       ddl-auto: validate
+```
+
+## 🔒 Password Policy Configuration
+
+Ricardo Auth includes a **comprehensive password policy system** to enforce strong passwords and protect against common attacks.
+
+### 🎯 Quick Start (Recommended Settings)
+
+**For most applications, use these settings:**
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 10                  # Strong minimum length
+      require-uppercase: true         # Must have A-Z
+      require-lowercase: true         # Must have a-z  
+      require-digits: true            # Must have 0-9
+      require-special-chars: true     # Must have !@#$%^&*
+      prevent-common-passwords: true  # Block weak passwords
+```
+
+**Example valid password:** `MySecure@Pass123!`
+
+### ⚙️ All Configuration Options
+
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      # Length requirements
+      min-length: 10                    # Minimum chars (default: 8)
+      max-length: 128                   # Maximum chars (default: 128)
+      
+      # Character requirements
+      require-uppercase: true           # Must contain A-Z
+      require-lowercase: true           # Must contain a-z
+      require-digits: true              # Must contain 0-9
+      require-special-chars: true       # Must contain symbols
+      
+      # Special character configuration
+      special-characters: "!@#$%^&*()_+-=[]{}|;:,.<>?" # Allowed symbols
+      
+      # Security features
+      prevent-common-passwords: true    # Block common passwords
+      common-passwords-file: "/commonpasswords.txt"  # Custom weak password list
+```
+
+### 🎛 Environment-Specific Policies
+
+#### 🧪 Development (Relaxed)
+*Easier passwords for testing*
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 6
+      require-uppercase: false
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: false
+      prevent-common-passwords: false
+```
+**Valid dev password:** `test123`
+
+#### 🏭 Production (Strict)
+*Maximum security for production*
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 12
+      max-length: 64
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+```
+
+### Custom Common Passwords
+
+Create a custom common passwords file:
+
+```text
+# commonpasswords.txt
+password
+123456
+password123
+admin
+qwerty
+letmein
+welcome
+monkey
+dragon
+```
+
+Load it in your configuration:
+
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      prevent-common-passwords: true
+      common-passwords-file: "classpath:/custom-passwords.txt"
+```
+
+### Password Policy Environment Variables
+
+| Variable | Description | Default | Example |
+|----------|-------------|---------|---------|
+| `RICARDO_AUTH_PASSWORD_POLICY_MIN_LENGTH` | Minimum password length | `8` | `12` |
+| `RICARDO_AUTH_PASSWORD_POLICY_MAX_LENGTH` | Maximum password length | `128` | `64` |
+| `RICARDO_AUTH_PASSWORD_POLICY_REQUIRE_UPPERCASE` | Require uppercase | `true` | `false` |
+| `RICARDO_AUTH_PASSWORD_POLICY_REQUIRE_LOWERCASE` | Require lowercase | `true` | `false` |
+| `RICARDO_AUTH_PASSWORD_POLICY_REQUIRE_DIGITS` | Require digits | `true` | `false` |
+| `RICARDO_AUTH_PASSWORD_POLICY_REQUIRE_SPECIAL_CHARS` | Require special chars | `false` | `true` |
+| `RICARDO_AUTH_PASSWORD_POLICY_PREVENT_COMMON_PASSWORDS` | Prevent common passwords | `true` | `false` |
+
+#### Setting Password Policy Environment Variables
+
+```bash
+export RICARDO_AUTH_PASSWORD_POLICY_MIN_LENGTH="12"
+export RICARDO_AUTH_PASSWORD_POLICY_REQUIRE_UPPERCASE="true"
+export RICARDO_AUTH_PASSWORD_POLICY_REQUIRE_SPECIAL_CHARS="true"
 ```
 
 ## Configuration Validation

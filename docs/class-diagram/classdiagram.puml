@@ -16,7 +16,7 @@ skinparam padding 10
 skinparam classFontSize 11
 skinparam packageFontSize 12
 
-title Ricardo Auth Spring Boot Starter\nArchitecture Overview
+title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v1.1.0)
 
 ' Fix: Use left to right direction to prevent cropping
 !define DIRECTION left to right
@@ -109,6 +109,11 @@ package "Core Interfaces" <<Rectangle>> {
         +extractAllClaims(token: String): Claims
     }
     
+    interface PasswordPolicyService {
+        +validatePassword(password: String): void
+        +generateSecurePassword(): String
+    }
+    
     interface AuthenticatedUser {
         +getName(): String
         +getRoles(): List<String>
@@ -119,6 +124,7 @@ package "Service Layer" <<Rectangle>> {
     
     class UserServiceImpl {
         -userRepository: UserJpaRepository
+        -passwordPolicyService: PasswordPolicyService
         +createUser(user: User): User
         +getUserByEmail(email: String): User
         +emailExists(email: String): boolean
@@ -137,6 +143,26 @@ package "Service Layer" <<Rectangle>> {
         -getKey(): Key
     }
     
+    class PasswordPolicy {
+        -authProperties: AuthProperties
+        -minLength: int
+        -maxLength: int
+        -requireUppercase: boolean
+        -requireLowercase: boolean
+        -requireDigits: boolean
+        -requireSpecialChars: boolean
+        -specialCharacters: String
+        -preventCommonPasswords: boolean
+        -commonPasswords: Set<String>
+        +PasswordPolicy(authProperties: AuthProperties)
+        +validatePassword(password: String): void
+        +generateSecurePassword(): String
+        -loadCommonPasswords(): Set<String>
+        -validateLength(password: String): void
+        -validateCharacterRequirements(password: String): void
+        -validateCommonPassword(password: String): void
+    }
+    
     class UserDetailsServiceImpl {
         -userService: UserService<User, Long>
         +loadUserByUsername(email: String): UserDetails
@@ -144,7 +170,9 @@ package "Service Layer" <<Rectangle>> {
     
     UserServiceImpl .up.|> UserService
     JwtServiceImpl .up.|> JwtService
+    PasswordPolicy .up.|> PasswordPolicyService
     UserDetailsServiceImpl .up.|> UserDetailsService
+    UserServiceImpl --> PasswordPolicyService : validates passwords
 }
 
 package "Repository Layer" <<Rectangle>> {
@@ -239,7 +267,8 @@ package "Auto Configuration" <<Rectangle>> {
     
     class AuthAutoConfiguration {
         +jwtService(): JwtService
-        +userService(userRepository: UserJpaRepository): UserService<User, Long>
+        +passwordPolicyService(authProperties: AuthProperties): PasswordPolicyService
+        +userService(userRepository: UserJpaRepository, passwordPolicy: PasswordPolicyService): UserService<User, Long>
         +userDetailsService(userRepository: UserJpaRepository): UserDetailsServiceImpl
         +jwtAuthFilter(jwtService: JwtService): JwtAuthFilter
         +authController(jwtService: JwtService, authManager: AuthenticationManager): AuthController
@@ -249,6 +278,7 @@ package "Auto Configuration" <<Rectangle>> {
     class AuthProperties {
         -enabled: boolean
         -jwt: Jwt
+        -passwordPolicy: PasswordPolicy
         -controllers: Controllers
     }
     
@@ -257,12 +287,25 @@ package "Auto Configuration" <<Rectangle>> {
         -expiration: long
     }
     
+    class "AuthProperties.PasswordPolicy" as PasswordPolicyProps {
+        -minLength: int
+        -maxLength: int
+        -requireUppercase: boolean
+        -requireLowercase: boolean
+        -requireDigits: boolean
+        -requireSpecialChars: boolean
+        -specialCharacters: String
+        -preventCommonPasswords: boolean
+        -commonPasswordsFilePath: String
+    }
+    
     class "AuthProperties.Controllers" as ControllersProps {
         -auth: Controller
         -user: Controller
     }
     
     AuthProperties *-- JwtProps
+    AuthProperties *-- PasswordPolicyProps
     AuthProperties *-- ControllersProps
 }
 

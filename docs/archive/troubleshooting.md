@@ -1,6 +1,13 @@
 # Troubleshooting Guide
 
-This guide helps you diagnose and resolve common issues when using the Ricardo Auth Spring Boot Starter.
+This guide helps you **quickly diagnose and fix** common issues with Ricardo Auth. Use the search function (Ctrl+F) to find your specific error message.
+
+## 🆘 Emergency Quick Fixes
+
+**App won't start?** → [JWT Secret Missing](#jwt-secret-not-configured)  
+**Login fails?** → [Authentication Issues](#login-always-returns-401-unauthorized)  
+**Password rejected?** → [Password Policy Errors](#password-policy-errors)  
+**Database errors?** → [Missing Dependencies](#missing-jpa-dependencies)
 
 ## Common Issues
 
@@ -665,3 +672,88 @@ Ensure you're using compatible versions:
 | 3.5.x       | 1.0.0                | 21+  |
 
 Remember to always check the changelog and migration guides when upgrading versions.
+
+## 🔑 Password Policy Errors
+
+### Password Doesn't Meet Requirements
+
+**❌ Error Message:**
+```json
+{
+  "error": "Bad Request",
+  "message": "Password must contain at least one uppercase letter",
+  "timestamp": "2024-01-15T10:30:00Z"
+}
+```
+
+**✅ Common Password Policy Errors & Fixes:**
+
+| Error Message | Problem | Solution |
+|---------------|---------|----------|
+| "Password must be at least X characters long" | Too short | Use longer password (default min: 8) |
+| "Password must contain at least one uppercase letter" | Missing A-Z | Add uppercase: `myPass123!` → `MyPass123!` |
+| "Password must contain at least one lowercase letter" | Missing a-z | Add lowercase: `MYPASS123!` → `MyPass123!` |
+| "Password must contain at least one digit" | Missing 0-9 | Add number: `MyPass!` → `MyPass123!` |
+| "Password must contain at least one special character" | Missing symbol | Add symbol: `MyPass123` → `MyPass123!` |
+| "Password is too common and easily guessable" | Weak password | Avoid: `password123`, `123456789`, etc. |
+
+**🎯 Quick Fix - Use This Password Pattern:**
+```
+[Uppercase][lowercase][digits][special]
+Example: SecureAuth@2024!
+```
+
+**⚙️ Check Your Password Policy Settings:**
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 8              # Adjust minimum length
+      require-uppercase: true    # A-Z required
+      require-lowercase: true    # a-z required  
+      require-digits: true       # 0-9 required
+      require-special-chars: true # !@#$%^&*() required
+      special-characters: "!@#$%^&*()" # Allowed symbols
+      prevent-common-passwords: true    # Block weak passwords
+```
+
+**🧪 Test Your Password:**
+```bash
+curl -X POST http://localhost:8080/api/users/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "test@example.com",
+    "password": "YourTestPassword@123!"
+  }'
+```
+
+### Common Password Fails to Create User
+
+**❌ Error Message:**
+```json
+{
+  "error": "Bad Request", 
+  "message": "Password is too common and easily guessable"
+}
+```
+
+**✅ Avoid These Common Passwords:**
+- `password`, `password123`, `123456`
+- `qwerty`, `admin`, `login`
+- `welcome`, `letmein`, `monkey`
+- Your username, email, or domain name
+- Sequential patterns: `123456`, `abcdef`
+
+**✅ Create Strong Passwords:**
+- Mix words with numbers and symbols: `Coffee@Shop2024!`
+- Use passphrases: `Pizza$Delivery#Fast99`
+- Include personal but not obvious elements: `MyDog@Runs4Miles!`
+
+**🔧 Disable Common Password Check (Not Recommended):**
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      prevent-common-passwords: false
+```

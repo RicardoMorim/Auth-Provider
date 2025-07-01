@@ -2,25 +2,40 @@
 
 !theme sketchy-outline
 skinparam backgroundColor #FEFEFE
-skinparam noteBackgroundColor #88A4DD
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #6C757D
+skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Service Architecture
+title Ricardo Auth Starter - Service Architecture (v1.1.0)
 
 interface "UserService<T, ID>" as UserService
 interface JwtService
+interface PasswordPolicyService
 class UserServiceImpl
 class JwtServiceImpl
+class PasswordPolicy
 class AuthAutoConfiguration
 
 UserServiceImpl .up.|> UserService
 JwtServiceImpl .up.|> JwtService
+PasswordPolicy .up.|> PasswordPolicyService
 AuthAutoConfiguration --> UserService : creates
 AuthAutoConfiguration --> JwtService : creates
+AuthAutoConfiguration --> PasswordPolicyService : creates
+UserServiceImpl --> PasswordPolicyService : uses for validation
 
 note top of AuthAutoConfiguration
   **Spring Boot Auto-Configuration**
-  Zero-configuration setup
+  Zero-configuration setup with
+  automatic password policy
+end note
+
+note right of PasswordPolicy
+  **🆕 Password Policy Service (v1.1.0)**
+  Configurable validation rules
+  and secure password generation
 end note
 
 @enduml

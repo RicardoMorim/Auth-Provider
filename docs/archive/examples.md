@@ -1,48 +1,49 @@
 # Examples and Use Cases
 
-This guide provides practical examples and common use cases for implementing the Ricardo Auth Spring Boot Starter in real-world applications.
+This guide shows you **exactly how to implement** Ricardo Auth in real applications. Each example includes complete code, configuration, and step-by-step instructions.
 
-## Table of Contents
+> 💡 **Tip:** Start with the Basic Web Application example if you're new to Ricardo Auth.
 
-1. [Basic Web Application](#basic-web-application)
-2. [Microservices Architecture](#microservices-architecture)
-3. [Mobile API Backend](#mobile-api-backend)
-4. [Multi-Tenant Application](#multi-tenant-application)
-5. [Social Media Platform](#social-media-platform)
-6. [E-commerce Application](#e-commerce-application)
-7. [Custom Integrations](#custom-integrations)
+## 📋 Quick Reference
 
-## Basic Web Application
+| Example | Best For | Complexity | Time |
+|---------|----------|------------|------|
+| [Basic Web Application](#basic-web-application) | Learning, simple apps | ⭐ Easy | 15 min |
+| [Mobile API Backend](#mobile-api-backend) | REST APIs, mobile apps | ⭐⭐ Medium | 25 min |
+| [Microservices Architecture](#microservices-architecture) | Enterprise, scalable systems | ⭐⭐⭐ Advanced | 45 min |
+| [E-commerce Platform](#e-commerce-application) | Business applications | ⭐⭐ Medium | 35 min |
+
+## 🏁 Basic Web Application
+
+**Perfect for:** Learning Ricardo Auth, simple web applications, prototypes
+
+### What You'll Build
+A simple Spring Boot web app with user registration, login, and protected pages.
 
 ### Project Structure
 ```
 my-web-app/
-├── src/
-│   ├── main/
-│   │   ├── java/
-│   │   │   └── com/mycompany/webapp/
-│   │   │       ├── WebAppApplication.java
-│   │   │       ├── controller/
-│   │   │       │   └── HomeController.java
-│   │   │       └── config/
-│   │   │           └── WebConfig.java
-│   │   └── resources/
-│   │       ├── application.yml
-│   │       ├── static/
-│   │       └── templates/
-│   └── test/
-├── pom.xml
-└── README.md
+├── src/main/java/com/mycompany/webapp/
+│   ├── WebAppApplication.java
+│   └── controller/
+│       └── HomeController.java
+├── src/main/resources/
+│   ├── application.yml
+│   └── templates/
+│       ├── index.html
+│       ├── login.html
+│       └── dashboard.html
+└── pom.xml
 ```
 
-### Dependencies (pom.xml)
+### Step 1: Dependencies (pom.xml)
 ```xml
 <dependencies>
     <!-- Ricardo Auth Starter -->
     <dependency>
         <groupId>io.github.ricardomorim</groupId>
         <artifactId>auth-spring-boot-starter</artifactId>
-        <version>1.0.0</version>
+        <version>1.1.0</version>
     </dependency>
     
     <!-- Spring Boot Web -->
@@ -57,14 +58,14 @@ my-web-app/
         <artifactId>spring-boot-starter-data-jpa</artifactId>
     </dependency>
     
-    <!-- Database -->
+    <!-- Database (H2 for quick start) -->
     <dependency>
         <groupId>com.h2database</groupId>
         <artifactId>h2</artifactId>
         <scope>runtime</scope>
     </dependency>
     
-    <!-- Thymeleaf (optional for server-side rendering) -->
+    <!-- Thymeleaf for templates -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-thymeleaf</artifactId>
@@ -72,12 +73,13 @@ my-web-app/
 </dependencies>
 ```
 
-### Configuration (application.yml)
+### Step 2: Configuration (application.yml)
 ```yaml
 spring:
   application:
     name: my-web-app
   
+  # Database configuration
   datasource:
     url: jdbc:h2:mem:webapp
     driver-class-name: org.h2.Driver
@@ -93,11 +95,100 @@ spring:
     console:
       enabled: true
 
+# Ricardo Auth configuration
 ricardo:
   auth:
     jwt:
-      secret: ${JWT_SECRET:my-development-secret-key-for-webapp}
-      expiration: 86400000  # 24 hours
+      secret: "my-super-secure-development-secret-key-for-webapp-should-be-256-bits"
+      expiration: 86400000  # 24 hours for development
+    
+    # Password policy (optional - these are the defaults)
+    password-policy:
+      min-length: 8
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+```
+
+### Step 3: Main Application Class
+```java
+package com.mycompany.webapp;
+
+import org.springframework.boot.SpringApplication;
+import org.springframework.boot.autoconfigure.SpringBootApplication;
+
+@SpringBootApplication
+public class WebAppApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(WebAppApplication.class, args);
+    }
+}
+```
+
+### Step 4: Simple Web Controller
+```java
+package com.mycompany.webapp.controller;
+
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+
+@Controller
+public class HomeController {
+    
+    @GetMapping("/")
+    public String home() {
+        return "index";
+    }
+    
+    @GetMapping("/login")
+    public String login() {
+        return "login";
+    }
+    
+    @GetMapping("/dashboard")
+    public String dashboard() {
+        return "dashboard";
+    }
+}
+```
+
+### Step 5: Test It Out
+
+1. **Start your application:**
+   ```bash
+   mvn spring-boot:run
+   ```
+
+2. **Create a test user:**
+   ```bash
+   curl -X POST http://localhost:8080/api/users/create \
+     -H "Content-Type: application/json" \
+     -d '{
+       "username": "testuser",
+       "email": "test@example.com",
+       "password": "TestPass@123!"
+     }'
+   ```
+
+3. **Login to get a JWT token:**
+   ```bash
+   curl -X POST http://localhost:8080/api/auth/login \
+     -H "Content-Type: application/json" \
+     -d '{
+       "email": "test@example.com",
+       "password": "TestPass@123!"
+     }'
+   ```
+
+4. **Use the token:**
+   ```bash
+   curl -H "Authorization: Bearer YOUR_TOKEN" \
+        http://localhost:8080/api/auth/me
+   ```
+
+✅ **You now have a working Spring Boot app with JWT authentication!**
     controllers:
       auth:
         enabled: true

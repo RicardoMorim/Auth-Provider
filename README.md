@@ -4,19 +4,37 @@
 [![GitHub release](https://img.shields.io/github/release/RicardoMorim/Auth-Provider.svg)](https://github.com/RicardoMorim/Auth-Provider/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-A Spring Boot starter that provides out-of-the-box JWT authentication and user management capabilities for your Spring Boot applications.
+A **plug-and-play** Spring Boot starter that adds JWT authentication and user management to your application with minimal configuration required.
 
-## 🚀 Features
+> 🚀 **Zero-configuration setup** - Just add the dependency and you're ready to go!  
+> 🔐 **Production-ready security** - Built-in password policies, JWT tokens, and role-based access  
+> 📚 **Complete documentation** - Comprehensive guides for setup, configuration, and deployment
 
-- **JWT Authentication**: Complete JWT token generation, validation, and refresh
-- **User Management**: CRUD operations for user entities with role-based access control
-- **Auto-Configuration**: Zero-configuration setup with sensible defaults
-- **Customizable**: Extensive configuration options for all components
-- **Security**: Built-in security configurations with Spring Security
-- **REST Endpoints**: Pre-built authentication and user management endpoints
-- **Role-Based Access**: Support for role-based authorization
-- **Password Encryption**: Secure password hashing with BCrypt
-- **Domain-Driven Design**: Clean architecture with value objects and domain entities
+## ✨ What You Get
+
+**Authentication & Security**
+- 🔑 JWT token generation, validation, and refresh
+- 🛡️ Configurable password policies with strength validation
+- 🔒 BCrypt password encryption
+- 👥 Role-based access control (RBAC)
+- 🚫 Protection against common weak passwords
+
+**Ready-to-Use API Endpoints**
+- `/api/auth/login` - User authentication
+- `/api/auth/register` - User registration
+- `/api/users/*` - Complete user management CRUD
+
+**Developer Experience**
+- 🚀 **Zero-configuration** - Works out of the box with sensible defaults
+- ⚙️ **Highly customizable** - Configure everything through `application.yml`
+- 🧪 **Test-friendly** - Includes test utilities and examples
+- 📖 **Comprehensive docs** - Step-by-step guides for all use cases
+
+**Production Ready**
+- 🏗️ Clean architecture with Domain-Driven Design principles
+- 🔧 Spring Boot auto-configuration
+- 📊 Built-in error handling and validation
+- 🌍 Environment-specific configuration support
 
 ## 📦 Installation
 
@@ -69,11 +87,37 @@ Add the following dependency to your `pom.xml`:
 
 ## ⚡ Quick Start
 
-1. **Add the dependency** to your Spring Boot project (see installation above)
+> **Prerequisites:** Java 17+, Maven/Gradle, and an existing Spring Boot project
 
-2. **Configure your database** in `application.yml`:
+### Step 1: Add the Dependency
+
+```xml
+<dependency>
+    <groupId>io.github.ricardomorim</groupId>
+    <artifactId>auth-spring-boot-starter</artifactId>
+    <version>1.1.0</version>
+</dependency>
+
+<!-- Required: JPA support -->
+<dependency>
+    <groupId>org.springframework.boot</groupId>
+    <artifactId>spring-boot-starter-data-jpa</artifactId>
+</dependency>
+
+<!-- Choose your database (H2 for quick testing) -->
+<dependency>
+    <groupId>com.h2database</groupId>
+    <artifactId>h2</artifactId>
+    <scope>runtime</scope>
+</dependency>
+```
+
+### Step 2: Configure Database & JWT Secret
+
+Add to your `application.yml`:
 
 ```yaml
+# Database configuration
 spring:
   datasource:
     url: jdbc:h2:mem:testdb
@@ -83,19 +127,69 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
-```
 
-3. **Set JWT secret** (required):
-
-```yaml
+# Required: JWT configuration
 ricardo:
   auth:
     jwt:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
-      expiration: 604800000  # 7 days in milliseconds
+      expiration: 604800000  # 7 days
 ```
 
-4. **Start your application** - That's it! The starter will auto-configure everything.
+### Step 3: Start Your Application
+
+```java
+@SpringBootApplication
+public class MyApplication {
+    public static void main(String[] args) {
+        SpringApplication.run(MyApplication.class, args);
+    }
+}
+```
+
+### Step 4: Test the API
+
+**Create a user:**
+```bash
+curl -X POST http://localhost:8080/api/users/create \
+  -H "Content-Type: application/json" \
+  -d '{
+    "username": "testuser",
+    "email": "test@example.com", 
+    "password": "SecurePass@123!"
+  }'
+```
+
+**Login to get JWT token:**
+```bash
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "test@example.com",
+    "password": "SecurePass@123!"
+  }'
+```
+
+**Use the token to access protected endpoints:**
+```bash
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+     http://localhost:8080/api/auth/me
+```
+
+🎉 **That's it!** Your Spring Boot app now has complete JWT authentication and user management.
+
+> � **New to Ricardo Auth?** Check out our [5-minute Getting Started Guide](docs/getting-started.md)  
+> �💡 **Need more control?** See the [Configuration Guide](docs/configuration-guide.md) for advanced options.
+
+## 📖 Documentation
+
+| Guide | Purpose | When to Use |
+|-------|---------|-------------|
+| **[Configuration Guide](docs/configuration-guide.md)** | Complete setup options | Customizing behavior |
+| **[API Reference](docs/api-reference.md)** | All endpoints & examples | Frontend integration |
+| **[Security Guide](docs/security-guide.md)** | Production security | Deploying safely |
+| **[Examples](docs/examples.md)** | Real-world use cases | Learning patterns |
+| **[Troubleshooting](docs/troubleshooting.md)** | Common issues & fixes | Debugging problems |
 
 ## 🔧 Configuration
 
@@ -116,6 +210,27 @@ ricardo:
       user:
         enabled: true   # Enable/disable user management endpoints
 ```
+
+### Password Policy Configuration
+
+Configure password requirements to enhance security:
+
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 10                    # Minimum password length
+      max-length: 128                   # Maximum password length  
+      require-uppercase: true           # Require uppercase letters
+      require-lowercase: true           # Require lowercase letters
+      require-digits: true              # Require numeric digits
+      require-special-chars: true       # Require special characters
+      special-characters: "!@#$%^&*"    # Allowed special characters
+      prevent-common-passwords: true    # Block common passwords
+      common-passwords-file: "/commonpasswords.txt"  # Custom password list
+```
+
+**Example secure password**: `MySecure@Pass123!`
 
 ### Environment Variables
 
@@ -185,23 +300,40 @@ Authorization: Bearer {token}
 ### User Management Endpoints
 
 #### POST `/api/users/create`
-Create a new user account.
+Create a new user account with password policy validation.
 
 **Request:**
 ```json
 {
     "username": "johndoe",
     "email": "john@example.com",
-    "password": "securePassword123"
+    "password": "SecurePass@123!"
 }
 ```
 
-**Response:**
+**Password Requirements:**
+- Minimum 10 characters (configurable)
+- At least one uppercase letter
+- At least one lowercase letter  
+- At least one numeric digit
+- At least one special character: `!@#$%^&*()`
+- Not in common passwords list
+
+**Response (Success):**
 ```json
 {
     "id": 1,
     "username": "johndoe",
     "email": "john@example.com"
+}
+```
+
+**Response (Example Password Policy Error):**
+```json
+{
+    "error": "Bad Request",
+    "message": "Password must contain at least one uppercase letter",
+    "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
 

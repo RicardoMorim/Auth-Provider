@@ -1,9 +1,9 @@
 package com.ricardo.auth.security;
 
 import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.*;
-import com.ricardo.auth.repository.UserJpaRepository;
-import com.ricardo.auth.service.UserDetailsServiceImpl;
+import com.ricardo.auth.repository.DefaultUserJpaRepository;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -39,13 +39,13 @@ class JwtAuthFilterTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserDetailsServiceImpl userDetailsService;
-
-    @Autowired
-    private UserJpaRepository userRepository;
+    private DefaultUserJpaRepository userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
+
+    @Autowired
+    private PasswordPolicyService passwordPolicyService;
 
     private User testUser;
     private String validToken;
@@ -65,7 +65,7 @@ class JwtAuthFilterTest {
         testUser = new User(
             Username.valueOf("testuser"),
             Email.valueOf("test@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
         testUser = userRepository.save(testUser);
@@ -424,7 +424,7 @@ class JwtAuthFilterTest {
         User specialUser = new User(
             Username.valueOf("specialuser"),
             Email.valueOf("test+tag@example.com"),
-            Password.valueOf("password123", passwordEncoder)
+            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         specialUser.addRole(AppRole.USER);
         userRepository.save(specialUser);

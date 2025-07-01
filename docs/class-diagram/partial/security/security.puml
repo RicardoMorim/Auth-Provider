@@ -8,7 +8,7 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Security Architecture & Flow
+title Ricardo Auth Starter - Security Architecture & Flow (v1.1.0)
 
 package "Security Components" {
     class JwtAuthFilter {
@@ -32,12 +32,36 @@ package "Security Components" {
     class UserDetailsServiceImpl {
         +loadUserByUsername(): UserDetails
     }
+    
+    ' 🆕 ADD: Password Policy Service
+    interface PasswordPolicyService {
+        +validatePassword(password: String): void
+        +generateSecurePassword(): String
+    }
+    
+    class PasswordPolicy {
+        +validatePassword(password: String): void
+        +generateSecurePassword(): String
+    }
 }
 
 package "Controllers" {
     class AuthController {
         +login(): ResponseEntity<TokenDTO>
         +getAuthenticatedUser(): ResponseEntity<AuthenticatedUserDTO>
+    }
+    
+    ' 🆕 UPDATED: UserController now uses PasswordPolicyService
+    class UserController {
+        -passwordPolicyService: PasswordPolicyService
+        +createUser(): ResponseEntity<UserDTO>
+        +updateUser(): ResponseEntity<UserDTO>
+    }
+}
+
+package "Domain Layer" {
+    class Password {
+        +valueOf(raw: String, encoder: PasswordEncoder, policyService: PasswordPolicyService): Password
     }
 }
 
@@ -50,12 +74,17 @@ package "Spring Security" <<Rectangle>> {
 ' Relationships
 JwtAuthFilter .up.|> OncePerRequestFilter
 UserDetailsServiceImpl .up.|> UserDetailsService
+PasswordPolicy .up.|> PasswordPolicyService
 SecurityConfig --> JwtAuthFilter : configures
 SecurityConfig --> UserDetailsServiceImpl : uses
 AuthController --> JwtServiceImpl : uses
 AuthController --> AuthenticationManager : uses
 JwtAuthFilter --> JwtServiceImpl : validates tokens
 UserDetailsServiceImpl --> UserService : loads user data
+
+' 🆕 NEW: Password Policy Integration
+UserController --> PasswordPolicyService : uses for validation
+Password --> PasswordPolicyService : validates with
 
 note right of JwtAuthFilter #E8F4FD
   **Filter Chain Integration**
@@ -73,6 +102,18 @@ note bottom of AuthController #E8F4FD
   **Authentication Endpoints**
   Handles login and user
   authentication flow
+end note
+
+note right of UserController #E8F4FD
+  **🆕 Password Policy Integration (v1.1.0)**
+  Validates passwords during
+  user creation and updates
+end note
+
+note left of Password #E8F4FD
+  **🆕 Policy-Aware Value Object (v1.1.0)**
+  Password validation happens
+  at domain object creation
 end note
 
 @enduml

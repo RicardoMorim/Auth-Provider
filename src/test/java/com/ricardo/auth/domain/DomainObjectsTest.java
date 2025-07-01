@@ -1,8 +1,15 @@
 package com.ricardo.auth.domain;
 
+import com.ricardo.auth.autoconfig.AuthProperties;
+import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.service.PasswordPolicy;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -10,9 +17,24 @@ import static org.junit.jupiter.api.Assertions.*;
  * Comprehensive tests for domain value objects and business logic.
  * Tests validation rules, edge cases, and business constraints.
  */
+@SpringBootTest
+@ActiveProfiles("test")
+@TestPropertySource(properties = {
+        "ricardo.auth.jwt.secret=dGVzdGtleWZvcnRlc3RpbmdwdXJwb3Nlc29ubHkxMjM0NTY3ODkw",
+        "ricardo.auth.jwt.expiration=3600000",
+        "ricardo.auth.password-policy.min-length=10",
+        "ricardo.auth.password-policy.require-uppercase=true",
+        "ricardo.auth.password-policy.require-lowercase=true",
+        "ricardo.auth.password-policy.require-digits=true",
+        "ricardo.auth.password-policy.require-special-chars=true",
+        "ricardo.auth.password-policy.prevent-common-passwords=true"
+})
 class DomainObjectsTest {
 
     private final PasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
+    @Autowired
+    private PasswordPolicyService passwordPolicyService;
 
     // ========== EMAIL TESTS ==========
 
@@ -47,7 +69,7 @@ class DomainObjectsTest {
         // Act & Assert
         IllegalArgumentException exception1 = assertThrows(IllegalArgumentException.class, () -> Email.valueOf(""));
         assertEquals("Email cannot be null or empty", exception1.getMessage());
-        
+
         IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class, () -> Email.valueOf("   "));
         assertEquals("Invalid email format", exception2.getMessage());
     }
@@ -145,7 +167,7 @@ class DomainObjectsTest {
         // Act & Assert
         IllegalArgumentException exception1 = assertThrows(IllegalArgumentException.class, () -> Username.valueOf(""));
         assertEquals("Username cannot be null or empty", exception1.getMessage());
-        
+
         IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class, () -> Username.valueOf("   "));
         assertEquals("Username can only contain letters, numbers, dots, underscores, and hyphens", exception2.getMessage());
     }
@@ -202,7 +224,7 @@ class DomainObjectsTest {
         // Act & Assert
         IllegalArgumentException exception1 = assertThrows(IllegalArgumentException.class, () -> Username.valueOf("user space"));
         assertEquals("Username can only contain letters, numbers, dots, underscores, and hyphens", exception1.getMessage());
-        
+
         IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class, () -> Username.valueOf("user@name"));
         assertEquals("Username can only contain letters, numbers, dots, underscores, and hyphens", exception2.getMessage());
     }
@@ -231,12 +253,12 @@ class DomainObjectsTest {
     @Test
     void password_shouldCreateValidPassword() {
         // Act
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
 
         // Assert
         assertNotNull(password);
         assertNotNull(password.getHashed());
-        assertTrue(passwordEncoder.matches("password123", password.getHashed()));
+        assertTrue(passwordEncoder.matches("Password@123", password.getHashed()));
     }
 
     /**
@@ -245,8 +267,8 @@ class DomainObjectsTest {
     @Test
     void password_shouldRejectNullValue() {
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Password.valueOf(null, passwordEncoder));
-        assertEquals("Password hash cannot be null or blank", exception.getMessage());
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Password.valueOf(null, passwordEncoder, passwordPolicyService));
+        assertEquals("Password must be at least 10 characters long.", exception.getMessage());
     }
 
     /**
@@ -255,11 +277,11 @@ class DomainObjectsTest {
     @Test
     void password_shouldRejectEmptyValue() {
         // Act & Assert
-        IllegalArgumentException exception1 = assertThrows(IllegalArgumentException.class, () -> Password.valueOf("", passwordEncoder));
-        assertEquals("Password hash cannot be null or blank", exception1.getMessage());
-        
-        IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class, () -> Password.valueOf("   ", passwordEncoder));
-        assertEquals("Password hash cannot be null or blank", exception2.getMessage());
+        IllegalArgumentException exception1 = assertThrows(IllegalArgumentException.class, () -> Password.valueOf("", passwordEncoder, passwordPolicyService));
+        assertEquals("Password must be at least 10 characters long.", exception1.getMessage());
+
+        IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class, () -> Password.valueOf("   ", passwordEncoder, passwordPolicyService));
+        assertEquals("Password must be at least 10 characters long.", exception2.getMessage());
     }
 
     /**
@@ -268,8 +290,8 @@ class DomainObjectsTest {
     @Test
     void password_shouldRejectTooShortPassword() {
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Password.valueOf("123", passwordEncoder));
-        assertEquals("Password hash must be at least 6 characters long", exception.getMessage());
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Password.valueOf("123", passwordEncoder, passwordPolicyService));
+        assertEquals("Password must be at least 10 characters long.", exception.getMessage());
     }
 
     /**
@@ -278,9 +300,9 @@ class DomainObjectsTest {
     @Test
     void password_shouldRejectTooLongPassword() {
         // Act & Assert
-        String longPassword = "a".repeat(61); // More than 60 chars
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Password.valueOf(longPassword, passwordEncoder));
-        assertEquals("Password hash cannot be longer than 60 characters", exception.getMessage());
+        String longPassword = "a".repeat(61) + "A@1"; // More than 60 chars
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Password.valueOf(longPassword, passwordEncoder, passwordPolicyService));
+        assertEquals("Password must not exceed 60 characters.", exception.getMessage());
     }
 
     /**
@@ -289,9 +311,9 @@ class DomainObjectsTest {
     @Test
     void password_shouldAcceptValidLengths() {
         // Act & Assert - Should not throw exceptions
-        assertDoesNotThrow(() -> Password.valueOf("123456", passwordEncoder)); // 6 chars (minimum)
-        assertDoesNotThrow(() -> Password.valueOf("password123", passwordEncoder));
-        assertDoesNotThrow(() -> Password.valueOf("a".repeat(60), passwordEncoder)); // 60 chars (maximum)
+        assertDoesNotThrow(() -> Password.valueOf("Pp@1234561", passwordEncoder, passwordPolicyService)); // 10 chars (minimum)
+        assertDoesNotThrow(() -> Password.valueOf("Password@123", passwordEncoder, passwordPolicyService));
+        assertDoesNotThrow(() -> Password.valueOf("a".repeat(56) + "@Pp1", passwordEncoder, passwordPolicyService)); // 60 chars (still valid)
     }
 
     /**
@@ -300,10 +322,10 @@ class DomainObjectsTest {
     @Test
     void password_shouldHashPassword() {
         // Arrange
-        String plainPassword = "password123";
+        String plainPassword = "Password@123";
 
         // Act
-        Password password = Password.valueOf(plainPassword, passwordEncoder);
+        Password password = Password.valueOf(plainPassword, passwordEncoder, passwordPolicyService);
 
         // Assert
         assertNotEquals(plainPassword, password.getHashed());
@@ -316,11 +338,11 @@ class DomainObjectsTest {
     @Test
     void password_shouldProduceDifferentHashesForSamePassword() {
         // Arrange
-        String plainPassword = "password123";
+        String plainPassword = "Password@123";
 
         // Act
-        Password password1 = Password.valueOf(plainPassword, passwordEncoder);
-        Password password2 = Password.valueOf(plainPassword, passwordEncoder);
+        Password password1 = Password.valueOf(plainPassword, passwordEncoder, passwordPolicyService);
+        Password password2 = Password.valueOf(plainPassword, passwordEncoder, passwordPolicyService);
 
         // Assert - Due to salt, hashes should be different but both valid
         assertNotEquals(password1.getHashed(), password2.getHashed());
@@ -364,7 +386,7 @@ class DomainObjectsTest {
         // Arrange
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
 
         // Act
         User user = new User(username, email, password);
@@ -373,7 +395,7 @@ class DomainObjectsTest {
         assertNotNull(user);
         assertEquals("testuser", user.getUsername());
         assertEquals("test@example.com", user.getEmail());
-        assertTrue(passwordEncoder.matches("password123", user.getPassword()));
+        assertTrue(passwordEncoder.matches("Password@123", user.getPassword()));
     }
 
     /**
@@ -384,7 +406,7 @@ class DomainObjectsTest {
         // Arrange
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User user = new User(username, email, password);
 
         // Act - Add roles
@@ -395,7 +417,7 @@ class DomainObjectsTest {
         assertEquals(2, user.getRoles().size());
         assertTrue(user.getRoles().contains(AppRole.USER));
         assertTrue(user.getRoles().contains(AppRole.ADMIN));
-        
+
         // Test that roles can be accessed through authorities
         var authorities = user.getAuthorities();
         assertEquals(2, authorities.size());
@@ -411,7 +433,7 @@ class DomainObjectsTest {
         // Arrange
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User user = new User(username, email, password);
         user.addRole(AppRole.USER);
         user.addRole(AppRole.ADMIN);
@@ -433,7 +455,7 @@ class DomainObjectsTest {
         // Arrange
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User user = new User(username, email, password);
 
         // Assert UserDetails implementation
@@ -499,8 +521,8 @@ class DomainObjectsTest {
     @Test
     void password_shouldHandleSpecialCharacters() {
         // Act & Assert - Passwords with special characters
-        assertDoesNotThrow(() -> Password.valueOf("P@ssw0rd!", passwordEncoder));
-        assertDoesNotThrow(() -> Password.valueOf("🔒secure🔑", passwordEncoder));
+        assertDoesNotThrow(() -> Password.valueOf("Pa1@ssw0rd!", passwordEncoder, passwordPolicyService));
+        assertThrows(IllegalArgumentException.class, () -> Password.valueOf("🔒secure🔑", passwordEncoder, passwordPolicyService));
     }
 
     /**
@@ -511,7 +533,7 @@ class DomainObjectsTest {
         // Arrange
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User user = new User(username, email, password);
 
         // Act & Assert - Should handle no roles gracefully
@@ -529,7 +551,7 @@ class DomainObjectsTest {
         // Arrange
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.valueOf("password123", passwordEncoder);
+        Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User user = new User(username, email, password);
 
         // Act - Add same role twice
@@ -547,8 +569,8 @@ class DomainObjectsTest {
     @Test
     void password_shouldMatchCorrectly() {
         // Arrange
-        String plainPassword = "testPassword123";
-        Password password = Password.valueOf(plainPassword, passwordEncoder);
+        String plainPassword = "testPassword@123";
+        Password password = Password.valueOf(plainPassword, passwordEncoder, passwordPolicyService);
 
         // Act & Assert
         assertTrue(password.matches(plainPassword, passwordEncoder));
@@ -561,11 +583,35 @@ class DomainObjectsTest {
     @Test
     void password_shouldRejectNullRawPasswordInMatches() {
         // Arrange
-        Password password = Password.valueOf("testPassword123", passwordEncoder);
+        Password password = Password.valueOf("testPassword@123", passwordEncoder, passwordPolicyService);
 
         // Act & Assert
-        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, 
-            () -> password.matches(null, passwordEncoder));
+        IllegalArgumentException exception = assertThrows(IllegalArgumentException.class,
+                () -> password.matches(null, passwordEncoder));
         assertEquals("Raw password cannot be null or blank", exception.getMessage());
+
+    }
+
+    /**
+     * Password should integrate with password policy.
+     */
+    @Test
+    void password_shouldIntegrateWithPasswordPolicy() {
+        // Arrange
+        AuthProperties authProperties = new AuthProperties();
+        PasswordPolicyService policyService = new PasswordPolicy(authProperties);
+
+        // Act & Assert - Should fail for weak passwords
+        assertThrows(IllegalArgumentException.class, () -> {
+            if (!policyService.validatePassword("weak")) {
+                throw new IllegalArgumentException("Password doesn't meet policy requirements");
+            }
+            Password.valueOf("weak", passwordEncoder, policyService);
+        });
+
+        // Should succeed for strong passwords
+        assertDoesNotThrow(() -> {
+            Password.valueOf("StrongPass123", passwordEncoder, policyService);
+        });
     }
 }

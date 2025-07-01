@@ -8,6 +8,7 @@ import java.util.Optional;
 
 /**
  * The interface User service.
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  *
  * @param <U>  the type parameter
  * @param <ID> the type parameter

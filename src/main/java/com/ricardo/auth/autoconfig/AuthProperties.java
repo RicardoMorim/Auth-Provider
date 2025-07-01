@@ -1,11 +1,12 @@
 package com.ricardo.auth.autoconfig;
 
-import org.hibernate.cfg.Environment;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
  * Configuration properties for Ricardo Auth Starter
+ * This class enables IDE auto-completion on the application.properties file and allows users to configure the settings without needing to write code.
  */
 @ConfigurationProperties(prefix = "ricardo.auth")
 public class AuthProperties {
@@ -26,20 +27,23 @@ public class AuthProperties {
     private Controllers controllers = new Controllers();
 
     /**
+     * Password policy configuration
+     */
+    private PasswordPolicy passwordPolicy = new PasswordPolicy();
+
+    /**
      * The type Jwt.
      */
     public static class Jwt {
         /**
-         * JWT secret key (Base64 encoded)
+         * JWT secret key (Base64 encoded) - REQUIRED
          */
-        @Value("${jwt.secret}")
         private String secret;
 
         /**
-         * JWT expiration time in milliseconds
+         * JWT expiration time in milliseconds (default: 7 days)
          */
-        @Value("${jwt.expiration:604800000}") // 7 dias em ms
-        private long expiration;
+        private long expiration = 604800000L;
 
         /**
          * Gets secret.
@@ -128,6 +132,61 @@ public class AuthProperties {
     }
 
     /**
+     * Password policy configuration
+     */
+    @Setter
+    @Getter
+    public static class PasswordPolicy {
+        /**
+         * Minimum password length
+         */
+        private int minLength = 8;
+
+        /**
+         * Maximum password length
+         */
+        private int maxLength = 128;
+
+        /**
+         * Require at least one uppercase letter
+         */
+        private boolean requireUppercase = true;
+
+        /**
+         * Require at least one lowercase letter
+         */
+        private boolean requireLowercase = true;
+
+        /**
+         * Require at least one digit
+         */
+        private boolean requireDigits = true;
+
+        /**
+         * Require at least one special character
+         */
+        private boolean requireSpecialChars = false;
+
+        /**
+         * Allowed special characters
+         */
+        private String allowedSpecialChars = "!@#$%^&*()_+-=[]{}|;:,.<>?";
+
+        /**
+         * Prevent common passwords (basic check)
+         */
+        private boolean preventCommonPasswords = true;
+
+
+        /**
+         * Path to file containing common passwords (one per line)
+         * Required when preventCommonPasswords is true
+         */
+        private String commonPasswordsFilePath = "/commonpasswords.txt";
+
+    }
+
+    /**
      * Is enabled boolean.
      *
      * @return the boolean
@@ -168,4 +227,18 @@ public class AuthProperties {
      * @param controllers the controllers
      */
     public void setControllers(Controllers controllers) { this.controllers = controllers; }
+
+    /**
+     * Gets password policy.
+     *
+     * @return the password policy
+     */
+    public PasswordPolicy getPasswordPolicy() { return passwordPolicy; }
+
+    /**
+     * Sets password policy.
+     *
+     * @param passwordPolicy the password policy
+     */
+    public void setPasswordPolicy(PasswordPolicy passwordPolicy) { this.passwordPolicy = passwordPolicy; }
 }
