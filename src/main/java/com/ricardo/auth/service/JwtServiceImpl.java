@@ -2,15 +2,17 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import java.security.Key;
+import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -18,13 +20,14 @@ import java.util.stream.Collectors;
 /**
  * The type Jwt service.
  * * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
- *
  */
 public class JwtServiceImpl implements JwtService {
 
     private String secret;
 
-    private long expiration;
+    private long access_token_expiration;
+
+    private long refresh_token_expiration;
 
     private Key key;
 
@@ -35,7 +38,8 @@ public class JwtServiceImpl implements JwtService {
      */
     public JwtServiceImpl(AuthProperties authProperties) {
         this.secret = authProperties.getJwt().getSecret();
-        this.expiration = authProperties.getJwt().getExpiration();
+        this.access_token_expiration = authProperties.getJwt().getAccess_token_expiration();
+        this.refresh_token_expiration = authProperties.getJwt().getRefresh_token_expiration();
 
         // Validate secret is provided
         if (secret == null || secret.trim().isEmpty()) {
@@ -56,21 +60,27 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
-    public String generateToken(String subject, Collection<? extends GrantedAuthority> authorities) {
+    public String generateAccessToken(String subject, Collection<? extends GrantedAuthority> authorities) {
         Map<String, Object> claims = new HashMap<>();
         List<String> roleStrings = authorities.stream()
                 .map(GrantedAuthority::getAuthority)
                 .collect(Collectors.toList());
         claims.put("roles", roleStrings);
 
+        String tokenId = UUID.randomUUID().toString();
+        claims.put("jti", tokenId); // JWT ID for uniqueness
+
+        claims.put("token_type", "access");
+
         return Jwts.builder()
-                .setClaims(claims)
-                .setSubject(subject)
-                .setIssuedAt(new Date())
-                .setExpiration(new Date(System.currentTimeMillis() + expiration))
-                .signWith(key, SignatureAlgorithm.HS256)
+                .claims(claims)
+                .subject(subject)
+                .issuedAt(new Date())
+                .expiration(new Date(System.currentTimeMillis() + access_token_expiration))
+                .signWith(key)
                 .compact();
     }
+
 
     @Override
     public String extractSubject(String token) {
@@ -109,7 +119,7 @@ public class JwtServiceImpl implements JwtService {
         return Jwts.parser()
                 .setSigningKey(key)
                 .build()
-                .parseClaimsJws(token)
-                .getBody();
+                .parseSignedClaims(token)
+                .getPayload();
     }
 }

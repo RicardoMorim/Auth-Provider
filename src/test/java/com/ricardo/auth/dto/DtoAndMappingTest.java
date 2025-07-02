@@ -1,7 +1,7 @@
 package com.ricardo.auth.dto;
 
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.user.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

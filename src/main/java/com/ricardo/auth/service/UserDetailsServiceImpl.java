@@ -1,7 +1,7 @@
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;

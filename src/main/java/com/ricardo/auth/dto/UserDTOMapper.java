@@ -1,5 +1,7 @@
 package com.ricardo.auth.dto;
 
+import com.ricardo.auth.domain.user.AuthUser;
+
 /**
  * The type User dto mapper.
  */
@@ -10,7 +12,7 @@ public class UserDTOMapper {
      * @param user the user
      * @return the user dto
      */
-    public static UserDTO toDTO(com.ricardo.auth.domain.AuthUser<?> user) {
+    public static UserDTO toDTO(AuthUser<?> user) {
         if (user == null) {
             return null;
         }

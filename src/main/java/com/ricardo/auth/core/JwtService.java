@@ -17,7 +17,7 @@ public interface JwtService {
      * @param authorities the authorities
      * @return the string
      */
-    String generateToken(String subject, Collection<? extends GrantedAuthority> authorities);
+    String generateAccessToken(String subject, Collection<? extends GrantedAuthority> authorities);
 
     /**
      * Extract subject string.

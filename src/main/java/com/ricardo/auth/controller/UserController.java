@@ -2,7 +2,7 @@ package com.ricardo.auth.controller;
 
 import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.UserDTO;
 import com.ricardo.auth.dto.UserDTOMapper;

@@ -3,11 +3,11 @@ package com.ricardo.auth.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.dto.TokenDTO;
-import com.ricardo.auth.repository.DefaultUserJpaRepository;
+import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -202,7 +202,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldAuthenticateWithValidJwtToken() throws Exception {
         // Arrange - Generate valid token
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -255,7 +255,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldRejectTokenWithoutBearerPrefix() throws Exception {
         // Arrange - Generate valid token but send without Bearer prefix
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -350,7 +350,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldAllowUserRoleToAccessUserEndpoints() throws Exception {
         // Arrange - Generate token for user role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -369,7 +369,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldAllowAdminRoleToAccessAdminEndpoints() throws Exception {
         // Arrange - Generate token for admin role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 adminUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
@@ -388,7 +388,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldDenyUserRoleAccessToAdminEndpoints() throws Exception {
         // Arrange - Generate token for user role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -407,7 +407,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldDenyAccessWithTamperedToken() throws Exception {
         // This test simulates a tampered token (invalid signature)
-        String tamperedToken = jwtService.generateToken(
+        String tamperedToken = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         ) + "tampered";
@@ -428,7 +428,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldHandleTokenWithInvalidRoles() throws Exception {
         // Arrange - Generate token with invalid role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_INVALID"))
         );
@@ -455,7 +455,7 @@ class SecurityIntegrationTest {
         adminUser.addRole(AppRole.USER); // Admin also has USER role
         userRepository.save(adminUser);
 
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 adminUser.getEmail(),
                 List.of(
                         new SimpleGrantedAuthority("ROLE_USER"),
@@ -530,7 +530,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldReturnJsonErrorForForbiddenRequests() throws Exception {
         // Arrange - Generate token for user role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -616,7 +616,7 @@ class SecurityIntegrationTest {
     void shouldHandleVeryLongTokens() throws Exception {
         // Test with extremely long but valid token
         String longSubject = "a".repeat(1000) + "@example.com";
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 longSubject,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -636,7 +636,7 @@ class SecurityIntegrationTest {
     void shouldHandleSpecialCharactersInToken() throws Exception {
         // Test with special characters in subject
         String specialSubject = "test+user@example.com";
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 specialSubject,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -655,7 +655,7 @@ class SecurityIntegrationTest {
     @Test
     void shouldHandleCaseInsensitiveBearerHeader() throws Exception {
         // Arrange
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );

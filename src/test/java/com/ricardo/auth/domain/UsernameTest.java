@@ -1,5 +1,6 @@
 package com.ricardo.auth.domain;
 
+import com.ricardo.auth.domain.user.Username;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;

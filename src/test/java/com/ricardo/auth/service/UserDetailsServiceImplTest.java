@@ -1,12 +1,13 @@
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.user.Email;
+import com.ricardo.auth.domain.user.AppRole;
+import com.ricardo.auth.domain.user.Password;
+import com.ricardo.auth.domain.user.User;
+import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.repository.DefaultUserJpaRepository;
+import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -80,8 +81,8 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsername_shouldReturnCorrectAuthorities() {
         // Arrange - Add roles to user
-        testUser.addRole(com.ricardo.auth.domain.AppRole.USER);
-        testUser.addRole(com.ricardo.auth.domain.AppRole.ADMIN);
+        testUser.addRole(AppRole.USER);
+        testUser.addRole(AppRole.ADMIN);
         userRepository.save(testUser);
 
         // Act
@@ -184,7 +185,7 @@ class UserDetailsServiceImplTest {
             Email.valueOf("user2@example.com"),
             Password.valueOf("Password@456", passwordEncoder, passwordPolicyService)
         );
-        user2.addRole(com.ricardo.auth.domain.AppRole.ADMIN);
+        user2.addRole(AppRole.ADMIN);
         userRepository.save(user2);
 
         User user3 = new User(
@@ -338,7 +339,7 @@ class UserDetailsServiceImplTest {
         assertTrue(initialUserDetails.getAuthorities().isEmpty());
 
         // Act - Modify user in database
-        testUser.addRole(com.ricardo.auth.domain.AppRole.USER);
+        testUser.addRole(AppRole.USER);
         userRepository.save(testUser);
 
         // Load user again

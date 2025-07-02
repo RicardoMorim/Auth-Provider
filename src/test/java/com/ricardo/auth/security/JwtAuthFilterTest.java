@@ -2,8 +2,8 @@ package com.ricardo.auth.security;
 
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.*;
-import com.ricardo.auth.repository.DefaultUserJpaRepository;
+import com.ricardo.auth.domain.user.*;
+import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import jakarta.servlet.ServletException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -71,7 +71,7 @@ class JwtAuthFilterTest {
         testUser = userRepository.save(testUser);
 
         // Generate valid token
-        validToken = jwtService.generateToken(
+        validToken = jwtService.generateAccessToken(
             testUser.getEmail(),
             List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -383,7 +383,7 @@ class JwtAuthFilterTest {
         testUser.addRole(AppRole.ADMIN);
         userRepository.save(testUser);
         
-        String multiRoleToken = jwtService.generateToken(
+        String multiRoleToken = jwtService.generateAccessToken(
             testUser.getEmail(),
             List.of(
                 new SimpleGrantedAuthority("ROLE_USER"),
@@ -429,7 +429,7 @@ class JwtAuthFilterTest {
         specialUser.addRole(AppRole.USER);
         userRepository.save(specialUser);
         
-        String specialToken = jwtService.generateToken(
+        String specialToken = jwtService.generateAccessToken(
             "test+tag@example.com",
             List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );

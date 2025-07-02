@@ -1,6 +1,6 @@
-package com.ricardo.auth.repository;
+package com.ricardo.auth.repository.user;
 
-import com.ricardo.auth.domain.AuthUser;
+import com.ricardo.auth.domain.user.AuthUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 

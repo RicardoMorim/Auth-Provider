@@ -274,11 +274,12 @@ management:
 ## User Service
 
 ### Enhanced User Controller
+
 ```java
 package com.mycompany.userservice.controller;
 
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.UserDTO;
 import com.ricardo.auth.dto.UserDTOMapper;
 import org.springframework.data.domain.Page;
@@ -291,51 +292,51 @@ import org.springframework.web.bind.annotation.*;
 @RestController
 @RequestMapping("/api/users")
 public class EnhancedUserController {
-    
+
     private final UserService userService;
-    
+
     public EnhancedUserController(UserService userService) {
         this.userService = userService;
     }
-    
+
     @GetMapping("/profile")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<UserDTO> getMyProfile(@RequestHeader("X-User-Email") String userEmail) {
         User user = userService.getUserByEmail(userEmail);
         return ResponseEntity.ok(UserDTOMapper.toDTO(user));
     }
-    
+
     @PutMapping("/profile")
     @PreAuthorize("hasRole('USER')")
     public ResponseEntity<UserDTO> updateProfile(
             @RequestHeader("X-User-Email") String userEmail,
             @RequestBody UpdateProfileRequestDTO request) {
-        
+
         User user = userService.getUserByEmail(userEmail);
-        
+
         // Update profile fields
         user.setFirstName(request.getFirstName());
         user.setLastName(request.getLastName());
         user.setPhoneNumber(request.getPhoneNumber());
-        
+
         User updatedUser = userService.updateUser(user.getId(), user);
         return ResponseEntity.ok(UserDTOMapper.toDTO(updatedUser));
     }
-    
+
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Page<UserDTO>> searchUsers(
             @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size) {
-        
+
         Pageable pageable = PageRequest.of(page, size);
         Page<User> users = userService.searchUsers(query, pageable);
         Page<UserDTO> userDTOs = users.map(UserDTOMapper::toDTO);
-        
+
         return ResponseEntity.ok(userDTOs);
     }
-    
+
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
