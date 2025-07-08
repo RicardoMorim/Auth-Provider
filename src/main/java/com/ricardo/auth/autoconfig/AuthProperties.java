@@ -71,11 +71,6 @@ public class AuthProperties {
         private boolean enabled = true;
 
         /**
-         * Storage type for refresh tokens
-         */
-        private Storage storage = new Storage();
-
-        /**
          * Maximum number of concurrent refresh tokens per user (0 = unlimited)
          */
         private int maxTokensPerUser = 5;
@@ -91,87 +86,14 @@ public class AuthProperties {
         private long cleanupInterval = 3600000L;
 
         /**
-         * Storage configuration for refresh tokens
+         * Table name for refresh tokens (JPA only)
          */
-        @Getter
-        @Setter
-        public static class Storage {
-            /**
-             * Storage type: jpa, redis, mongodb, memory
-             */
-            private String type = "jpa";
+        private String tableName = "refresh_tokens";
 
-            /**
-             * Redis-specific configuration
-             */
-            private Redis redis = new Redis();
-
-            /**
-             * JPA-specific configuration
-             */
-            private Jpa jpa = new Jpa();
-
-            /**
-             * MongoDB-specific configuration
-             */
-            private MongoDB mongodb = new MongoDB();
-
-            /**
-             * Redis storage configuration
-             */
-            @Getter
-            @Setter
-            public static class Redis {
-                /**
-                 * TTL buffer time in milliseconds (extra time beyond token expiry)
-                 */
-                private long ttlBuffer = 600000L; // 10 minutes
-
-                /**
-                 * Redis key prefix for refresh tokens
-                 */
-                private String keyPrefix = "refresh_token:";
-
-                /**
-                 * Redis key prefix for user token tracking
-                 */
-                private String userTokensPrefix = "user_tokens:";
-            }
-
-            /**
-             * JPA storage configuration
-             */
-            @Getter
-            @Setter
-            public static class Jpa {
-                /**
-                 * Table name for refresh tokens
-                 */
-                private String tableName = "refresh_tokens";
-
-                /**
-                 * Enable automatic cleanup of expired tokens
-                 */
-                private boolean autoCleanup = true;
-            }
-
-            /**
-             * MongoDB storage configuration
-             */
-            @Getter
-            @Setter
-            public static class MongoDB {
-                /**
-                 * Collection name for refresh tokens
-                 */
-                private String collectionName = "refresh_tokens";
-
-                /**
-                 * Enable TTL index for automatic expiration
-                 */
-                private boolean enableTtlIndex = true;
-            }
-        }
+        /**
+         * Enable automatic cleanup of expired tokens
+         */
+        private boolean autoCleanup = true;
     }
 
     /**

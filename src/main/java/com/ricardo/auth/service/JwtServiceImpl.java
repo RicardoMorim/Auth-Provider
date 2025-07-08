@@ -27,7 +27,6 @@ public class JwtServiceImpl implements JwtService {
 
     private long access_token_expiration;
 
-    private long refresh_token_expiration;
 
     private Key key;
 
@@ -38,8 +37,7 @@ public class JwtServiceImpl implements JwtService {
      */
     public JwtServiceImpl(AuthProperties authProperties) {
         this.secret = authProperties.getJwt().getSecret();
-        this.access_token_expiration = authProperties.getJwt().getAccess_token_expiration();
-        this.refresh_token_expiration = authProperties.getJwt().getRefresh_token_expiration();
+        this.access_token_expiration = authProperties.getJwt().getAccessTokenExpiration();
 
         // Validate secret is provided
         if (secret == null || secret.trim().isEmpty()) {

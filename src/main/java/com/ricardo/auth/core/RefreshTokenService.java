@@ -35,7 +35,7 @@ public interface RefreshTokenService<U extends AuthUser<?>, ID> {
      *
      * @param tokenValue the token value to revoke
      */
-    void revokeToken(String tokenValue) throws Throwable;
+    void revokeToken(String tokenValue) throws TokenExpiredException;
 
     /**
      * Revokes all refresh tokens for a specific user.
@@ -59,7 +59,7 @@ public interface RefreshTokenService<U extends AuthUser<?>, ID> {
      * @return the refresh token
      * @throws com.ricardo.auth.domain.exceptions.ResourceNotFoundException if token is not found
      */
-    RefreshToken findByToken(String tokenValue) throws Throwable;
+    RefreshToken findByToken(String tokenValue) throws TokenExpiredException;
 
     /**
      * Cleans up expired refresh tokens.

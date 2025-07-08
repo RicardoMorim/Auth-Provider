@@ -4,12 +4,15 @@ import com.ricardo.auth.controller.AuthController;
 import com.ricardo.auth.controller.UserController;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.core.RefreshTokenService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.user.User;
+import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import com.ricardo.auth.security.JwtAuthFilter;
 import com.ricardo.auth.service.JwtServiceImpl;
 import com.ricardo.auth.service.PasswordPolicy;
+import com.ricardo.auth.service.RefreshTokenServiceImpl;
 import com.ricardo.auth.service.UserDetailsServiceImpl;
 import com.ricardo.auth.service.UserServiceImpl;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
@@ -64,6 +67,25 @@ public class AuthAutoConfiguration {
         return new UserServiceImpl<>(userRepository);
     }
 
+    /**
+     * Refresh token service refresh token service.
+     *
+     * @param refreshTokenRepository the refresh token repository
+     * @param userService            the user service
+     * @param authProperties         the auth properties
+     * @return the refresh token service
+     */
+    @Bean
+    @ConditionalOnMissingBean
+    @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens", name = "enabled", havingValue = "true", matchIfMissing = true)
+    public RefreshTokenService<User, Long> refreshTokenService(
+            RefreshTokenRepository refreshTokenRepository,
+            UserService<User, Long> userService,
+            AuthProperties authProperties) {
+
+        Long expiryDuration = authProperties.getJwt().getRefreshTokenExpiration() / 1000; // Convert to seconds
+        return new RefreshTokenServiceImpl<>(refreshTokenRepository, userService, expiryDuration);
+    }
 
     /**
      * User details service user details service.
@@ -92,15 +114,21 @@ public class AuthAutoConfiguration {
     /**
      * Auth controller auth controller.
      *
-     * @param jwtService  the jwt service
-     * @param authManager the auth manager
+     * @param jwtService          the jwt service
+     * @param authManager         the auth manager
+     * @param refreshTokenService the refresh token service (optional)
      * @return the auth controller
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "auth.enabled", havingValue = "true", matchIfMissing = true)
-    public AuthController authController(JwtService jwtService, AuthenticationManager authManager) {
-        return new AuthController(jwtService, authManager);
+    public AuthController authController(
+            JwtService jwtService,
+            AuthenticationManager authManager,
+            RefreshTokenService<User, Long> refreshTokenService,
+            AuthProperties authProperties) {
+
+        return new AuthController(jwtService, authManager, refreshTokenService, authProperties);
     }
 
     /**
@@ -126,9 +154,10 @@ public class AuthAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "user.enabled", havingValue = "true", matchIfMissing = true)
-    public UserController userController(UserService<User, Long> userService, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) {
+    public UserController userController(
+            UserService<User, Long> userService,
+            PasswordEncoder passwordEncoder,
+            PasswordPolicyService passwordPolicyService) {
         return new UserController(userService, passwordEncoder, passwordPolicyService);
     }
-
-
 }
