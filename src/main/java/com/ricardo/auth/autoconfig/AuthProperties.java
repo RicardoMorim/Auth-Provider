@@ -5,9 +5,11 @@ import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties for Ricardo Auth Starter
- * This class enables IDE auto-completion on the application.properties file and allows users to configure some settings without needing to write code
- * Also enables users to create their own custom configuration class that extends this one, allowing them to override the default values.
+ * Configuration properties for Ricardo Auth Starter.
+ * This class enables IDE auto-completion on the application.properties file and allows users to configure some
+ * settings without needing to write code.
+ * Also enables users to create their own custom configuration class that extends this one, allowing them to
+ * override the default values.
  */
 @ConfigurationProperties(prefix = "ricardo.auth")
 public class AuthProperties {
@@ -37,6 +39,60 @@ public class AuthProperties {
      */
     private RefreshTokens refreshTokens = new RefreshTokens();
 
+    @Getter
+    @Setter
+    public static class RefreshTokens {
+        private boolean enabled = true;
+        private int maxTokensPerUser = 5;
+        private boolean rotateOnRefresh = true;
+        private long cleanupInterval = 3600000L;
+        private boolean autoCleanup = true;
+
+        /**
+         * Repository configuration specifically for refresh tokens
+         */
+        private RefreshTokenRepository repository = new RefreshTokenRepository();
+    }
+
+    @Getter
+    @Setter
+    public static class RefreshTokenRepository {
+        /**
+         * Repository type for refresh tokens: jpa, postgresql
+         */
+        private String type = RefreshTokenRepositoryType.JPA.toString().toLowerCase();
+
+        /**
+         * Database-specific settings for refresh tokens
+         */
+        private Database database = new Database();
+    }
+
+    @Getter
+    @Setter
+    public static class Database {
+        private String refreshTokensTable = "refresh_tokens";
+        private String schema;
+        private String url;
+        private String driverClassName;
+    }
+
+    public enum RefreshTokenRepositoryType {
+        JPA ("jpa"), POSTGRESQL ("postgresql");
+
+        @Getter
+        private final String value;
+
+        RefreshTokenRepositoryType(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public final String toString() {
+            return value;
+        }
+    }
+
     /**
      * The type Jwt.
      */
@@ -59,42 +115,6 @@ public class AuthProperties {
         private long refreshTokenExpiration = 604800000L; // 7 days
     }
 
-    /**
-     * Refresh token configuration
-     */
-    @Getter
-    @Setter
-    public static class RefreshTokens {
-        /**
-         * Whether refresh tokens are enabled
-         */
-        private boolean enabled = true;
-
-        /**
-         * Maximum number of concurrent refresh tokens per user (0 = unlimited)
-         */
-        private int maxTokensPerUser = 5;
-
-        /**
-         * Whether to rotate refresh tokens on each use
-         */
-        private boolean rotateOnRefresh = true;
-
-        /**
-         * Cleanup interval for expired tokens in milliseconds (default: 1 hour)
-         */
-        private long cleanupInterval = 3600000L;
-
-        /**
-         * Table name for refresh tokens (JPA only)
-         */
-        private String tableName = "refresh_tokens";
-
-        /**
-         * Enable automatic cleanup of expired tokens
-         */
-        private boolean autoCleanup = true;
-    }
 
     /**
      * The type Controllers.

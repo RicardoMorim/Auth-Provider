@@ -83,7 +83,7 @@ public class SecurityConfig {
         return http.csrf(AbstractHttpConfigurer::disable)
                 .authorizeHttpRequests(auth -> auth
                         // Apenas login e registo são públicos
-                        .requestMatchers("/api/auth/login", "/api/users/create").permitAll()
+                        .requestMatchers("/api/auth/login", "/api/users/create", "/api/auth/refresh").permitAll()
                         // Todas as outras requisições exigem autenticação
                         .anyRequest().authenticated()
                 )
