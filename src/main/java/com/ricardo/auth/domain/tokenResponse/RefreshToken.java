@@ -1,6 +1,7 @@
 package com.ricardo.auth.domain.tokenResponse;
 
 
+import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -10,7 +11,7 @@ import java.time.Instant;
 
 @Entity
 @Getter
-@Table(name="refresh_token")
+@Table(name="refresh_tokens")
 public class RefreshToken {
 
 
@@ -32,7 +33,7 @@ public class RefreshToken {
 
     @Setter
     @Column(nullable = false)
-    private boolean revoked = false;
+    private boolean revoked;
 
     public RefreshToken(String refreshToken, String email, Instant expiration) {
         if (refreshToken == null || refreshToken.isBlank()) {
@@ -44,19 +45,30 @@ public class RefreshToken {
         }
 
         if (expiration == null || expiration.isBefore(Instant.now())) {
-            throw new IllegalArgumentException("Expiration must be a future date");
+            throw new TokenExpiredException("Expiration must be a future date");
         }
 
         this.token = refreshToken;
         this.userEmail = email;
         this.expiryDate = expiration;
+        this.revoked = false;
     }
 
     @Override
     public String toString() {
         return "RefreshToken{" +
                 "refreshToken='" + token + '\'' +
+                "is revoked:"+
+                isRevoked()+
                 '}';
+    }
+
+    public boolean isExpired() {
+        return Instant.now().isAfter(expiryDate);
+    }
+
+    public boolean isRevoked(){
+        return revoked;
     }
 
     @Override
@@ -70,5 +82,17 @@ public class RefreshToken {
     @Override
     public int hashCode() {
         return token.hashCode();
+    }
+
+    /**
+     * Sets the ID of the refresh token.
+     * THIS METHOD IS FOR POSTGRESQL ONLY.
+     * JPA/HIBERNATE WILL SET THE ID AUTOMATICALLY.
+     *
+     * @param id the ID to set
+    **/
+    @SuppressWarnings("unused")
+    public void setId(Long id) {
+        this.id = id;
     }
 }
