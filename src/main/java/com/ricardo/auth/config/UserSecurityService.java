@@ -1,8 +1,8 @@
 package com.ricardo.auth.config;
 
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.User;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
+import com.ricardo.auth.domain.user.User;
 import org.springframework.stereotype.Service;
 
 /**

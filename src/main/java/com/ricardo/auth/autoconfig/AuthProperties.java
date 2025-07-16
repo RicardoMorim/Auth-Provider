@@ -1,12 +1,16 @@
 package com.ricardo.auth.autoconfig;
 
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
 /**
- * Configuration properties for Ricardo Auth Starter
- * This class enables IDE auto-completion on the application.properties file and allows users to configure the settings without needing to write code.
+ * Configuration properties for Ricardo Auth Starter.
+ * This class enables IDE auto-completion on the application.properties file and allows users to configure some
+ * settings without needing to write code.
+ * Also enables users to create their own custom configuration class that extends this one, allowing them to
+ * override the default values.
  */
 @ConfigurationProperties(prefix = "ricardo.auth")
 public class AuthProperties {
@@ -32,8 +36,96 @@ public class AuthProperties {
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
 
     /**
+     * Refresh token configuration
+     */
+    private RefreshTokens refreshTokens = new RefreshTokens();
+
+    /**
+     * The type Refresh tokens.
+     */
+    @Getter
+    @Setter
+    public static class RefreshTokens {
+        private boolean enabled = true;
+        /**
+         * Maximum number of refresh tokens per user (0 = unlimited)
+         */
+        @Min(0)
+        private int maxTokensPerUser = 5;
+
+        private boolean rotateOnRefresh = true;
+
+        @Min(60000) // 1 minute
+        private long cleanupInterval = 3600000L; // default 1 hour
+
+        private boolean autoCleanup = true;
+
+        /**
+         * Repository configuration specifically for refresh tokens
+         */
+        private RefreshTokenRepository repository = new RefreshTokenRepository();
+    }
+
+    /**
+     * The type Refresh token repository.
+     */
+    @Getter
+    @Setter
+    public static class RefreshTokenRepository {
+        /**
+         * Repository type for refresh tokens: jpa, postgresql
+         */
+        private String type = RefreshTokenRepositoryType.JPA.toString().toLowerCase();
+
+        /**
+         * Database-specific settings for refresh tokens
+         */
+        private Database database = new Database();
+    }
+
+    /**
+     * The type Database.
+     */
+    @Getter
+    @Setter
+    public static class Database {
+        private String refreshTokensTable = "refresh_tokens";
+        private String schema;
+        private String url;
+        private String driverClassName;
+    }
+
+    /**
+     * The enum Refresh token repository type.
+     */
+    public enum RefreshTokenRepositoryType {
+        /**
+         * Jpa refresh token repository type.
+         */
+        JPA ("jpa"),
+        /**
+         * Postgresql refresh token repository type.
+         */
+        POSTGRESQL ("postgresql");
+
+        @Getter
+        private final String value;
+
+        RefreshTokenRepositoryType(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public final String toString() {
+            return value;
+        }
+    }
+
+    /**
      * The type Jwt.
      */
+    @Getter
+    @Setter
     public static class Jwt {
         /**
          * JWT secret key (Base64 encoded) - REQUIRED
@@ -41,42 +133,22 @@ public class AuthProperties {
         private String secret;
 
         /**
-         * JWT expiration time in milliseconds (default: 7 days)
+         * JWT access token expiration time in milliseconds (default: 15 minutes)
          */
-        private long expiration = 604800000L;
+        private long accessTokenExpiration = 900000L; // 15 minutes
 
         /**
-         * Gets secret.
-         *
-         * @return the secret
+         * JWT refresh token expiration time in milliseconds (default: 7 days)
          */
-        public String getSecret() { return secret; }
-
-        /**
-         * Sets secret.
-         *
-         * @param secret the secret
-         */
-        public void setSecret(String secret) { this.secret = secret; }
-
-        /**
-         * Gets expiration.
-         *
-         * @return the expiration
-         */
-        public long getExpiration() { return expiration; }
-
-        /**
-         * Sets expiration.
-         *
-         * @param expiration the expiration
-         */
-        public void setExpiration(long expiration) { this.expiration = expiration; }
+        private long refreshTokenExpiration = 604800000L; // 7 days
     }
+
 
     /**
      * The type Controllers.
      */
+    @Getter
+    @Setter
     public static class Controllers {
         private Controller auth = new Controller();
         private Controller user = new Controller();
@@ -84,51 +156,11 @@ public class AuthProperties {
         /**
          * The type Controller.
          */
+        @Getter
+        @Setter
         public static class Controller {
             private boolean enabled = true;
-
-            /**
-             * Is enabled boolean.
-             *
-             * @return the boolean
-             */
-            public boolean isEnabled() { return enabled; }
-
-            /**
-             * Sets enabled.
-             *
-             * @param enabled the enabled
-             */
-            public void setEnabled(boolean enabled) { this.enabled = enabled; }
         }
-
-        /**
-         * Gets auth.
-         *
-         * @return the auth
-         */
-        public Controller getAuth() { return auth; }
-
-        /**
-         * Sets auth.
-         *
-         * @param auth the auth
-         */
-        public void setAuth(Controller auth) { this.auth = auth; }
-
-        /**
-         * Gets user.
-         *
-         * @return the user
-         */
-        public Controller getUser() { return user; }
-
-        /**
-         * Sets user.
-         *
-         * @param user the user
-         */
-        public void setUser(Controller user) { this.user = user; }
     }
 
     /**
@@ -177,13 +209,11 @@ public class AuthProperties {
          */
         private boolean preventCommonPasswords = true;
 
-
         /**
          * Path to file containing common passwords (one per line)
          * Required when preventCommonPasswords is true
          */
         private String commonPasswordsFilePath = "/commonpasswords.txt";
-
     }
 
     /**
@@ -191,6 +221,7 @@ public class AuthProperties {
      *
      * @return the boolean
      */
+// Root level getters and setters
     public boolean isEnabled() { return enabled; }
 
     /**
@@ -241,4 +272,18 @@ public class AuthProperties {
      * @param passwordPolicy the password policy
      */
     public void setPasswordPolicy(PasswordPolicy passwordPolicy) { this.passwordPolicy = passwordPolicy; }
+
+    /**
+     * Gets refresh tokens.
+     *
+     * @return the refresh tokens
+     */
+    public RefreshTokens getRefreshTokens() { return refreshTokens; }
+
+    /**
+     * Sets refresh tokens.
+     *
+     * @param refreshTokens the refresh tokens
+     */
+    public void setRefreshTokens(RefreshTokens refreshTokens) { this.refreshTokens = refreshTokens; }
 }

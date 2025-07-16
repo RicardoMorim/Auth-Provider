@@ -14,6 +14,7 @@ This section provides practical, real-world examples for implementing Ricardo Au
 
 ### By Feature Focus
 - **[Password Policy Examples](password-policy.md)** 🆕 - Password validation examples and configuration
+- **[Refresh Token Examples](refresh-token.md)** 🆕 - Token refresh patterns and frontend integration
 - **[Custom Integrations](custom-integrations.md)** ⭐⭐⭐ - Advanced customization scenarios
 
 ### By Complexity Level

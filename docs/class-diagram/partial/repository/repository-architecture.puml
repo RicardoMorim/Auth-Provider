@@ -1,0 +1,181 @@
+@startuml Auth Starter - Repository Architecture
+
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #6C757D
+skinparam noteBackgroundColor #E8F4FD
+skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
+
+title Ricardo Auth Starter - Repository Architecture (v1.2.0)
+
+package "Spring Data JPA" {
+    interface "JpaRepository<T, ID>" as JpaRepository {
+        +save(entity: T): T
+        +findById(id: ID): Optional<T>
+        +findAll(): List<T>
+        +deleteById(id: ID): void
+        +count(): long
+    }
+}
+
+package "User Repository Architecture" {
+    interface "UserRepository<U, ID>" as UserRepository {
+        +findByEmail(email: String): Optional<U>
+    }
+    
+    interface "UserJpaRepository<U, ID>" as UserJpaRepository {
+        +findByEmail_Email(email: String): Optional<U>
+        +findByUsername_Username(username: String): Optional<U>
+        +existsByEmail_Email(email: String): boolean
+    }
+    
+    interface DefaultUserJpaRepository {
+        ' Default implementation for User and Long
+    }
+    
+    UserJpaRepository --|> UserRepository
+    UserJpaRepository --|> JpaRepository
+    DefaultUserJpaRepository --|> UserJpaRepository
+}
+
+package "Refresh Token Repository Architecture" {
+    interface RefreshTokenRepository {
+        +saveToken(refreshToken: RefreshToken): RefreshToken
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +findByToken(token: String): Optional<RefreshToken>
+        +deleteExpiredTokens(): void
+        +revokeAllUserTokens(userEmail: String): void
+        +count(): long
+    }
+    
+    interface JpaRefreshTokenRepository {
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +deleteByExpiryDateBefore(date: Instant): void
+        +deleteByUserEmail(userEmail: String): void
+        +findByUserEmailOrderByCreatedAtDesc(userEmail: String): List<RefreshToken>
+        +countByUserEmail(userEmail: String): long
+        +default saveToken(refreshToken: RefreshToken): RefreshToken
+    }
+    
+    interface DefaultJpaRefreshTokenRepository {
+        ' Default JPA implementation
+    }
+    
+    class PostgreSQLRefreshTokenRepository {
+        -jdbcTemplate: JdbcTemplate
+        -tableName: String
+        +saveToken(refreshToken: RefreshToken): RefreshToken
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +findByToken(token: String): Optional<RefreshToken>
+        +deleteExpiredTokens(): void
+        +revokeAllUserTokens(userEmail: String): void
+        +count(): long
+        -insert(token: RefreshToken): RefreshToken
+        -update(token: RefreshToken): RefreshToken
+        -mapRowToRefreshToken(rs: ResultSet): RefreshToken
+    }
+    
+    JpaRefreshTokenRepository --|> RefreshTokenRepository
+    JpaRefreshTokenRepository --|> JpaRepository
+    DefaultJpaRefreshTokenRepository --|> JpaRefreshTokenRepository
+    PostgreSQLRefreshTokenRepository --|> RefreshTokenRepository
+}
+
+
+package "Configuration" {
+    class AuthAutoConfiguration {
+        +defaultUserJpaRepository(): DefaultUserJpaRepository
+        +defaultJpaRefreshTokenRepository(): DefaultJpaRefreshTokenRepository
+        +postgresqlRefreshTokenRepository(dataSource: DataSource): PostgreSQLRefreshTokenRepository
+    }
+    
+    class AuthProperties {
+        -refreshTokens: RefreshTokens
+    }
+    
+    class "AuthProperties.RefreshTokens" as RefreshTokens {
+        -repository: Repository
+    }
+    
+    class "Repository" as RepositoryConfig {
+        -type: RefreshTokenRepositoryType
+    }
+    
+    enum RefreshTokenRepositoryType {
+        JPA
+        POSTGRESQL
+    }
+    
+    AuthProperties *-- RefreshTokens
+    RefreshTokens *-- RepositoryConfig
+    RepositoryConfig --> RefreshTokenRepositoryType
+    AuthAutoConfiguration --> RefreshTokenRepositoryType : uses for conditional creation
+}
+
+package "Conditional Bean Creation" {
+    class ConditionalOnProperty {
+        +prefix: String
+        +name: String
+        +havingValue: String
+        +matchIfMissing: boolean
+    }
+    
+    class ConditionalOnMissingBean {
+        +value: Class<?>
+        +name: String
+    }
+    
+    DefaultUserJpaRepository ..> ConditionalOnMissingBean : @ConditionalOnMissingBean(name = "userRepository")
+    DefaultJpaRefreshTokenRepository ..> ConditionalOnMissingBean : @ConditionalOnMissingBean(RefreshTokenRepository.class)
+    DefaultJpaRefreshTokenRepository ..> ConditionalOnProperty : @ConditionalOnProperty(name = "type", havingValue = "jpa")
+    PostgreSQLRefreshTokenRepository ..> ConditionalOnProperty : @ConditionalOnProperty(name = "type", havingValue = "postgresql")
+}
+
+note right of RefreshTokenRepository #E8F4FD
+  **🆕 Resolved Interface Conflicts (v1.2.0)**
+  Base interface does NOT define save()
+  to avoid conflicts with JpaRepository.save()
+  
+  - JPA implementations inherit save() from JpaRepository
+  - Custom implementations provide their own save()
+  - saveToken() method provides consistent API
+end note
+
+note bottom of PostgreSQLRefreshTokenRepository #E8F4FD
+  **🆕 PostgreSQL Implementation (v1.2.0)**
+  Native JDBC implementation with:
+  - Proper Timestamp handling
+  - Optimized native queries
+  - Custom save() method implementation
+  - Connection pooling support
+end note
+
+note left of JpaRefreshTokenRepository #E8F4FD
+  **🆕 JPA Implementation (v1.2.0)**
+  Spring Data JPA implementation with:
+  - Inherits save() from JpaRepository
+  - Custom @Query methods
+  - Default saveToken() implementation
+  - Automatic transaction management
+end note
+
+note top of AuthAutoConfiguration #E8F4FD
+  **Conditional Bean Creation**
+  Creates appropriate repository
+  implementation based on configuration:
+  - JPA: DefaultJpaRefreshTokenRepository
+  - PostgreSQL: PostgreSQLRefreshTokenRepository
+end note
+
+note right of ConditionalOnProperty #E8F4FD
+  **🆕 Configuration-Driven Selection (v1.2.0)**
+  Repository type is selected based on:
+  ricardo.auth.refresh-tokens.repository.type
+  
+  - "jpa" → JPA implementation
+  - "postgresql" → PostgreSQL implementation
+end note
+
+@enduml

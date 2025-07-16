@@ -349,7 +349,7 @@ package com.mycompany.mobileapi.controller;
 
 import com.mycompany.mobileapi.dto.MobileLoginResponse;
 import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -369,16 +369,16 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/mobile/auth")
 @CrossOrigin(origins = {"*"})
 public class MobileAuthController {
-    
+
     @Autowired
     private AuthenticationManager authenticationManager;
-    
+
     @Autowired
     private JwtService jwtService;
-    
+
     @Autowired
     private UserService userService;
-    
+
     /**
      * Mobile login endpoint with extended response
      */
@@ -387,39 +387,39 @@ public class MobileAuthController {
         try {
             // Authenticate user
             Authentication authentication = authenticationManager.authenticate(
-                new UsernamePasswordAuthenticationToken(
-                    loginRequest.getEmail(),
-                    loginRequest.getPassword()
-                )
+                    new UsernamePasswordAuthenticationToken(
+                            loginRequest.getEmail(),
+                            loginRequest.getPassword()
+                    )
             );
-            
+
             // Generate JWT token
-            String token = jwtService.generateToken(
-                authentication.getName(), 
-                authentication.getAuthorities()
+            String token = jwtService.generateAccessToken(
+                    authentication.getName(),
+                    authentication.getAuthorities()
             );
-            
+
             // Get user details
             User user = userService.getUserByEmail(loginRequest.getEmail());
-            
+
             // Return mobile-optimized response
             MobileLoginResponse response = new MobileLoginResponse(
-                token,
-                user.getId(),
-                user.getUsername().getValue(),
-                user.getEmail().getValue(),
-                user.getRoles(),
-                System.currentTimeMillis() + 604800000L // Token expiry time
+                    token,
+                    user.getId(),
+                    user.getUsername().getValue(),
+                    user.getEmail().getValue(),
+                    user.getRoles(),
+                    System.currentTimeMillis() + 604800000L // Token expiry time
             );
-            
+
             return ResponseEntity.ok(response);
-            
+
         } catch (AuthenticationException e) {
             return ResponseEntity.status(401)
-                .body(new ErrorResponse("Authentication failed", "Invalid email or password"));
+                    .body(new ErrorResponse("Authentication failed", "Invalid email or password"));
         }
     }
-    
+
     /**
      * Token validation endpoint for mobile apps
      */
@@ -427,28 +427,28 @@ public class MobileAuthController {
     public ResponseEntity<?> validateToken(@RequestHeader("Authorization") String authHeader) {
         try {
             String token = authHeader.replace("Bearer ", "");
-            
+
             if (jwtService.isTokenValid(token)) {
                 String username = jwtService.extractUsername(token);
                 User user = userService.getUserByEmail(username);
-                
+
                 return ResponseEntity.ok(new TokenValidationResponse(
-                    true,
-                    user.getId(),
-                    user.getUsername().getValue(),
-                    user.getEmail().getValue(),
-                    user.getRoles()
+                        true,
+                        user.getId(),
+                        user.getUsername().getValue(),
+                        user.getEmail().getValue(),
+                        user.getRoles()
                 ));
             } else {
                 return ResponseEntity.status(401)
-                    .body(new TokenValidationResponse(false, null, null, null, null));
+                        .body(new TokenValidationResponse(false, null, null, null, null));
             }
         } catch (Exception e) {
             return ResponseEntity.status(401)
-                .body(new TokenValidationResponse(false, null, null, null, null));
+                    .body(new TokenValidationResponse(false, null, null, null, null));
         }
     }
-    
+
     /**
      * Token refresh endpoint
      */
@@ -457,22 +457,22 @@ public class MobileAuthController {
         try {
             String token = authHeader.replace("Bearer ", "");
             String username = jwtService.extractUsername(token);
-            
+
             if (jwtService.isTokenValid(token)) {
-                User user = userService.getUserByEmail(username);
-                String newToken = jwtService.generateToken(username, user.getAuthorities());
-                
+                com.ricardo.auth.domain.user.User user = userService.getUserByEmail(username);
+                String newToken = jwtService.generateAccessToken(username, user.getAuthorities());
+
                 return ResponseEntity.ok(new TokenRefreshResponse(
-                    newToken,
-                    System.currentTimeMillis() + 604800000L
+                        newToken,
+                        System.currentTimeMillis() + 604800000L
                 ));
             } else {
                 return ResponseEntity.status(401)
-                    .body(new ErrorResponse("Token refresh failed", "Invalid or expired token"));
+                        .body(new ErrorResponse("Token refresh failed", "Invalid or expired token"));
             }
         } catch (Exception e) {
             return ResponseEntity.status(401)
-                .body(new ErrorResponse("Token refresh failed", "Invalid token"));
+                    .body(new ErrorResponse("Token refresh failed", "Invalid token"));
         }
     }
 }
@@ -485,7 +485,7 @@ package com.mycompany.mobileapi.controller;
 
 import com.mycompany.mobileapi.dto.UserProfileDTO;
 import com.mycompany.mobileapi.service.MobileUserService;
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -505,13 +505,13 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/mobile/users")
 @CrossOrigin(origins = {"*"})
 public class MobileUserController {
-    
+
     @Autowired
     private UserService userService;
-    
+
     @Autowired
     private MobileUserService mobileUserService;
-    
+
     /**
      * Get current user profile
      */
@@ -523,7 +523,7 @@ public class MobileUserController {
         UserProfileDTO profile = mobileUserService.buildUserProfile(user);
         return ResponseEntity.ok(profile);
     }
-    
+
     /**
      * Update user profile
      */
@@ -532,17 +532,17 @@ public class MobileUserController {
     public ResponseEntity<UserProfileDTO> updateProfile(
             @Valid @RequestBody UpdateProfileRequest request,
             Authentication authentication) {
-        
+
         String email = authentication.getName();
         User user = userService.getUserByEmail(email);
-        
+
         // Update profile fields
         User updatedUser = mobileUserService.updateUserProfile(user, request);
         UserProfileDTO profile = mobileUserService.buildUserProfile(updatedUser);
-        
+
         return ResponseEntity.ok(profile);
     }
-    
+
     /**
      * Change password
      */
@@ -551,17 +551,17 @@ public class MobileUserController {
     public ResponseEntity<?> changePassword(
             @Valid @RequestBody ChangePasswordRequest request,
             Authentication authentication) {
-        
+
         try {
             String email = authentication.getName();
             mobileUserService.changePassword(email, request);
             return ResponseEntity.ok(new MessageResponse("Password changed successfully"));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
-                .body(new ErrorResponse("Password change failed", e.getMessage()));
+                    .body(new ErrorResponse("Password change failed", e.getMessage()));
         }
     }
-    
+
     /**
      * Delete account
      */
@@ -573,7 +573,7 @@ public class MobileUserController {
         userService.deleteUser(user.getId());
         return ResponseEntity.ok(new MessageResponse("Account deleted successfully"));
     }
-    
+
     /**
      * Search users (mobile-friendly pagination)
      */
@@ -583,11 +583,11 @@ public class MobileUserController {
             @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "10") int size) {
-        
+
         Pageable pageable = PageRequest.of(page, Math.min(size, 50)); // Limit page size for mobile
         Page<User> users = mobileUserService.searchUsers(query, pageable);
         Page<UserProfileDTO> profiles = users.map(mobileUserService::buildUserProfile);
-        
+
         return ResponseEntity.ok(profiles);
     }
 }
@@ -727,7 +727,7 @@ public class UserProfileDTO {
 package com.mycompany.mobileapi.service;
 
 import com.mycompany.mobileapi.dto.UserProfileDTO;
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
@@ -739,10 +739,10 @@ import org.springframework.stereotype.Service;
  */
 @Service
 public class MobileUserService {
-    
+
     @Autowired
     private UserService userService;
-    
+
     /**
      * Build user profile DTO from user entity
      */
@@ -756,33 +756,33 @@ public class MobileUserService {
         // Add other profile fields as needed
         return profile;
     }
-    
+
     /**
      * Update user profile
      */
-    public User updateUserProfile(User user, UpdateProfileRequest request) {
+    public User updateUserProfile(com.ricardo.auth.domain.user.User user, UpdateProfileRequest request) {
         // Update profile fields
         // Note: In a real implementation, you'd extend the User entity
         // to include firstName, lastName, phoneNumber, etc.
-        
+
         return userService.updateUser(user.getId(), user);
     }
-    
+
     /**
      * Change user password
      */
     public void changePassword(String email, ChangePasswordRequest request) {
         User user = userService.getUserByEmail(email);
-        
+
         // Verify current password
         if (!userService.verifyPassword(user, request.getCurrentPassword())) {
             throw new IllegalArgumentException("Current password is incorrect");
         }
-        
+
         // Update password
         userService.updatePassword(user.getId(), request.getNewPassword());
     }
-    
+
     /**
      * Search users with mobile-friendly pagination
      */
@@ -790,11 +790,11 @@ public class MobileUserService {
         // Implement search logic
         // This is a simplified version - in practice, you'd implement
         // full-text search or use a search engine like Elasticsearch
-        
+
         if (query == null || query.trim().isEmpty()) {
             return userService.getAllUsers(pageable);
         }
-        
+
         // Search by username or email containing the query
         return userService.searchUsersByQuery(query, pageable);
     }

@@ -1,4 +1,4 @@
-package com.ricardo.auth.domain;
+package com.ricardo.auth.domain.user;
 
 import jakarta.persistence.Embeddable;
 

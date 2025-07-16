@@ -1,6 +1,6 @@
-package com.ricardo.auth.repository;
+package com.ricardo.auth.repository.user;
 
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.stereotype.Repository;
 
@@ -11,6 +11,7 @@ import org.springframework.stereotype.Repository;
  * This interface is marked with @ConditionalOnMissingBean to ensure that it is only used when no other UserJpaRepository bean is defined in the application context.
  */
 @Repository
-@ConditionalOnMissingBean(UserJpaRepository.class)
+@ConditionalOnMissingBean(name = "userRepository")
 public interface DefaultUserJpaRepository extends UserJpaRepository<User, Long> {
+    // No additional methods needed - inherits everything from UserJpaRepository
 }

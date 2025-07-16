@@ -1,0 +1,172 @@
+@startuml Auth Starter - Deployment Architecture
+
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam classBackgroundColor #F8F9FA
+skinparam classBorderColor #6C757D
+skinparam noteBackgroundColor #E8F4FD
+skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
+
+title Ricardo Auth Starter - Deployment Architecture (v1.2.0)
+
+package "Client Applications" {
+    node "Web Frontend" {
+        component "React/Vue/Angular" as WebApp
+        component "Token Management" as TokenMgmt
+        component "HTTP Client" as HttpClient
+
+        WebApp --> TokenMgmt
+        TokenMgmt --> HttpClient
+    }
+
+    node "Mobile App" {
+        component "iOS/Android" as MobileApp
+        component "Secure Storage" as SecureStorage
+        component "API Client" as APIClient
+
+        MobileApp --> SecureStorage
+        SecureStorage --> APIClient
+    }
+}
+
+package "Spring Boot Application" {
+    node "Web Layer" {
+        component "AuthController" as AuthCtrl
+        component "UserController" as UserCtrl
+        component "JwtAuthFilter" as JwtFilter
+        component "SecurityConfig" as SecConfig
+
+        JwtFilter --> AuthCtrl
+        JwtFilter --> UserCtrl
+        SecConfig --> JwtFilter
+    }
+
+    node "Service Layer" {
+        component "JwtService" as JwtSvc
+        component "RefreshTokenService" as RefreshSvc
+        component "UserService" as UserSvc
+        component "PasswordPolicyService" as PasswordSvc
+        component "RefreshTokenCleanupService" as CleanupSvc
+
+        AuthCtrl --> JwtSvc
+        AuthCtrl --> RefreshSvc
+        UserCtrl --> UserSvc
+        UserCtrl --> PasswordSvc
+        CleanupSvc --> RefreshSvc
+    }
+
+    node "Repository Layer" {
+        component "UserRepository" as UserRepo
+        component "RefreshTokenRepository" as RefreshRepo
+
+        UserSvc --> UserRepo
+        RefreshSvc --> RefreshRepo
+    }
+
+    node "Configuration" {
+        component "AuthAutoConfiguration" as AutoConfig
+        component "AuthProperties" as Properties
+
+        AutoConfig --> Properties
+        AutoConfig --> JwtSvc
+        AutoConfig --> RefreshSvc
+        AutoConfig --> UserSvc
+    }
+}
+
+package "Database Layer" {
+    node "PostgreSQL" <<database>> {
+        component "users" as Users
+        component "refresh_tokens" as RefreshTokens
+
+        Users --> RefreshTokens : user_email
+    }
+}
+
+package "Repository Implementations" {
+    component "PostgreSQLRefreshTokenRepository" as PostgresRepo
+    component "DefaultUserJpaRepository" as DefaultUserRepo
+
+    PostgresRepo --> Users
+    PostgresRepo --> RefreshTokens
+    DefaultUserRepo --> Users
+}
+
+package "External Services" {
+    cloud "Maven Central" {
+        component "ricardo-auth-starter" as Starter
+    }
+
+    file "Common Passwords" {
+        component "commonpasswords.txt" as PasswordsFile
+    }
+}
+
+' Client connections
+HttpClient --> AuthCtrl : HTTPS
+APIClient --> AuthCtrl : HTTPS
+HttpClient --> UserCtrl : HTTPS
+APIClient --> UserCtrl : HTTPS
+
+' Repository to implementation mapping
+RefreshRepo --> PostgresRepo
+UserRepo --> DefaultUserRepo
+
+' External dependencies
+PasswordSvc --> PasswordsFile : loads common passwords
+AutoConfig --> Starter : dependency
+
+' Scheduled tasks
+CleanupSvc --> RefreshTokens : cleanup expired tokens
+
+note right of TokenMgmt #E8F4FD
+  **🆕 Token Management (v1.2.0)**
+  - Automatic token refresh
+  - Secure token storage
+  - Token rotation handling
+  - Error recovery
+end note
+
+note bottom of RefreshRepo #E8F4FD
+  **🆕 Repository Implementation (v1.2.0)**
+  PostgreSQL optimized repository:
+  - Native JDBC queries
+  - Proper timestamp handling
+  - Connection pooling support
+  - Batch operations
+end note
+
+note left of CleanupSvc #E8F4FD
+  **🆕 Automatic Cleanup (v1.2.0)**
+  Scheduled service removes expired tokens:
+  - Configurable intervals
+  - Per-user token limits
+  - Background processing
+end note
+
+note top of Properties #E8F4FD
+  **Configuration Properties (v1.2.0)**
+  ricardo.auth:
+    jwt:
+      secret: "your-secret"
+      access-token-expiration: 900000
+      refresh-token-expiration: 604800000
+    refresh-tokens:
+      enabled: true
+      max-tokens-per-user: 5
+      rotate-on-refresh: true
+      cleanup-interval: 3600000
+      auto-cleanup: true
+end note
+
+note bottom of Users #E8F4FD
+  **Production Database**
+  PostgreSQL recommended for:
+  - High performance
+  - ACID compliance
+  - Concurrent access
+  - Advanced features
+end note
+
+@enduml

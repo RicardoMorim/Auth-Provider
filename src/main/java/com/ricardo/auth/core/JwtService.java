@@ -17,7 +17,7 @@ public interface JwtService {
      * @param authorities the authorities
      * @return the string
      */
-    String generateToken(String subject, Collection<? extends GrantedAuthority> authorities);
+    String generateAccessToken(String subject, Collection<? extends GrantedAuthority> authorities);
 
     /**
      * Extract subject string.
@@ -34,6 +34,15 @@ public interface JwtService {
      * @return the boolean
      */
     boolean isTokenValid(String token);
+
+    /**
+     * Is token valid boolean.
+     *
+     * @param token the token
+     * @param email the email
+     * @return the boolean
+     */
+    boolean isTokenValid(String token, String email);
 
     /**
      * Extract roles list.

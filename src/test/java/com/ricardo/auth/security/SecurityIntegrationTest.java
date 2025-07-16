@@ -3,11 +3,11 @@ package com.ricardo.auth.security;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.*;
+import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.dto.TokenDTO;
-import com.ricardo.auth.repository.DefaultUserJpaRepository;
+import com.ricardo.auth.dto.TokenResponse;
+import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -93,12 +93,8 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldAllowPublicAccessToLogin() throws Exception {
-        // Arrange
         LoginRequestDTO loginRequest = new LoginRequestDTO("nonexistent@user.com", "wrongpassword");
 
-        // Act & Assert
-        // Esperamos um 401 Unauthorized porque a autenticação falha,
-        // o que prova que o endpoint é público e a requisição foi processada.
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
@@ -112,12 +108,10 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldAllowPublicAccessToUserCreation() throws Exception {
-        // Arrange
         CreateUserRequestDTO createRequest = new CreateUserRequestDTO(
                 "newuser", "newuser@example.com", "Password@123"
         );
 
-        // Act & Assert
         mockMvc.perform(post("/api/users/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -144,7 +138,6 @@ class SecurityIntegrationTest {
      */
     @Test
     @WithMockUser(username = "test@user.com", roles = {"USER"})
-        // Simula um utilizador autenticado
     void shouldAllowAccessToMeEndpointForAuthenticatedUser() throws Exception {
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isOk());
@@ -165,14 +158,16 @@ class SecurityIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists())
-                .andExpect(jsonPath("$.token").isNotEmpty())
+                .andExpect(jsonPath("$.accessToken").exists()) // ✅ Changed from $.token
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").exists()) // ✅ Added refresh token check
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
                 .andReturn();
 
         // Verify token is valid
         String response = result.getResponse().getContentAsString();
-        TokenDTO tokenDto = objectMapper.readValue(response, TokenDTO.class);
-        assertTrue(jwtService.isTokenValid(tokenDto.getToken()));
+        TokenResponse tokenResponse = objectMapper.readValue(response, TokenResponse.class); // ✅ Changed from TokenDTO
+        assertTrue(jwtService.isTokenValid(tokenResponse.getAccessToken())); // ✅ Use accessToken
     }
 
     /**
@@ -182,10 +177,8 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldRejectInvalidCredentials() throws Exception {
-        // Arrange
         LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "wrongpassword");
 
-        // Act & Assert
         mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
@@ -201,13 +194,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldAuthenticateWithValidJwtToken() throws Exception {
-        // Arrange - Generate valid token
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk())
@@ -222,10 +213,8 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldRejectInvalidJwtToken() throws Exception {
-        // Arrange
         String invalidToken = "invalid.jwt.token";
 
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + invalidToken))
                 .andExpect(status().isUnauthorized());
@@ -238,10 +227,8 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldRejectMalformedJwtToken() throws Exception {
-        // Arrange - Create malformed token
         String malformedToken = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.malformed";
 
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + malformedToken))
                 .andExpect(status().isUnauthorized());
@@ -254,15 +241,13 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldRejectTokenWithoutBearerPrefix() throws Exception {
-        // Arrange - Generate valid token but send without Bearer prefix
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", token)) // Missing "Bearer " prefix
+                        .header("Authorization", token))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -273,7 +258,6 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldRejectEmptyAuthorizationHeader() throws Exception {
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", ""))
                 .andExpect(status().isUnauthorized());
@@ -286,28 +270,24 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldRejectRequestWithoutAuthorizationHeader() throws Exception {
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me"))
                 .andExpect(status().isUnauthorized());
     }
+
+    // ========== ROLE-BASED ACCESS CONTROL TESTS ==========
 
     /**
      * Should not allow access to delete for admin.
      *
      * @throws Exception the exception
      */
-// ========== ROLE-BASED ACCESS CONTROL TESTS ==========
     @Test
     @WithMockUser(roles = "USER")
-    // Simula um utilizador com a role user
     void shouldNotAllowAccessToDeleteForAdmin() throws Exception {
-
-        // create a user to delete
         CreateUserRequestDTO createRequest = new CreateUserRequestDTO(
                 "testusera", "testusera@gmail.com", "Password@123"
         );
 
-        // save the user to the database
         mockMvc.perform(post("/api/users/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -324,15 +304,11 @@ class SecurityIntegrationTest {
      */
     @Test
     @WithMockUser(roles = "ADMIN")
-        // Simula um utilizador com a role admin
     void shouldAllowAccessToDeleteForAdmin() throws Exception {
-
-        // create a user to delete
         CreateUserRequestDTO createRequest = new CreateUserRequestDTO(
                 "testuserabc", "testuserabc@gmail.com", "Password@123"
         );
 
-        // save the user to the database
         mockMvc.perform(post("/api/users/create")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(createRequest)))
@@ -349,13 +325,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldAllowUserRoleToAccessUserEndpoints() throws Exception {
-        // Arrange - Generate token for user role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Act & Assert - User can access their own profile
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
@@ -368,13 +342,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldAllowAdminRoleToAccessAdminEndpoints() throws Exception {
-        // Arrange - Generate token for admin role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 adminUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
 
-        // Act & Assert - Admin can access user management endpoints
         mockMvc.perform(get("/api/users/" + testUser.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
@@ -387,13 +359,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldDenyUserRoleAccessToAdminEndpoints() throws Exception {
-        // Arrange - Generate token for user role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Act & Assert - User cannot delete other users
         mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
@@ -406,13 +376,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldDenyAccessWithTamperedToken() throws Exception {
-        // This test simulates a tampered token (invalid signature)
-        String tamperedToken = jwtService.generateToken(
+        String tamperedToken = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         ) + "tampered";
 
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + tamperedToken))
                 .andExpect(status().isUnauthorized());
@@ -427,18 +395,15 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldHandleTokenWithInvalidRoles() throws Exception {
-        // Arrange - Generate token with invalid role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_INVALID"))
         );
 
-        // Act & Assert - Should still allow access to /me endpoint (basic auth check)
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
 
-        // But should deny access to delete other users' endpoints
         mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isForbidden());
@@ -451,11 +416,10 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldHandleMultipleRoles() throws Exception {
-        // Arrange - User with both USER and ADMIN roles
-        adminUser.addRole(AppRole.USER); // Admin also has USER role
+        adminUser.addRole(AppRole.USER);
         userRepository.save(adminUser);
 
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 adminUser.getEmail(),
                 List.of(
                         new SimpleGrantedAuthority("ROLE_USER"),
@@ -463,7 +427,6 @@ class SecurityIntegrationTest {
                 )
         );
 
-        // Act & Assert - Should have access to both user and admin endpoints
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
@@ -482,26 +445,20 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldSecureAllHttpMethodsForProtectedEndpoints() throws Exception {
-        // Test that all HTTP methods require authentication for protected endpoints
         String protectedEndpoint = "/api/auth/me";
 
-        // GET
         mockMvc.perform(get(protectedEndpoint))
                 .andExpect(status().isUnauthorized());
 
-        // POST
         mockMvc.perform(post(protectedEndpoint))
                 .andExpect(status().isUnauthorized());
 
-        // PUT
         mockMvc.perform(put(protectedEndpoint))
                 .andExpect(status().isUnauthorized());
 
-        // DELETE
         mockMvc.perform(delete(protectedEndpoint))
                 .andExpect(status().isUnauthorized());
 
-        // PATCH
         mockMvc.perform(patch(protectedEndpoint))
                 .andExpect(status().isUnauthorized());
     }
@@ -515,7 +472,6 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldReturnJsonErrorForUnauthorizedRequests() throws Exception {
-        // Act & Assert
         mockMvc.perform(get("/api/auth/me")
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isUnauthorized())
@@ -529,13 +485,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldReturnJsonErrorForForbiddenRequests() throws Exception {
-        // Arrange - Generate token for user role
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Act & Assert
         mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
                         .header("Authorization", "Bearer " + token)
                         .accept(MediaType.APPLICATION_JSON))
@@ -561,17 +515,17 @@ class SecurityIntegrationTest {
                 .andReturn();
 
         String loginResponse = loginResult.getResponse().getContentAsString();
-        TokenDTO tokenDto = objectMapper.readValue(loginResponse, TokenDTO.class);
+        TokenResponse tokenResponse = objectMapper.readValue(loginResponse, TokenResponse.class); // ✅ Changed from TokenDTO
 
         // Step 2: Use token to access protected endpoint
         mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + tokenDto.getToken()))
+                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken())) // ✅ Use accessToken
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("testuser"));
 
         // Step 3: Try to access admin endpoint (should fail for USER role)
         mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
-                        .header("Authorization", "Bearer " + tokenDto.getToken()))
+                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken()))
                 .andExpect(status().isForbidden());
     }
 
@@ -592,16 +546,16 @@ class SecurityIntegrationTest {
                 .andReturn();
 
         String loginResponse = loginResult.getResponse().getContentAsString();
-        TokenDTO tokenDto = objectMapper.readValue(loginResponse, TokenDTO.class);
+        TokenResponse tokenResponse = objectMapper.readValue(loginResponse, TokenResponse.class); // ✅ Changed from TokenDTO
 
         // Step 2: Use admin token to access user management
         mockMvc.perform(get("/api/users/" + testUser.getId())
-                        .header("Authorization", "Bearer " + tokenDto.getToken()))
+                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken()))
                 .andExpect(status().isOk());
 
         // Step 3: Use admin token to delete user
         mockMvc.perform(delete("/api/users/delete/" + testUser.getId())
-                        .header("Authorization", "Bearer " + tokenDto.getToken()))
+                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken()))
                 .andExpect(status().isNoContent());
     }
 
@@ -614,14 +568,12 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldHandleVeryLongTokens() throws Exception {
-        // Test with extremely long but valid token
         String longSubject = "a".repeat(1000) + "@example.com";
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 longSubject,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Should handle long tokens gracefully
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
@@ -634,9 +586,8 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldHandleSpecialCharactersInToken() throws Exception {
-        // Test with special characters in subject
         String specialSubject = "test+user@example.com";
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 specialSubject,
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
@@ -654,19 +605,17 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldHandleCaseInsensitiveBearerHeader() throws Exception {
-        // Arrange
-        String token = jwtService.generateToken(
+        String token = jwtService.generateAccessToken(
                 testUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        // Test different case variations - most should fail except exact "Bearer"
         mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "bearer " + token)) // lowercase
+                        .header("Authorization", "bearer " + token))
                 .andExpect(status().isUnauthorized());
 
         mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "BEARER " + token)) // uppercase
+                        .header("Authorization", "BEARER " + token))
                 .andExpect(status().isUnauthorized());
     }
 }

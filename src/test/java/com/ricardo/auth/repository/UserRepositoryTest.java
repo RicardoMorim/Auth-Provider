@@ -1,9 +1,10 @@
 package com.ricardo.auth.repository;
 
-import com.ricardo.auth.domain.Email;
-import com.ricardo.auth.domain.Password;
-import com.ricardo.auth.domain.User;
-import com.ricardo.auth.domain.Username;
+import com.ricardo.auth.domain.user.Email;
+import com.ricardo.auth.domain.user.Password;
+import com.ricardo.auth.domain.user.User;
+import com.ricardo.auth.domain.user.Username;
+import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;

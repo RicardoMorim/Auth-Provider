@@ -1,6 +1,7 @@
-package com.ricardo.auth.domain;
+package com.ricardo.auth.domain.user;
 
 import jakarta.persistence.*;
+import org.hibernate.annotations.BatchSize;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
@@ -34,11 +35,12 @@ public class User implements AuthUser<AppRole> {
     @Embedded
     private Password password;
 
-    @ElementCollection(targetClass = AppRole.class, fetch = FetchType.EAGER)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
+    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
     @Column(name = "role")
-    private Set<AppRole> roles;
+    @BatchSize(size = 25)  // ✅ Add this to batch fetch roles
+    private Set<AppRole> roles = new HashSet<>();
 
     /**
      * Instantiates a new User.
@@ -80,6 +82,33 @@ public class User implements AuthUser<AppRole> {
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getAuthority()))
                 .collect(Collectors.toSet());
+    }
+
+    /**
+     * Sets id.
+     *
+     * @param id the id
+     */
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    /**
+     * Gets version.
+     *
+     * @return the version
+     */
+    public Long getVersion() {
+        return version;
+    }
+
+    /**
+     * Sets version.
+     *
+     * @param version the version
+     */
+    public void setVersion(Long version) {
+        this.version = version;
     }
 
     @Override

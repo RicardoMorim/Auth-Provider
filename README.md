@@ -3,6 +3,8 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.ricardomorim/auth-spring-boot-starter?color=blue&label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.ricardomorim/auth-spring-boot-starter)
 [![GitHub release](https://img.shields.io/github/release/RicardoMorim/Auth-Provider.svg)](https://github.com/RicardoMorim/Auth-Provider/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/RicardoMorim/Auth-Provider)
+[![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/RicardoMorim/Auth-Provider/graphs/commit-activity)
 
 A **plug-and-play** Spring Boot starter that adds JWT authentication and user management to your application with minimal configuration required.
 
@@ -13,14 +15,17 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 ## ✨ What You Get
 
 **Authentication & Security**
-- 🔑 JWT token generation, validation, and refresh
+- 🔑 JWT access and refresh token generation, validation, and refresh
+- 🔄 Secure refresh token system with automatic rotation
 - 🛡️ Configurable password policies with strength validation
 - 🔒 BCrypt password encryption
 - 👥 Role-based access control (RBAC)
 - 🚫 Protection against common weak passwords
+- 🗄️ Flexible token storage (JPA/PostgreSQL)
 
 **Ready-to-Use API Endpoints**
-- `/api/auth/login` - User authentication
+- `/api/auth/login` - User authentication with refresh token
+- `/api/auth/refresh` - Refresh access token using refresh token
 - `/api/auth/register` - User registration
 - `/api/users/*` - Complete user management CRUD
 
@@ -95,7 +100,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>1.2.0</version>
 </dependency>
 
 <!-- Required: JPA support -->
@@ -160,7 +165,7 @@ curl -X POST http://localhost:8080/api/users/create \
   }'
 ```
 
-**Login to get JWT token:**
+**Login to get JWT tokens:**
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -170,9 +175,18 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
-**Use the token to access protected endpoints:**
+**Refresh your access token:**
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "YOUR_REFRESH_TOKEN_HERE"
+  }'
+```
+
+**Use the access token to access protected endpoints:**
+```bash
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE" \
      http://localhost:8080/api/auth/me
 ```
 
@@ -202,8 +216,22 @@ ricardo:
   auth:
     enabled: true  # Enable/disable the entire auth module
     jwt:
-      secret: "your-secret-key"  # Required: JWT signing secret
-      expiration: 604800000      # Token expiration time in ms (default: 7 days)
+      secret: "your-secret-key"           # Required: JWT signing secret
+      access-token-expiration: 900000     # Access token expiration (15 minutes)
+      refresh-token-expiration: 604800000 # Refresh token expiration (7 days)
+    refresh-tokens:
+      enabled: true                       # Enable/disable refresh token functionality
+      max-tokens-per-user: 5              # Maximum tokens per user
+      rotate-on-refresh: true             # Rotate tokens on each refresh
+      cleanup-interval: 3600000           # Cleanup interval (1 hour)
+      auto-cleanup: true                  # Enable automatic cleanup
+      repository:
+        type: "jpa"                       # Repository type: "jpa" or "postgresql"
+        database:
+          refresh-tokens-table: "refresh_tokens"  # Table name
+          schema: ""                      # Database schema (optional)
+          url: ""                         # Database URL (optional)
+          driver-class-name: ""           # Driver class (optional)
     controllers:
       auth:
         enabled: true   # Enable/disable auth endpoints
@@ -219,15 +247,15 @@ Configure password requirements to enhance security:
 ricardo:
   auth:
     password-policy:
-      min-length: 10                    # Minimum password length
-      max-length: 128                   # Maximum password length  
-      require-uppercase: true           # Require uppercase letters
-      require-lowercase: true           # Require lowercase letters
-      require-digits: true              # Require numeric digits
-      require-special-chars: true       # Require special characters
-      special-characters: "!@#$%^&*"    # Allowed special characters
-      prevent-common-passwords: true    # Block common passwords
-      common-passwords-file: "/commonpasswords.txt"  # Custom password list
+      min-length: 8                         # Minimum password length
+      max-length: 128                       # Maximum password length  
+      require-uppercase: true               # Require uppercase letters
+      require-lowercase: true               # Require lowercase letters
+      require-digits: true                  # Require numeric digits
+      require-special-chars: false          # Require special characters
+      allowed-special-chars: "!@#$%^&*()_+-=[]{}|;:,.<>?"  # Allowed special characters
+      prevent-common-passwords: true        # Block common passwords
+      common-passwords-file-path: "/commonpasswords.txt"   # Custom password list
 ```
 
 **Example secure password**: `MySecure@Pass123!`
@@ -264,7 +292,7 @@ The starter requires a JPA implementation. Add to your `pom.xml`:
 ### Authentication Endpoints
 
 #### POST `/api/auth/login`
-Authenticate a user and receive a JWT token.
+Authenticate a user and receive JWT access and refresh tokens.
 
 **Request:**
 ```json
@@ -277,7 +305,26 @@ Authenticate a user and receive a JWT token.
 **Response:**
 ```json
 {
-    "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+#### POST `/api/auth/refresh`
+Refresh an access token using a valid refresh token.
+
+**Request:**
+```json
+{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+}
+```
+
+**Response:**
+```json
+{
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
 }
 ```
 
@@ -286,7 +333,7 @@ Get the currently authenticated user's information.
 
 **Headers:**
 ```
-Authorization: Bearer {token}
+Authorization: Bearer {accessToken}
 ```
 
 **Response:**
@@ -370,11 +417,49 @@ Delete a user (requires ADMIN role or ownership).
 
 ### Using JWT Tokens
 
-Include the JWT token in the `Authorization` header:
+Include the JWT access token in the `Authorization` header:
 
 ```bash
-curl -H "Authorization: Bearer your-jwt-token" \
+curl -H "Authorization: Bearer your-access-token" \
      http://localhost:8080/api/auth/me
+```
+
+### Refresh Token Flow
+
+For long-running applications, use refresh tokens to maintain user sessions:
+
+```bash
+# 1. Login to get tokens
+curl -X POST http://localhost:8080/api/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password"}'
+
+# 2. When access token expires, use refresh token
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{"refreshToken": "your-refresh-token"}'
+```
+
+### Refresh Token Storage
+
+The starter supports two storage options:
+
+**JPA (Default):**
+```yaml
+ricardo:
+  auth:
+    refresh-tokens:
+      repository:
+        type: "jpa"
+```
+
+**PostgreSQL (High Performance):**
+```yaml
+ricardo:
+  auth:
+    refresh-tokens:
+      repository:
+        type: "postgresql"
 ```
 
 ### Role-Based Access Control
@@ -525,9 +610,20 @@ management:
         include: health,info,metrics
 ```
 
+## 🚀 Project Status
+
+This project is **production-ready** for its current feature set:
+- ✅ JWT Authentication with Refresh Tokens
+- ✅ User Management CRUD
+- ✅ Password Policy System
+- ✅ Role-Based Access Control
+- ✅ Multiple Database Support
+
+**Future enhancements** are planned based on community needs and contributions. See [CHANGELOG.md](CHANGELOG.md) for details.
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is actively maintained. Bug fixes and security issues will be addressed promptly. Feature contributions are welcome!
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)

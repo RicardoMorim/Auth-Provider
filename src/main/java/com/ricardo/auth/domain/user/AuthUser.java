@@ -1,4 +1,4 @@
-package com.ricardo.auth.domain;
+package com.ricardo.auth.domain.user;
 
 import com.ricardo.auth.core.Role;
 import org.springframework.security.core.userdetails.UserDetails;

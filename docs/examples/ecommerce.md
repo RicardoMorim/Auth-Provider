@@ -154,11 +154,13 @@ logging:
 ## Customer Registration
 
 ### Enhanced Customer Entity
+
 ```java
 package com.mycompany.ecommerce.entity;
 
-import com.ricardo.auth.domain.User;
+import com.ricardo.auth.domain.user.User;
 import jakarta.persistence.*;
+
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
@@ -166,55 +168,56 @@ import java.util.List;
 @Entity
 @Table(name = "customers")
 public class Customer {
-    
+
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    
+
     @OneToOne
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
-    
+
     @Column(name = "first_name", nullable = false)
     private String firstName;
-    
+
     @Column(name = "last_name", nullable = false)
     private String lastName;
-    
+
     @Column(name = "phone_number")
     private String phoneNumber;
-    
+
     @Column(name = "date_of_birth")
     private LocalDate dateOfBirth;
-    
+
     @Column(name = "preferred_language")
     private String preferredLanguage = "en";
-    
+
     @Column(name = "marketing_consent")
     private Boolean marketingConsent = false;
-    
+
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
-    
+
     @Column(name = "updated_at")
     private LocalDateTime updatedAt = LocalDateTime.now();
-    
+
     // Address information
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Address> addresses;
-    
+
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
     private List<Order> orders;
-    
+
     // Constructors, getters, and setters
-    public Customer() {}
-    
+    public Customer() {
+    }
+
     public Customer(User user, String firstName, String lastName) {
         this.user = user;
         this.firstName = firstName;
         this.lastName = lastName;
     }
-    
+
     // Getters and setters...
 }
 ```

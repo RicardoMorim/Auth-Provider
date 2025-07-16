@@ -1,0 +1,300 @@
+@startuml Auth Starter - Refresh Token Flow
+
+!theme sketchy-outline
+skinparam backgroundColor #FEFEFE
+skinparam noteBackgroundColor #E8F4FD
+skinparam noteBorderColor #2C5282
+skinparam noteFontColor #1A202C
+
+title Ricardo Auth Starter - Refresh Token Flow (v1.2.0)
+
+actor User
+participant "Frontend" as FE
+participant "AuthController" as AC
+participant "JwtService" as JWT
+participant "RefreshTokenService" as RTS
+participant "RefreshTokenRepository" as RTR
+participant "UserService" as US
+participant "Database" as DB
+
+' ✅ Add lifelines (activation boxes) to show when objects are active
+== Login Flow ==
+User -> FE: Enter credentials
+activate FE
+
+FE -> AC: POST /api/auth/login
+activate AC
+
+AC -> JWT: validateCredentials()
+activate JWT
+
+JWT -> US: loadUserByUsername()
+activate US
+
+US -> DB: findByEmail()
+activate DB
+DB --> US: User details
+deactivate DB
+
+US --> JWT: UserDetails
+deactivate US
+
+JWT --> AC: Authentication successful
+deactivate JWT
+
+AC -> JWT: generateAccessToken()
+activate JWT
+JWT --> AC: Access token
+deactivate JWT
+
+AC -> RTS: createRefreshToken(user)
+activate RTS
+
+RTS -> RTR: saveToken(refreshToken)
+activate RTR
+
+RTR -> DB: INSERT refresh_tokens
+activate DB
+DB --> RTR: Token saved
+deactivate DB
+
+RTR --> RTS: RefreshToken
+deactivate RTR
+
+RTS --> AC: RefreshToken
+deactivate RTS
+
+AC --> FE: TokenResponse(accessToken, refreshToken)
+deactivate AC
+
+FE --> User: Login successful
+deactivate FE
+
+note right of FE #E8F4FD
+  **Token Storage**
+  Frontend stores both tokens
+  securely (localStorage, httpOnly cookies)
+end note
+
+== Token Refresh Flow ==
+User -> FE: Access protected resource
+activate FE
+
+FE -> FE: Check access token expiry
+
+FE -> AC: POST /api/auth/refresh
+activate AC
+note right of FE
+  Request: { "refreshToken": "..." }
+end note
+
+AC -> RTS: findByToken(refreshToken)
+activate RTS
+
+RTS -> RTR: findByTokenRaw(token)
+activate RTR
+
+RTR -> DB: SELECT * FROM refresh_tokens WHERE token = ?
+activate DB
+DB --> RTR: RefreshToken or empty
+deactivate DB
+
+RTR --> RTS: Optional<RefreshToken>
+deactivate RTR
+
+alt Token found and valid
+    RTS -> RTS: verifyExpiration(token)
+    alt Token not expired
+        RTS -> US: getUserByEmail(token.userEmail)
+        activate US
+        
+        US -> DB: findByEmail()
+        activate DB
+        DB --> US: User
+        deactivate DB
+        
+        US --> RTS: User
+        deactivate US
+        
+        RTS --> AC: Valid token and user
+        deactivate RTS
+        
+        AC -> JWT: generateAccessToken(user)
+        activate JWT
+        JWT --> AC: New access token
+        deactivate JWT
+        
+        alt Rotation enabled
+            AC -> RTS: createRefreshToken(user)
+            activate RTS
+            
+            RTS -> RTR: saveToken(newRefreshToken)
+            activate RTR
+            
+            RTR -> DB: INSERT new refresh token
+            activate DB
+            DB --> RTR: New token saved
+            deactivate DB
+            
+            RTR --> RTS: New RefreshToken
+            deactivate RTR
+            
+            RTS --> AC: New RefreshToken
+            deactivate RTS
+            
+            AC -> RTS: deleteByToken(oldRefreshToken)
+            activate RTS
+            
+            RTS -> RTR: deleteByToken(oldToken)
+            activate RTR
+            
+            RTR -> DB: DELETE old refresh token
+            activate DB
+            DB --> RTR: Token deleted
+            deactivate DB
+            
+            RTR --> RTS: Deletion confirmed
+            deactivate RTR
+            
+            RTS --> AC: Old token removed
+            deactivate RTS
+        end
+        
+        AC --> FE: TokenResponse(newAccessToken, newRefreshToken)
+        deactivate AC
+        
+        FE -> FE: Store new tokens
+        FE --> User: Access granted with new tokens
+        deactivate FE
+        
+    else Token expired
+        RTS -> RTS: TokenExpiredException
+        RTS --> AC: TokenExpiredException
+        deactivate RTS
+        
+        AC --> FE: 401 Unauthorized
+        deactivate AC
+        
+        FE -> FE: Clear stored tokens
+        FE --> User: Redirect to login
+        deactivate FE
+    end
+    
+else Token not found
+    RTS --> AC: Optional.empty()
+    deactivate RTS
+    
+    AC --> FE: 401 Unauthorized
+    deactivate AC
+    
+    FE -> FE: Clear stored tokens
+    FE --> User: Redirect to login
+    deactivate FE
+end
+
+note right of RTS #E8F4FD
+  **🆕 Token Rotation (v1.2.0)**
+  When rotation is enabled:
+  1. New refresh token is created
+  2. Old refresh token is deleted
+  3. Both tokens returned to client
+  
+  This prevents token replay attacks
+end note
+
+== Cleanup Process ==
+participant "RefreshTokenCleanupService" as RTCS
+
+RTCS -> RTCS: @Scheduled cleanup trigger
+activate RTCS
+
+RTCS -> RTR: deleteExpiredTokens()
+activate RTR
+
+RTR -> DB: DELETE FROM refresh_tokens WHERE expiry_date < NOW()
+activate DB
+DB --> RTR: Expired tokens deleted
+deactivate DB
+
+RTR --> RTCS: Cleanup completed
+deactivate RTR
+
+deactivate RTCS
+
+note right of RTCS #E8F4FD
+  **🆕 Automatic Cleanup (v1.2.0)**
+  Scheduled service removes expired tokens
+  based on configurable intervals:
+  - Default: every hour
+  - Configurable via properties
+end note
+
+== Error Handling ==
+alt Database connection error
+    RTR -> DB: Connection attempt
+    activate RTR
+    activate DB
+    
+    DB --> RTR: Connection failed
+    deactivate DB
+    
+    RTR --> RTS: DataAccessException
+    deactivate RTR
+    
+    activate RTS
+    RTS --> AC: ServiceException
+    deactivate RTS
+    
+    activate AC
+    AC --> FE: 500 Internal Server Error
+    deactivate AC
+    
+    activate FE
+    FE --> User: "Service temporarily unavailable"
+    deactivate FE
+end
+
+alt Token limit exceeded
+    activate RTS
+    RTS -> RTR: countByUserEmail(userEmail)
+    activate RTR
+    
+    RTR -> DB: SELECT COUNT(*) FROM refresh_tokens WHERE user_email = ?
+    activate DB
+    DB --> RTR: Token count
+    deactivate DB
+    
+    RTR --> RTS: Token count
+    deactivate RTR
+    
+    RTS -> RTS: Check against maxTokensPerUser
+    
+    alt Limit exceeded
+        RTS -> RTR: deleteOldestTokensForUser(userEmail)
+        activate RTR
+        
+        RTR -> DB: DELETE oldest tokens
+        activate DB
+        DB --> RTR: Old tokens deleted
+        deactivate DB
+        
+        RTR --> RTS: Space available
+        deactivate RTR
+        
+        RTS -> RTR: saveToken(newToken)
+        activate RTR
+        ' Continue with normal flow
+        deactivate RTR
+    end
+    deactivate RTS
+end
+
+note left of RTR #E8F4FD
+  **🆕 Multi-Repository Support (v1.2.0)**
+  - JPA: Standard Spring Data JPA
+  - PostgreSQL: Native JDBC with optimizations
+  - Configurable via properties
+  - Proper timestamp handling for both
+end note
+
+@enduml

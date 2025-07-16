@@ -6,6 +6,7 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 
 **App won't start?** → [Startup Issues](startup-issues.md)  
 **Login fails?** → [Authentication Issues](authentication.md)  
+**Token refresh fails?** → [Refresh Token Issues](refresh-token.md)  
 **Password rejected?** → [Password Policy Issues](password-policy.md)  
 **Database errors?** → [Database Issues](database.md)  
 **Performance problems?** → [Performance Issues](performance.md)
@@ -34,6 +35,13 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 | Password validation errors | [Password Policy Issues](password-policy.md) | Too weak, missing requirements |
 | Common password rejected | [Password Policy Issues](password-policy.md) | Blacklisted password |
 | Policy too strict | [Password Policy Issues](password-policy.md) | Wrong environment configuration |
+
+### 🔄 **Refresh Token Issues**
+| Issue | Guide | Common Causes |
+|-------|-------|---------------|
+| Refresh token not found | [Refresh Token Issues](refresh-token.md) | Token expired, database issues |
+| Token refresh fails | [Refresh Token Issues](refresh-token.md) | Invalid token, rotation issues |
+| Too many tokens error | [Refresh Token Issues](refresh-token.md) | Exceeded user limit |
 
 ### 🗄️ **Database & Data**
 | Issue | Guide | Common Causes |
@@ -65,6 +73,11 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 - `Password must be at least X characters` → [Length Requirements](password-policy.md#password-too-short)
 - `Password must contain uppercase` → [Character Requirements](password-policy.md#missing-character-types)
 - `Password is too common` → [Common Password](password-policy.md#common-password-detected)
+
+### Refresh Token Errors
+- `Refresh token not found` → [Token Not Found](refresh-token.md#refresh-token-not-found-error)
+- `Invalid or expired refresh token` → [Token Expired](refresh-token.md#invalid-or-expired-refresh-token-error)
+- `Too many refresh tokens` → [Token Limit](refresh-token.md#too-many-refresh-tokens-error)
 
 ### Database Errors
 - `Table 'USER' doesn't exist` → [Schema Issues](database.md#table-not-found)

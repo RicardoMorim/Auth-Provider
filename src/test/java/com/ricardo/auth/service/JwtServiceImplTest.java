@@ -19,7 +19,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-class JwtServiceIntegrationTest {
+class JwtServiceImplTest {
 
     @Autowired
     private JwtService jwtService;
@@ -28,13 +28,13 @@ class JwtServiceIntegrationTest {
      * Generate token should create valid token.
      */
     @Test
-    void generateToken_shouldCreateValidToken() {
+    void generateToken_shouldCreateValidAccessToken() {
         // Arrange
         String subject = "test@example.com";
         List<SimpleGrantedAuthority> authorities = Collections.singletonList(new SimpleGrantedAuthority("ROLE_USER"));
 
         // Act
-        String token = jwtService.generateToken(subject, authorities);
+        String token = jwtService.generateAccessToken(subject, authorities);
 
         // Assert
         assertThat(token).isNotNull();
@@ -48,7 +48,7 @@ class JwtServiceIntegrationTest {
     @Test
     void isTokenValid_shouldReturnTrue_forValidToken() {
         // Arrange
-        String token = jwtService.generateToken("test@user.com", Collections.emptyList());
+        String token = jwtService.generateAccessToken("test@user.com", Collections.emptyList());
 
         // Act & Assert
         assertTrue(jwtService.isTokenValid(token));

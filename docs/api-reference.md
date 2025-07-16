@@ -23,7 +23,7 @@ Authorization: Bearer <your-jwt-token>
 
 ### POST /api/auth/login
 
-Authenticate a user and receive a JWT token.
+Authenticate a user and receive JWT access and refresh tokens.
 
 #### Request
 
@@ -50,7 +50,8 @@ Content-Type: application/json
 
 ```json
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
 }
 ```
 
@@ -87,6 +88,70 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
+### POST /api/auth/refresh
+
+Refresh an access token using a valid refresh token.
+
+#### Request
+
+**Headers:**
+
+```
+Content-Type: application/json
+```
+
+**Body:**
+
+```json
+{
+  "refreshToken": "string"
+  // Required: Valid refresh token
+}
+```
+
+#### Response
+
+**Success (200 OK):**
+
+```json
+{
+  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature",
+  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
+}
+```
+
+**Error (401 Unauthorized):**
+
+```json
+{
+  "error": "Unauthorized",
+  "message": "Invalid or expired refresh token",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/refresh"
+}
+```
+
+**Error (400 Bad Request):**
+
+```json
+{
+  "error": "Bad Request",
+  "message": "Refresh token is required",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/refresh"
+}
+```
+
+#### Example
+
+```bash
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  }'
+```
+
 ### GET /api/auth/me
 
 Get information about the currently authenticated user.
@@ -96,7 +161,7 @@ Get information about the currently authenticated user.
 **Headers:**
 
 ```
-Authorization: Bearer <token>
+Authorization: Bearer <accessToken>
 ```
 
 #### Response
