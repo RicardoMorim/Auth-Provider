@@ -325,8 +325,6 @@ ricardo:
 
 ## [Unreleased]
 
-## [Unreleased]
-
 ### Future Considerations
 > **Note**: The following features are planned for future development as the project evolves and based on community feedback. They are not actively being developed at this time.
 
