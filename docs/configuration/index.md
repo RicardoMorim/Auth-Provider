@@ -47,6 +47,7 @@ That's it! Ricardo Auth will use sensible defaults for everything else.
 | Guide | Purpose | Time | When to Use |
 |-------|---------|------|-------------|
 | **[Password Policy](password-policy.md)** 🆕 | Password strength requirements | 10 min | Enhancing security |
+| **[Refresh Token Configuration](refresh-token.md)** 🆕 | Token refresh and storage | 15 min | Session management |
 | **[Security Configuration](security.md)** | Production security settings | 15 min | Production deployment |
 
 ### **Production Ready**
@@ -78,12 +79,17 @@ ricardo:
   auth:
     jwt:
       secret: ${JWT_SECRET}     # From environment variable
-      expiration: 604800000     # 7 days
+      access-token-expiration: 900000     # 15 minutes
+      refresh-token-expiration: 604800000 # 7 days
+    refresh-tokens:
+      enabled: true             # Enable refresh tokens
+      repository:
+        type: "postgresql"      # High performance storage
     password-policy:
       min-length: 12            # Stronger for production
       require-special-chars: true
 ```
-👉 **See:** [Environment Variables](environment.md), [Security Configuration](security.md)
+👉 **See:** [Environment Variables](environment.md), [Security Configuration](security.md), [Refresh Token Configuration](refresh-token.md)
 
 ### **Mobile API Backend**
 Optimized for mobile applications:
@@ -91,11 +97,15 @@ Optimized for mobile applications:
 ricardo:
   auth:
     jwt:
-      expiration: 2592000000    # 30 days for mobile
+      access-token-expiration: 900000     # 15 minutes for mobile access tokens
+      refresh-token-expiration: 2592000000 # 30 days for mobile refresh tokens
+    refresh-tokens:
+      enabled: true
+      max-tokens-per-user: 10   # More tokens for multiple devices
     password-policy:
       require-special-chars: false  # Mobile-friendly
 ```
-👉 **See:** [Mobile API Example](../examples/mobile-api.md)
+👉 **See:** [Mobile API Example](../examples/mobile-api.md), [Refresh Token Configuration](refresh-token.md)
 
 ### **High-Security Application**
 Maximum security settings:
@@ -267,6 +277,10 @@ ricardo:
     jwt:
       secret: ${JWT_SECRET}
       expiration: ${JWT_EXPIRATION:604800000}
+    
+    refresh-token:
+      enabled: ${REFRESH_TOKEN_ENABLED:true}
+      expiration: ${REFRESH_TOKEN_EXPIRATION:2592000000}
     
     password-policy:
       min-length: ${PASSWORD_MIN_LENGTH:8}

@@ -219,17 +219,119 @@ ricardo:
 - **New Users**: All new user registrations must meet the configured password policy
 - **Custom Policies**: Configure `ricardo.auth.password-policy.min-length: 6` for backwards compatibility
 
+## [1.2.0] - 2025-07-16
+
+### 🔄 Added - Refresh Token System
+- **Comprehensive Refresh Token Support**: Complete refresh token implementation with automatic rotation
+  - JWT refresh token generation with configurable expiration
+  - Automatic token rotation on each refresh for enhanced security
+  - Configurable storage backends (JPA and PostgreSQL)
+  - Built-in cleanup mechanism for expired tokens
+  - User token limits to prevent token accumulation
+- **New API Endpoint**: `POST /api/auth/refresh` - Refresh access tokens using refresh tokens
+- **Enhanced Login Response**: Login now returns both access and refresh tokens
+- **Flexible Storage Options**: Choose between JPA (default) or PostgreSQL optimized storage
+- **Auto-Configuration**: `AuthAutoConfiguration` enhanced with refresh token repository selection
+- **Performance Optimizations**: Native PostgreSQL queries for high-traffic applications
+
+### 🗄️ Database Schema Updates
+- **Refresh Token Table**: Automatic creation of `refresh_tokens` table with proper indexing
+- **PostgreSQL Optimizations**: Enhanced indexing and query performance for PostgreSQL deployments
+- **Migration Support**: Seamless database schema updates with no manual intervention required
+
+### 📚 Documentation Enhancements
+- **Comprehensive Refresh Token Guide**: Complete documentation at [docs/configuration/refresh-token.md](docs/configuration/refresh-token.md)
+- **Frontend Integration Examples**: Real-world examples for React, Vue.js, Android, and iOS
+- **Security Best Practices**: Detailed security considerations and implementation guidelines
+- **Performance Optimization**: Database tuning and monitoring recommendations
+- **Troubleshooting Guide**: Common issues and solutions at [docs/troubleshooting/refresh-token.md](docs/troubleshooting/refresh-token.md)
+- **Updated API Reference**: Complete refresh token endpoint documentation
+- **Enhanced README**: Updated quick start guide with refresh token examples
+
+### ⚙️ New Configuration Options
+```yaml
+ricardo:
+  auth:
+    jwt:
+      access-token-expiration: 900000     # Access token expiration (15 minutes)
+      refresh-token-expiration: 604800000 # Refresh token expiration (7 days)
+    refresh-tokens:
+      enabled: true                       # Enable refresh token functionality
+      max-tokens-per-user: 5              # Maximum tokens per user
+      rotate-on-refresh: true             # Rotate tokens on each refresh
+      cleanup-interval: 3600000           # Cleanup interval (1 hour)
+      auto-cleanup: true                  # Enable automatic cleanup
+      repository:
+        type: "jpa"                       # Repository type: "jpa" or "postgresql"
+        database:
+          refresh-tokens-table: "refresh_tokens"  # Table name
+          schema: ""                      # Database schema (optional)
+```
+
+### 🔧 Technical Improvements
+- **Repository Architecture**: New `RefreshTokenRepository` interface with JPA and PostgreSQL implementations
+- **Service Layer**: Enhanced `JwtService` with refresh token management
+- **Security Configuration**: Updated security filter chain to allow public access to refresh endpoint
+- **Transaction Management**: Proper transaction boundaries for token operations
+- **Error Handling**: Comprehensive error handling for refresh token scenarios
+
+### 🧪 Testing Enhancements
+- **Comprehensive Test Suite**: Complete test coverage for refresh token functionality
+- **Integration Tests**: End-to-end testing of refresh token flow
+- **Performance Tests**: High-concurrency testing for token refresh operations
+- **Security Tests**: Token rotation and expiration testing
+
+### 🚀 Performance Features
+- **Connection Pooling**: Optimized database connection management
+- **Query Optimization**: Efficient queries for token lookup and cleanup
+- **Caching Ready**: Prepared for future Redis caching integration
+- **Monitoring Support**: Metrics and health checks for token operations
+
+### 🔒 Security Enhancements
+- **Token Rotation**: Automatic refresh token rotation on each use
+- **Expiration Management**: Configurable token expiration with cleanup
+- **User Limits**: Prevent token accumulation with per-user limits
+- **Secure Storage**: Best practices for token storage and transmission
+
+### 📱 Frontend Integration
+- **React/Next.js Examples**: Complete authentication hooks with token management
+- **Vue.js Integration**: Composable functions for token handling
+- **Mobile Examples**: Android (Kotlin) and iOS (Swift) implementations
+- **Security Patterns**: Secure token storage and automatic refresh patterns
+
+### 🌐 Production Ready
+- **Load Balancer Support**: NGINX configuration for sticky sessions
+- **Monitoring**: Comprehensive metrics and health checks
+- **Troubleshooting**: Detailed debugging and diagnostic tools
+- **Scalability**: Optimized for high-traffic applications
+
+### 🏗️ Breaking Changes
+- **Login Response Format**: Login endpoint now returns `{ "accessToken": "...", "refreshToken": "..." }` instead of `{ "token": "..." }`
+- **JWT Token Structure**: Access tokens now have shorter expiration times (recommended: 15 minutes)
+
+### 🔄 Migration Guide
+- **Update Frontend Code**: Change from `response.token` to `response.accessToken` and `response.refreshToken`
+- **Configure Token Expiration**: Set appropriate access token expiration (15 minutes recommended)
+- **Enable Refresh Tokens**: Add `ricardo.auth.refresh-token.enabled: true` to configuration
+- **Update API Calls**: Implement automatic token refresh in API clients
+
+### 📊 Metrics and Monitoring
+- **Token Usage Metrics**: Track refresh token usage patterns
+- **Performance Monitoring**: Monitor token refresh latency and success rates
+- **Health Checks**: Endpoint for checking refresh token system health
+- **Grafana Dashboards**: Example dashboard configurations for monitoring
+
 ---
 
 ## [Unreleased]
 
 ### Planned Features
-- **Refresh Token Support**: Automatic token refresh mechanism
 - **Social Login**: OAuth2 integration with Google, GitHub, Facebook
 - **Multi-Factor Authentication**: TOTP and SMS-based 2FA
 - **Rate Limiting**: Built-in rate limiting for authentication endpoints
 - **Audit Logging**: Comprehensive security event logging
 - ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
+- ~~**Refresh Token Support**: Automatic token refresh mechanism~~ [Implemented in 1.2.0]
 - **Account Management**: Email verification, password reset, account locking
 - **Redis Cache**: Caching integration for improved performance
 - **Metrics Integration**: Micrometer metrics for monitoring

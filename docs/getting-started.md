@@ -55,6 +55,12 @@ ricardo:
   auth:
     jwt:
       secret: "your-super-secure-secret-key-make-it-long-256-bits-for-security"
+      access-token-expiration: 900000     # 15 minutes for access tokens
+      refresh-token-expiration: 604800000 # 7 days for refresh tokens
+    refresh-tokens:
+      enabled: true        # Enable refresh tokens
+      max-tokens-per-user: 5
+      auto-cleanup: true
 ```
 
 ### Step 3: Start Application (1 minute)
@@ -83,7 +89,7 @@ curl -X POST http://localhost:8080/api/users/create \
   }'
 ```
 
-**Login to get JWT token:**
+**Login to get JWT tokens:**
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -93,15 +99,25 @@ curl -X POST http://localhost:8080/api/auth/login \
   }'
 ```
 
-**Use the token:**
+**Refresh your access token:**
 ```bash
-curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -H "Content-Type: application/json" \
+  -d '{
+    "refreshToken": "YOUR_REFRESH_TOKEN_HERE"
+  }'
+```
+
+**Use the access token:**
+```bash
+curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE" \
      http://localhost:8080/api/auth/me
 ```
 
 🎉 **Congratulations!** You now have a Spring Boot app with:
 - ✅ User registration and login
-- ✅ JWT token authentication  
+- ✅ JWT access and refresh tokens
+- ✅ Secure token refresh system
 - ✅ Secure password policies
 - ✅ Role-based access control
 - ✅ Complete REST API
