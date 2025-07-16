@@ -14,7 +14,24 @@ public interface RefreshTokenRepository {
     // They store user EMAIL (string) instead of user object
     // This ensures it works with any AuthUser implementation and avoids polymorphism rabbit holes
 
-    Optional<RefreshToken> findByRefreshToken(String token);
+
+    /**
+     * Find ANY refresh token by its value. (Should only be used for admin operations/testing)
+     *
+     * @param token
+     * @return Optional containing the RefreshToken if found, otherwise empty.
+     */
+    Optional<RefreshToken> findByTokenRaw(String token);
+
+
+
+    /**
+     * Find only VALID refresh token by its value.
+     *
+     * @param token
+     * @return Optional containing the RefreshToken if found and valid, otherwise empty.
+     */
+    Optional<RefreshToken> findByToken(String token);
 
     Optional<RefreshToken> findValidToken(String token, Instant now);
 
@@ -22,14 +39,14 @@ public interface RefreshTokenRepository {
 
     void revokeAllUserTokens(String userEmail);
 
-    void deleteUserExpiredTokens(String userEmail);
 
     RefreshToken save(RefreshToken refreshToken);
 
-    void deleteByRefreshToken(String token);
+    void deleteByToken(String token);
 
-    boolean existsByRefreshToken(String token);
+    boolean existsByToken(String token);
 
-    long countActiveTokensByUserEmail(String userEmail);
+    void deleteByUserEmailAndExpiryDateBefore(String userEmail, Instant now);
+    long countByUserEmailAndRevokedFalseAndExpiryDateAfter(String userEmail, Instant now);
 
 }
