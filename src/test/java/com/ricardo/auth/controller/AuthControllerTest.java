@@ -6,6 +6,7 @@ import com.ricardo.auth.domain.user.Password;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.dto.TokenResponse;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -36,7 +37,8 @@ class AuthControllerTest {
     private MockMvc mockMvc;
 
     @Autowired
-    private ObjectMapper objectMapper;    @Autowired
+    private ObjectMapper objectMapper;
+    @Autowired
     private DefaultUserJpaRepository userRepository;
 
     @Autowired
@@ -74,8 +76,10 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.token").exists())
-                .andExpect(jsonPath("$.token").isNotEmpty());
+                .andExpect(jsonPath("$.accessToken").exists())
+                .andExpect(jsonPath("$.accessToken").isNotEmpty())
+                .andExpect(jsonPath("$.refreshToken").exists())
+                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
     }
 
     /**
@@ -130,8 +134,9 @@ class AuthControllerTest {
                 .getResponse()
                 .getContentAsString();
 
-        // Extract token from response (you might need to parse JSON)
-        String token = extractTokenFromResponse(response);
+        // Parse response using TokenResponse DTO
+        TokenResponse tokenResponse = objectMapper.readValue(response, TokenResponse.class);
+        String token = tokenResponse.getAccessToken();
 
         // Use token to access protected endpoint
         mockMvc.perform(get("/api/auth/me")
@@ -163,10 +168,5 @@ class AuthControllerTest {
         mockMvc.perform(get("/api/auth/me")
                         .header("Authorization", "Bearer invalid.jwt.token"))
                 .andExpect(status().isUnauthorized());
-    }
-
-    private String extractTokenFromResponse(String response) throws Exception {
-        // Parse JSON response to extract token
-        return objectMapper.readTree(response).get("token").asText();
     }
 }
