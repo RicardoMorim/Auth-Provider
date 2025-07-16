@@ -122,8 +122,7 @@ public class AuthAutoConfiguration {
             UserService<User, Long> userService,
             AuthProperties authProperties) {
 
-        Long expiryDuration = authProperties.getJwt().getRefreshTokenExpiration() / 1000;
-        return new RefreshTokenServiceImpl<>(refreshTokenRepository, userService, expiryDuration);
+        return new RefreshTokenServiceImpl<>(refreshTokenRepository, userService, authProperties);
     }
 
     /**

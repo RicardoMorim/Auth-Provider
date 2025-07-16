@@ -1,4 +1,4 @@
-package com.ricardo.auth.domain.tokenResponse;
+package com.ricardo.auth.domain.refreshtoken;
 
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;

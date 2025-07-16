@@ -1,7 +1,7 @@
 package com.ricardo.auth.core;
 
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
+import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import com.ricardo.auth.domain.user.AuthUser;
 
 /**

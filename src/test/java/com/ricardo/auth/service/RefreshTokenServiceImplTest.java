@@ -1,10 +1,11 @@
 package com.ricardo.auth.service;
 
+import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.RefreshTokenService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
+import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
@@ -45,6 +46,9 @@ class RefreshTokenServiceImplTest {
     private PasswordEncoder passwordEncoder;
 
     private User testUser;
+
+    @Autowired
+    AuthProperties authProperties;
 
     /**
      * Sets up.
@@ -108,7 +112,7 @@ class RefreshTokenServiceImplTest {
                 testUser.getEmail(),
                 Instant.now().plusSeconds(1) // 1 second in the future
         );
-        refreshTokenRepository.save(expiredToken);
+        refreshTokenRepository.saveToken(expiredToken);
 
         // Simulate waiting for the token to expire
         try {
@@ -315,7 +319,7 @@ class RefreshTokenServiceImplTest {
                 testUser.getEmail(),
                 Instant.now().plusSeconds(1)
         );
-        refreshTokenRepository.save(expiredToken);
+        refreshTokenRepository.saveToken(expiredToken);
 
         RefreshToken validToken = refreshTokenService.createRefreshToken(testUser);
 
@@ -329,6 +333,25 @@ class RefreshTokenServiceImplTest {
         assertThrows(ResourceNotFoundException.class, () -> {
             refreshTokenService.findByToken("expired-token");
         });
+    }
+
+    @Test
+    void shouldCleanupExpiredTokens() {
+        // Create expired token
+        RefreshToken expiredToken = RefreshToken.builder()
+                .token("expired-token")
+                .userEmail("test@example.com")
+                .expiryDate(Instant.now().minusSeconds(1000))
+                .build();
+
+        refreshTokenRepository.saveToken(expiredToken);
+
+        // Run cleanup
+        RefreshTokenCleanupService cleanupService = new RefreshTokenCleanupService(refreshTokenRepository, authProperties);
+        cleanupService.cleanupExpiredTokens();
+
+        // Verify token was deleted
+        assertFalse(refreshTokenRepository.existsByToken("expired-token"));
     }
 
     // ========== BUSINESS LOGIC TESTS ==========

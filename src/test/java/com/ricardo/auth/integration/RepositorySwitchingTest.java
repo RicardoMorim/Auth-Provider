@@ -1,7 +1,7 @@
 package com.ricardo.auth.integration;
 
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
+import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import com.ricardo.auth.domain.user.Email;
 import com.ricardo.auth.domain.user.Password;
 import com.ricardo.auth.domain.user.User;
@@ -74,7 +74,7 @@ class RepositorySwitchingTest {
             );
 
             // Act
-            RefreshToken saved = repository.save(token);
+            RefreshToken saved = repository.saveToken(token);
             Optional<RefreshToken> found = repository.findByToken("jpa-test-token");
 
             // Assert
@@ -132,7 +132,7 @@ class RepositorySwitchingTest {
             );
 
             // Act
-            RefreshToken saved = repository.save(token);
+            RefreshToken saved = repository.saveToken(token);
             Optional<RefreshToken> found = repository.findByToken("postgresql-test-token");
 
             // Assert

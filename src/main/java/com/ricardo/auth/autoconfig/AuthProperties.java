@@ -1,5 +1,6 @@
 package com.ricardo.auth.autoconfig;
 
+import jakarta.validation.constraints.Min;
 import lombok.Getter;
 import lombok.Setter;
 import org.springframework.boot.context.properties.ConfigurationProperties;
@@ -46,9 +47,17 @@ public class AuthProperties {
     @Setter
     public static class RefreshTokens {
         private boolean enabled = true;
+        /**
+         * Maximum number of refresh tokens per user (0 = unlimited)
+         */
+        @Min(0)
         private int maxTokensPerUser = 5;
+
         private boolean rotateOnRefresh = true;
-        private long cleanupInterval = 3600000L;
+
+        @Min(60000) // 1 minute
+        private long cleanupInterval = 3600000L; // default 1 hour
+
         private boolean autoCleanup = true;
 
         /**

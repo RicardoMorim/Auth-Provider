@@ -1,7 +1,7 @@
 package com.ricardo.auth.repository.refreshToken;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
+import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
@@ -65,8 +65,7 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
         }
     }
 
-    @Override
-    public RefreshToken save(RefreshToken refreshToken) {
+    public RefreshToken saveToken(RefreshToken refreshToken) {
         if (refreshToken.getId() == null) {
             return insert(refreshToken);
         } else {
@@ -76,10 +75,10 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 
     private RefreshToken insert(RefreshToken refreshToken) {
         String sql = String.format("""
-            INSERT INTO %s (token, user_email, expiry_date, revoked) 
-            VALUES (?, ?, ?, ?) 
-            RETURNING id
-            """, tableName);
+        INSERT INTO %s (token, user_email, expiry_date, revoked, created_at) 
+        VALUES (?, ?, ?, ?, ?) 
+        RETURNING id
+        """, tableName);
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
@@ -88,6 +87,7 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
             ps.setString(2, refreshToken.getUserEmail());
             ps.setTimestamp(3, Timestamp.from(refreshToken.getExpiryDate()));
             ps.setBoolean(4, refreshToken.isRevoked());
+            ps.setTimestamp(5, Timestamp.from(refreshToken.getCreatedAt()));
             return ps;
         }, keyHolder);
 
@@ -141,9 +141,9 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     }
 
     @Override
-    public void deleteExpiredTokens(Instant now) {
+    public int deleteExpiredTokens(Instant now) {
         String sql = String.format("DELETE FROM %s WHERE expiry_date < ?", tableName);
-        jdbcTemplate.update(sql, Timestamp.from(now));
+        return jdbcTemplate.update(sql, Timestamp.from(now));
     }
 
     @Override
@@ -172,7 +172,67 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
             );
             token.setId(rs.getLong("id"));
             token.setRevoked(rs.getBoolean("revoked"));
+            token.setCreatedAt(rs.getTimestamp("created_at").toInstant());
             return token;
         }
+    }
+
+    @Override
+    public int deleteByUserEmail(String userEmail) {
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            return 0;
+        }
+
+        String sql = "DELETE FROM refresh_tokens WHERE user_email = ?";
+        return jdbcTemplate.update(sql, userEmail);
+    }
+
+    @Override
+    public int deleteOldestTokensForUser(String userEmail, int maxTokens) {
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            return 0;
+        }
+
+        // First check if we need to delete anything
+        String countSql = "SELECT COUNT(*) FROM refresh_tokens WHERE user_email = ?";
+        Integer currentCount = jdbcTemplate.queryForObject(countSql, Integer.class, userEmail);
+
+        if (currentCount == null || currentCount <= maxTokens) {
+            return 0;
+        }
+
+        int tokensToDelete = currentCount - maxTokens;
+
+        String sql = """
+                DELETE FROM refresh_tokens 
+                WHERE user_email = ? 
+                AND id IN (
+                    SELECT id FROM (
+                        SELECT id FROM refresh_tokens 
+                        WHERE user_email = ? 
+                        ORDER BY created_at ASC 
+                        LIMIT ?
+                    ) AS subquery
+                )
+                """;
+        return jdbcTemplate.update(sql, userEmail, userEmail, tokensToDelete);
+    }
+
+    @Override
+    public int countActiveTokensByUser(String userEmail) {
+        if (userEmail == null || userEmail.trim().isEmpty()) {
+            return 0;
+        }
+
+        String sql = "SELECT COUNT(*) FROM refresh_tokens WHERE user_email = ? AND revoked = false AND expiry_date > ?";
+        Integer count = jdbcTemplate.queryForObject(sql, Integer.class, userEmail, Timestamp.from(Instant.now()));
+        return count != null ? count : 0;
+    }
+
+
+    @Override
+    public void deleteAll() {
+        String sql = String.format("DELETE FROM %s", tableName);
+        jdbcTemplate.update(sql);
     }
 }

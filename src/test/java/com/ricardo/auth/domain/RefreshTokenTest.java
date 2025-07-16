@@ -1,6 +1,6 @@
 package com.ricardo.auth.domain;
 
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
+import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
