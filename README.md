@@ -3,6 +3,8 @@
 [![Maven Central](https://img.shields.io/maven-central/v/io.github.ricardomorim/auth-spring-boot-starter?color=blue&label=Maven%20Central)](https://central.sonatype.com/artifact/io.github.ricardomorim/auth-spring-boot-starter)
 [![GitHub release](https://img.shields.io/github/release/RicardoMorim/Auth-Provider.svg)](https://github.com/RicardoMorim/Auth-Provider/releases)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+[![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/RicardoMorim/Auth-Provider)
+[![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/RicardoMorim/Auth-Provider/graphs/commit-activity)
 
 A **plug-and-play** Spring Boot starter that adds JWT authentication and user management to your application with minimal configuration required.
 
@@ -608,9 +610,20 @@ management:
         include: health,info,metrics
 ```
 
+## 🚀 Project Status
+
+This project is **production-ready** for its current feature set:
+- ✅ JWT Authentication with Refresh Tokens
+- ✅ User Management CRUD
+- ✅ Password Policy System
+- ✅ Role-Based Access Control
+- ✅ Multiple Database Support
+
+**Future enhancements** are planned based on community needs and contributions. See [CHANGELOG.md](CHANGELOG.md) for details.
+
 ## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
+This project is actively maintained. Bug fixes and security issues will be addressed promptly. Feature contributions are welcome!
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)

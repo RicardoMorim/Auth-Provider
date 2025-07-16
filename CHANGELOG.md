@@ -325,6 +325,18 @@ ricardo:
 
 ## [Unreleased]
 
+## [Unreleased]
+
+### Future Considerations
+> **Note**: The following features are planned for future development as the project evolves and based on community feedback. They are not actively being developed at this time.
+
+> Anyone who liked this project and wants to contribute is more than welcome to implement any of these features. 
+> Simply code them, test them and sumbit a PR to the `dev` branch. For more information check out [contributing] (CONTRIBUTING.md).  
+
+
+
+### Contributing
+If you need any of these features, please consider contributing! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 ### Planned Features
 - **Social Login**: OAuth2 integration with Google, GitHub, Facebook
 - **Multi-Factor Authentication**: TOTP and SMS-based 2FA
@@ -335,8 +347,6 @@ ricardo:
 - **Account Management**: Email verification, password reset, account locking
 - **Redis Cache**: Caching integration for improved performance
 - **Metrics Integration**: Micrometer metrics for monitoring
-- **WebFlux Support**: Reactive web stack compatibility
-- **Kotlin Support**: Kotlin DSL configuration support
 
 
 

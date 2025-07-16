@@ -8,95 +8,176 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Domain Model (v1.1.0)
+title Ricardo Auth Starter - Domain Model (v1.2.0)
 
-interface "AuthUser<T>" as AuthUser {
-    +getId(): Long
-    +getEmail(): String
-    +getUsername(): String
-    +getRoles(): Set<T>
-    +getAuthorities(): Collection<GrantedAuthority>
+package "User Domain" {
+    interface "AuthUser<T>" as AuthUser {
+        +getId(): Long
+        +getEmail(): String
+        +getUsername(): String
+        +getRoles(): Set<T>
+        +getAuthorities(): Collection<GrantedAuthority>
+    }
+
+    class User {
+        -id: Long
+        -version: Long
+        -username: Username
+        -email: Email
+        -password: Password
+        -roles: Set<AppRole>
+        +User(username: Username, email: Email, password: Password)
+    }
+
+    class Username {
+        -username: String
+        +valueOf(username: String): Username
+        +getUsername(): String
+        -validateUsername(username: String): void
+    }
+
+    class Email {
+        -email: String
+        +valueOf(email: String): Email
+        +getEmail(): String
+        -validateEmail(email: String): void
+    }
+
+    class Password {
+        -hashed: String
+        +valueOf(raw: String, encoder: PasswordEncoder): Password
+        +fromHash(hashedPassword: String): Password
+        +matches(raw: String, encoder: PasswordEncoder): boolean
+    }
+
+    enum AppRole {
+        USER
+        ADMIN
+        VIP
+        +getAuthority(): String
+    }
+
+    User .up.|> AuthUser
+    User *-- Username : contains
+    User *-- Email : contains
+    User *-- Password : contains
+    User o-- AppRole : has many
 }
 
-class User {
-    -id: Long
-    -username: Username
-    -email: Email
-    -password: Password
-    -roles: Set<AppRole>
-    +User(username: Username, email: Email, password: Password)
+package "Refresh Token Domain" {
+    class RefreshToken {
+        -id: Long
+        -token: String
+        -userEmail: String
+        -expiryDate: Instant
+        -createdAt: Instant
+        +RefreshToken(token: String, userEmail: String, expiryDate: Instant)
+        +isExpired(): boolean
+        +verifyExpiration(): RefreshToken
+    }
+    
+    class RefreshTokenRequest {
+        -refreshToken: String
+        +RefreshTokenRequest(refreshToken: String)
+        +getRefreshToken(): String
+        +toString(): String
+    }
+    
+    class TokenExpiredException {
+        +TokenExpiredException(message: String)
+    }
+    
+    RefreshToken --> TokenExpiredException : throws when expired
 }
 
-class Username {
-    -username: String
-    +valueOf(username: String): Username
-    +getUsername(): String
+package "Password Policy" {
+    interface PasswordPolicyService {
+        +validatePassword(password: String): boolean
+        +generateSecurePassword(): String
+    }
+
+    class PasswordPolicy {
+        -minLength: int
+        -maxLength: int
+        -requireUpperCase: boolean
+        -requireLowerCase: boolean
+        -requireDigit: boolean
+        -requireSpecialChar: boolean
+        -specialCharacters: String
+        -preventCommonPasswords: boolean
+        -commonPasswords: Set<String>
+        +validatePassword(password: String): boolean
+        +generateSecurePassword(): String
+        -validateLength(password: String): void
+        -validateCharacterRequirements(password: String): void
+        -validateCommonPassword(password: String): void
+    }
+
+    PasswordPolicy .up.|> PasswordPolicyService
+    Password --> PasswordPolicyService : validates with
 }
 
-class Email {
-    -email: String
-    +valueOf(email: String): Email
-    +getEmail(): String
+package "Core Services" {
+    interface "UserService<T, ID>" as UserService {
+        +createUser(user: T): T
+        +getUserById(id: ID): T
+        +getUserByEmail(email: String): T
+        +updateUser(id: ID, user: T): T
+        +deleteUser(id: ID): void
+    }
+    
+    interface JwtService {
+        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
+        +extractSubject(token: String): String
+        +isTokenValid(token: String): boolean
+        +isTokenValid(token: String, email: String): boolean
+    }
+    
+    interface "RefreshTokenService<U, ID>" as RefreshTokenService {
+        +createRefreshToken(user: U): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+    }
+    
+    UserService --> User : manages
+    RefreshTokenService --> RefreshToken : manages
+    JwtService --> User : creates tokens for
 }
-
-class Password {
-    -hashed: String
-    +valueOf(raw: String, encoder: PasswordEncoder, policyService: PasswordPolicyService): Password
-    +fromHash(hashedPassword: String): Password
-    +matches(raw: String, encoder: PasswordEncoder): boolean
-}
-
-enum AppRole {
-    USER
-    ADMIN
-    +getAuthority(): String
-}
-
-interface PasswordPolicyService {
-    +validatePassword(password: String): void
-    +generateSecurePassword(): String
-}
-
-class PasswordPolicy {
-    -minLength: int
-    -maxLength: int
-    -requireUppercase: boolean
-    -requireLowercase: boolean
-    -requireDigits: boolean
-    -requireSpecialChars: boolean
-    -specialCharacters: String
-    -preventCommonPasswords: boolean
-    -commonPasswords: Set<String>
-    +validatePassword(password: String): void
-    +generateSecurePassword(): String
-    -validateLength(password: String): void
-    -validateCharacterRequirements(password: String): void
-    -validateCommonPassword(password: String): void
-}
-
-User .up.|> AuthUser
-User *-- Username : contains
-User *-- Email : contains
-User *-- Password : contains
-User o-- AppRole : has many
-PasswordPolicy .up.|> PasswordPolicyService
-Password --> PasswordPolicyService : validates with
 
 note right of AuthUser #E8F4FD
   **Polymorphic Design**
   Generic interface allows
-  custom role types
+  custom role types and
+  user implementations
 end note
 
 note bottom of Username #E8F4FD
   **Value Objects**
-  Immutable with validation
+  Immutable with built-in
+  validation logic
+end note
+
+note right of RefreshToken #E8F4FD
+  **🆕 Refresh Token (v1.2.0)**
+  Secure token storage with
+  expiration validation and
+  automatic cleanup support
 end note
 
 note right of PasswordPolicy #E8F4FD
-  **🆕 Password Policy (v1.1.0)**
-  Configurable password validation
-  with security requirements
+  **Enhanced Password Policy (v1.2.0)**
+  Configurable validation rules
+  with common password detection
+  and secure generation
+end note
+
+note bottom of RefreshTokenService #E8F4FD
+  **🆕 Refresh Token Service (v1.2.0)**
+  Complete token lifecycle
+  management with rotation
+  and cleanup capabilities
 end note
 
 @enduml

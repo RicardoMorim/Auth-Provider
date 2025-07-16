@@ -8,34 +8,176 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Service Architecture (v1.1.0)
+title Ricardo Auth Starter - Service Architecture (v1.2.0)
 
-interface "UserService<T, ID>" as UserService
-interface JwtService
-interface PasswordPolicyService
-class UserServiceImpl
-class JwtServiceImpl
-class PasswordPolicy
-class AuthAutoConfiguration
+package "Core Service Interfaces" {
+    interface "UserService<T, ID>" as UserService
+    interface JwtService
+    interface PasswordPolicyService
+    interface "RefreshTokenService<U, ID>" as RefreshTokenService
+}
 
+package "Service Implementations" {
+    class UserServiceImpl {
+        -userRepository: UserRepository
+        +createUser(user: User): User
+        +getUserById(id: Long): User
+        +getUserByEmail(email: String): User
+        +updateUser(id: Long, user: User): User
+        +deleteUser(id: Long): void
+    }
+    
+    class JwtServiceImpl {
+        -secret: String
+        -accessTokenExpiration: long
+        -key: Key
+        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
+        +extractSubject(token: String): String
+        +isTokenValid(token: String): boolean
+        +isTokenValid(token: String, email: String): boolean
+    }
+    
+    class PasswordPolicy {
+        -authProperties: AuthProperties
+        -requireUpperCase: boolean
+        -requireLowerCase: boolean
+        -requireDigit: boolean
+        -requireSpecialChar: boolean
+        -preventCommonPasswords: boolean
+        -commonPasswords: Set<String>
+        +validatePassword(password: String): boolean
+        +generateSecurePassword(): String
+    }
+    
+    class RefreshTokenServiceImpl {
+        -refreshTokenRepository: RefreshTokenRepository
+        -userService: UserService
+        -authProperties: AuthProperties
+        +createRefreshToken(user: AuthUser): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+    }
+    
+    class RefreshTokenCleanupService {
+        -refreshTokenRepository: RefreshTokenRepository
+        -authProperties: AuthProperties
+        +cleanupExpiredTokens(): void
+        +cleanupExpiredTokensForUser(userEmail: String): void
+    }
+    
+    class UserDetailsServiceImpl {
+        -userService: UserService
+        +loadUserByUsername(email: String): UserDetails
+    }
+}
+
+package "Repository Layer" {
+    interface RefreshTokenRepository {
+        +saveToken(refreshToken: RefreshToken): RefreshToken
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +deleteExpiredTokens(): void
+        +revokeAllUserTokens(userEmail: String): void
+        +count(): long
+    }
+    
+    interface JpaRefreshTokenRepository {
+        +deleteByExpiryDateBefore(date: Instant): void
+        +findByUserEmailOrderByCreatedAtDesc(userEmail: String): List<RefreshToken>
+        +countByUserEmail(userEmail: String): long
+    }
+    
+    class PostgreSQLRefreshTokenRepository {
+        -jdbcTemplate: JdbcTemplate
+        +saveToken(refreshToken: RefreshToken): RefreshToken
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +deleteExpiredTokens(): void
+        +revokeAllUserTokens(userEmail: String): void
+        -insert(token: RefreshToken): RefreshToken
+        -update(token: RefreshToken): RefreshToken
+    }
+    
+    interface "UserRepository<U, ID>" as UserRepository
+}
+
+package "Auto Configuration" {
+    class AuthAutoConfiguration {
+        +jwtService(authProperties: AuthProperties): JwtService
+        +passwordPolicyService(authProperties: AuthProperties): PasswordPolicyService
+        +userService(userRepository: UserRepository): UserService
+        +refreshTokenService(refreshTokenRepository: RefreshTokenRepository, userService: UserService, authProperties: AuthProperties): RefreshTokenService
+        +refreshTokenCleanupService(refreshTokenRepository: RefreshTokenRepository, authProperties: AuthProperties): RefreshTokenCleanupService
+        +userDetailsService(userService: UserService): UserDetailsServiceImpl
+        +postgresqlRefreshTokenRepository(dataSource: DataSource, authProperties: AuthProperties): PostgreSQLRefreshTokenRepository
+    }
+    
+    class AuthProperties {
+        -enabled: boolean
+        -jwt: Jwt
+        -refreshTokens: RefreshTokens
+        -passwordPolicy: PasswordPolicy
+        -controllers: Controllers
+    }
+}
+
+' Implementation relationships
 UserServiceImpl .up.|> UserService
 JwtServiceImpl .up.|> JwtService
 PasswordPolicy .up.|> PasswordPolicyService
+RefreshTokenServiceImpl .up.|> RefreshTokenService
+UserDetailsServiceImpl .up.|> UserDetailsService
+JpaRefreshTokenRepository .up.|> RefreshTokenRepository
+PostgreSQLRefreshTokenRepository .up.|> RefreshTokenRepository
+
+' Dependency relationships
 AuthAutoConfiguration --> UserService : creates
 AuthAutoConfiguration --> JwtService : creates
 AuthAutoConfiguration --> PasswordPolicyService : creates
-UserServiceImpl --> PasswordPolicyService : uses for validation
+AuthAutoConfiguration --> RefreshTokenService : creates
+AuthAutoConfiguration --> RefreshTokenCleanupService : creates
+AuthAutoConfiguration --> UserDetailsService : creates
+AuthAutoConfiguration --> RefreshTokenRepository : creates (conditional)
 
-note top of AuthAutoConfiguration
+UserServiceImpl --> UserRepository : uses
+RefreshTokenServiceImpl --> RefreshTokenRepository : uses
+RefreshTokenServiceImpl --> UserService : uses
+RefreshTokenCleanupService --> RefreshTokenRepository : uses
+UserDetailsServiceImpl --> UserService : uses
+
+note top of AuthAutoConfiguration #E8F4FD
   **Spring Boot Auto-Configuration**
-  Zero-configuration setup with
-  automatic password policy
+  Conditionally creates beans based on
+  configuration properties and available
+  implementations
 end note
 
-note right of PasswordPolicy
-  **🆕 Password Policy Service (v1.1.0)**
-  Configurable validation rules
-  and secure password generation
+note right of RefreshTokenServiceImpl #E8F4FD
+  **🆕 Refresh Token Service (v1.2.0)**
+  Manages complete token lifecycle
+  with automatic rotation and
+  configurable cleanup
+end note
+
+note bottom of PostgreSQLRefreshTokenRepository #E8F4FD
+  **🆕 PostgreSQL Repository (v1.2.0)**
+  Native query implementation with
+  proper timestamp handling and
+  optimized performance
+end note
+
+note right of RefreshTokenCleanupService #E8F4FD
+  **🆕 Cleanup Service (v1.2.0)**
+  Scheduled cleanup of expired
+  tokens with configurable
+  intervals
+end note
+
+note left of JpaRefreshTokenRepository #E8F4FD
+  **🆕 JPA Repository (v1.2.0)**
+  Standard JPA implementation
+  with resolved interface
+  conflicts
 end note
 
 @enduml

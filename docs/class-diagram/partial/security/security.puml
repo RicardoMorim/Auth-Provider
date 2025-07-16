@@ -8,60 +8,165 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Security Architecture & Flow (v1.1.0)
+title Ricardo Auth Starter - Security Architecture & Flow (v1.2.0)
 
 package "Security Components" {
     class JwtAuthFilter {
         -jwtService: JwtService
-        +doFilterInternal()
-        -extractTokenFromRequest()
+        +doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain): void
+        -extractTokenFromRequest(request: HttpServletRequest): String
+        -isAuthenticationRequired(email: String): boolean
     }
     
     class SecurityConfig {
+        -jwtAuthFilter: JwtAuthFilter
+        -userDetailsService: UserDetailsService
         +filterChain(HttpSecurity): SecurityFilterChain
         +authenticationProvider(): DaoAuthenticationProvider
         +passwordEncoder(): PasswordEncoder
+        +authenticationManager(AuthenticationConfiguration): AuthenticationManager
+        +authenticationEntryPoint(): AuthenticationEntryPoint
     }
     
     class JwtServiceImpl {
-        +generateToken(): String
-        +validateToken(): Boolean
-        +extractEmail(): String
+        -secret: String
+        -accessTokenExpiration: long
+        -key: Key
+        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
+        +extractSubject(token: String): String
+        +isTokenValid(token: String): boolean
+        +isTokenValid(token: String, email: String): boolean
+        -extractClaim(token: String, claimsResolver: Function<Claims, T>): T
+        -extractAllClaims(token: String): Claims
+        -isTokenExpired(token: String): boolean
+        -extractExpiration(token: String): Date
+        -createToken(claims: Map<String, Object>, subject: String): String
+        -getKey(): Key
     }
     
     class UserDetailsServiceImpl {
-        +loadUserByUsername(): UserDetails
+        -userService: UserService
+        +loadUserByUsername(email: String): UserDetails
     }
     
-    ' 🆕 ADD: Password Policy Service
     interface PasswordPolicyService {
-        +validatePassword(password: String): void
+        +validatePassword(password: String): boolean
         +generateSecurePassword(): String
     }
     
     class PasswordPolicy {
-        +validatePassword(password: String): void
+        -requireUpperCase: boolean
+        -requireLowerCase: boolean
+        -requireDigit: boolean
+        -requireSpecialChar: boolean
+        -preventCommonPasswords: boolean
+        -commonPasswords: Set<String>
+        +validatePassword(password: String): boolean
         +generateSecurePassword(): String
+        -validateLength(password: String): void
+        -validateCharacterRequirements(password: String): void
+        -validateCommonPassword(password: String): void
+    }
+    
+    class UserSecurityService {
+        -userService: UserService
+        +isOwner(email: String, userId: Long): boolean
     }
 }
 
 package "Controllers" {
     class AuthController {
-        +login(): ResponseEntity<TokenDTO>
-        +getAuthenticatedUser(): ResponseEntity<AuthenticatedUserDTO>
+        -jwtService: JwtService
+        -authenticationManager: AuthenticationManager
+        -refreshTokenService: RefreshTokenService
+        -authProperties: AuthProperties
+        +login(request: LoginRequestDTO): ResponseEntity<TokenResponse>
+        +refreshToken(request: RefreshTokenRequest): ResponseEntity<TokenResponse>
+        +getAuthenticatedUser(authentication: Authentication): ResponseEntity<AuthenticatedUserDTO>
     }
     
-    ' 🆕 UPDATED: UserController now uses PasswordPolicyService
     class UserController {
+        -userService: UserService
+        -passwordEncoder: PasswordEncoder
         -passwordPolicyService: PasswordPolicyService
-        +createUser(): ResponseEntity<UserDTO>
-        +updateUser(): ResponseEntity<UserDTO>
+        +createUser(request: CreateUserRequestDTO): ResponseEntity<UserDTO>
+        +getUserById(id: Long): ResponseEntity<UserDTO>
+        +getUserByEmail(email: String): ResponseEntity<UserDTO>
+        +updateUser(id: Long, request: CreateUserRequestDTO): ResponseEntity<UserDTO>
+        +deleteUser(id: Long): ResponseEntity<Void>
+    }
+}
+
+package "Refresh Token System" {
+    interface "RefreshTokenService<U, ID>" as RefreshTokenService {
+        +createRefreshToken(user: U): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+    }
+    
+    class RefreshTokenServiceImpl {
+        -refreshTokenRepository: RefreshTokenRepository
+        -userService: UserService
+        -authProperties: AuthProperties
+        +createRefreshToken(user: AuthUser): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+        -generateTokenValue(): String
+        -isTokenLimitExceeded(userEmail: String): boolean
+        -cleanupOldestTokensForUser(userEmail: String): void
+    }
+    
+    class RefreshTokenCleanupService {
+        -refreshTokenRepository: RefreshTokenRepository
+        -authProperties: AuthProperties
+        +cleanupExpiredTokens(): void
+        +cleanupExpiredTokensForUser(userEmail: String): void
+    }
+    
+    class RefreshToken {
+        -id: Long
+        -token: String
+        -userEmail: String
+        -expiryDate: Instant
+        -createdAt: Instant
+        +isExpired(): boolean
+        +verifyExpiration(): RefreshToken
+    }
+    
+    class RefreshTokenRequest {
+        -refreshToken: String
+        +getRefreshToken(): String
+    }
+    
+    class TokenResponse {
+        -accessToken: String
+        -refreshToken: String
+        +TokenResponse(accessToken: String, refreshToken: String)
     }
 }
 
 package "Domain Layer" {
     class Password {
-        +valueOf(raw: String, encoder: PasswordEncoder, policyService: PasswordPolicyService): Password
+        -hashed: String
+        +valueOf(raw: String, encoder: PasswordEncoder): Password
+        +matches(raw: String, encoder: PasswordEncoder): boolean
+    }
+    
+    class User {
+        -id: Long
+        -username: Username
+        -email: Email
+        -password: Password
+        -roles: Set<AppRole>
+        +getAuthorities(): Collection<GrantedAuthority>
+        +isAccountNonExpired(): boolean
+        +isAccountNonLocked(): boolean
+        +isCredentialsNonExpired(): boolean
+        +isEnabled(): boolean
     }
 }
 
@@ -69,34 +174,110 @@ package "Spring Security" <<Rectangle>> {
     interface OncePerRequestFilter
     interface UserDetailsService
     interface AuthenticationManager
+    interface DaoAuthenticationProvider
+    interface BCryptPasswordEncoder
 }
 
-' Relationships
+package "Exception Handling" {
+    class GlobalExceptionHandler {
+        +handleAuthenticationException(ex: AuthenticationException): ResponseEntity<ErrorResponse>
+        +handleAccessDeniedException(ex: AccessDeniedException): ResponseEntity<ErrorResponse>
+        +handleTokenExpiredException(ex: TokenExpiredException): ResponseEntity<ErrorResponse>
+        +handleResourceNotFoundException(ex: ResourceNotFoundException): ResponseEntity<ErrorResponse>
+    }
+    
+    class TokenExpiredException {
+        +TokenExpiredException(message: String)
+    }
+}
+
+' Implementation relationships
 JwtAuthFilter .up.|> OncePerRequestFilter
 UserDetailsServiceImpl .up.|> UserDetailsService
 PasswordPolicy .up.|> PasswordPolicyService
+RefreshTokenServiceImpl .up.|> RefreshTokenService
+
+' Security configuration relationships
 SecurityConfig --> JwtAuthFilter : configures
 SecurityConfig --> UserDetailsServiceImpl : uses
+SecurityConfig --> BCryptPasswordEncoder : creates
+SecurityConfig --> DaoAuthenticationProvider : creates
+SecurityConfig --> AuthenticationManager : creates
+
+' Controller relationships
 AuthController --> JwtServiceImpl : uses
 AuthController --> AuthenticationManager : uses
+AuthController --> RefreshTokenService : uses
+UserController --> PasswordPolicyService : uses for validation
+UserController --> UserService : uses
+
+' Security filter relationships
 JwtAuthFilter --> JwtServiceImpl : validates tokens
 UserDetailsServiceImpl --> UserService : loads user data
 
-' 🆕 NEW: Password Policy Integration
-UserController --> PasswordPolicyService : uses for validation
+' Domain relationships
 Password --> PasswordPolicyService : validates with
+User --> Password : contains
+
+' Refresh token relationships
+RefreshTokenServiceImpl --> RefreshTokenRepository : uses
+RefreshTokenServiceImpl --> UserService : uses
+RefreshTokenCleanupService --> RefreshTokenRepository : uses
+RefreshToken --> TokenExpiredException : throws when expired
+
+' Exception handling
+GlobalExceptionHandler --> TokenExpiredException : handles
+GlobalExceptionHandler --> AuthenticationException : handles
+GlobalExceptionHandler --> AccessDeniedException : handles
 
 note right of JwtAuthFilter #E8F4FD
   **Filter Chain Integration**
-  Intercepts requests and
-  validates JWT tokens
+  Intercepts requests and validates
+  JWT tokens before reaching
+  controllers
 end note
 
 note top of SecurityConfig #E8F4FD
   **Spring Security Configuration**
-  Configures authentication
-  and authorization rules
+  Configures authentication and
+  authorization rules with JWT
+  filter chain integration
 end note
+
+note right of RefreshTokenServiceImpl #E8F4FD
+  **🆕 Refresh Token Service (v1.2.0)**
+  Manages secure token lifecycle
+  with automatic rotation, cleanup,
+  and user token limits
+end note
+
+note bottom of AuthController #E8F4FD
+  **🆕 Enhanced Auth Controller (v1.2.0)**
+  Supports both access and refresh
+  tokens with automatic token
+  rotation on refresh
+end note
+
+note left of PasswordPolicy #E8F4FD
+  **Enhanced Password Policy (v1.2.0)**
+  Configurable validation with
+  common password detection
+  and secure generation
+end note
+
+note right of RefreshTokenCleanupService #E8F4FD
+  **🆕 Cleanup Service (v1.2.0)**
+  Scheduled cleanup of expired
+  tokens with configurable
+  intervals and user limits
+end note
+
+note bottom of UserSecurityService #E8F4FD
+  **Authorization Service**
+  Provides ownership validation
+  for user-specific operations
+end note
+
 
 note bottom of AuthController #E8F4FD
   **Authentication Endpoints**

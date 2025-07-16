@@ -6,19 +6,16 @@ skinparam backgroundColor #FEFEFE
 skinparam classBackgroundColor #F8F9FA
 skinparam classBorderColor #6C757D
 skinparam arrowColor #495057
-' Fix: Better note styling with dark text and border
 skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 skinparam noteFontStyle bold
-' Fix: Prevent cropping with better spacing
 skinparam padding 10
 skinparam classFontSize 11
 skinparam packageFontSize 12
 
-title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v1.1.0)
+title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v1.2.0)
 
-' Fix: Use left to right direction to prevent cropping
 !define DIRECTION left to right
 
 package "Domain Layer" <<Rectangle>> {
@@ -76,7 +73,26 @@ package "Domain Layer" <<Rectangle>> {
     enum AppRole {
         USER
         ADMIN
+        VIP
         +getAuthority(): String
+    }
+    
+    ' NEW: Refresh Token Domain
+    class RefreshToken {
+        -id: Long
+        -token: String
+        -userEmail: String
+        -expiryDate: Instant
+        -createdAt: Instant
+        +RefreshToken(token: String, userEmail: String, expiryDate: Instant)
+        +isExpired(): boolean
+        +verifyExpiration(): RefreshToken
+    }
+    
+    class RefreshTokenRequest {
+        -refreshToken: String
+        +RefreshTokenRequest(refreshToken: String)
+        +getRefreshToken(): String
     }
     
     User .up.|> AuthUser
@@ -101,16 +117,14 @@ package "Core Interfaces" <<Rectangle>> {
     }
     
     interface JwtService {
-        +generateToken(email: String, authorities: Collection<GrantedAuthority>): String
-        +extractEmail(token: String): String
-        +extractExpiration(token: String): Date
-        +validateToken(token: String, userDetails: UserDetails): Boolean
-        +isTokenExpired(token: String): Boolean
-        +extractAllClaims(token: String): Claims
+        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
+        +extractSubject(token: String): String
+        +isTokenValid(token: String): boolean
+        +isTokenValid(token: String, email: String): boolean
     }
     
     interface PasswordPolicyService {
-        +validatePassword(password: String): void
+        +validatePassword(password: String): boolean
         +generateSecurePassword(): String
     }
     
@@ -118,73 +132,76 @@ package "Core Interfaces" <<Rectangle>> {
         +getName(): String
         +getRoles(): List<String>
     }
+    
+    ' NEW: Refresh Token Service
+    interface "RefreshTokenService<U, ID>" as RefreshTokenService {
+        +createRefreshToken(user: U): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+    }
 }
 
-package "Service Layer" <<Rectangle>> {
-    
-    class UserServiceImpl {
-        -userRepository: UserJpaRepository
-        -passwordPolicyService: PasswordPolicyService
-        +createUser(user: User): User
-        +getUserByEmail(email: String): User
-        +emailExists(email: String): boolean
-        +usernameExists(username: String): boolean
-        +updateUser(id: Long, user: User): User
-        +deleteUser(id: Long): void
-        +getAllUsers(): List<User>
-    }
-    
-    class JwtServiceImpl {
-        -secret: String
-        -expiration: long
-        +generateToken(email: String, authorities: Collection<GrantedAuthority>): String
-        +validateToken(token: String, userDetails: UserDetails): Boolean
-        -createToken(claims: Map<String, Object>, subject: String): String
-        -getKey(): Key
-    }
-    
-    class PasswordPolicy {
-        -authProperties: AuthProperties
-        -minLength: int
-        -maxLength: int
-        -requireUppercase: boolean
-        -requireLowercase: boolean
-        -requireDigits: boolean
-        -requireSpecialChars: boolean
-        -specialCharacters: String
-        -preventCommonPasswords: boolean
-        -commonPasswords: Set<String>
-        +PasswordPolicy(authProperties: AuthProperties)
-        +validatePassword(password: String): void
-        +generateSecurePassword(): String
-        -loadCommonPasswords(): Set<String>
-        -validateLength(password: String): void
-        -validateCharacterRequirements(password: String): void
-        -validateCommonPassword(password: String): void
-    }
-    
-    class UserDetailsServiceImpl {
-        -userService: UserService<User, Long>
-        +loadUserByUsername(email: String): UserDetails
-    }
-    
-    UserServiceImpl .up.|> UserService
-    JwtServiceImpl .up.|> JwtService
-    PasswordPolicy .up.|> PasswordPolicyService
-    UserDetailsServiceImpl .up.|> UserDetailsService
-    UserServiceImpl --> PasswordPolicyService : validates passwords
-}
 
 package "Repository Layer" <<Rectangle>> {
     
-    interface UserJpaRepository {
-        +findByEmail_Email(email: String): Optional<User>
-        +findByUsername_Username(username: String): Optional<User>
-        +existsByEmail_Email(email: String): boolean
-        +existsByUsername_Username(username: String): boolean
+    interface "UserRepository<U, ID>" as UserRepository {
+        +findByEmail(email: String): Optional<U>
     }
     
+    interface "UserJpaRepository<U, ID>" as UserJpaRepository {
+        +findByEmail_Email(email: String): Optional<U>
+        +findByUsername_Username(username: String): Optional<U>
+        +existsByEmail_Email(email: String): boolean
+    }
+    
+    interface DefaultUserJpaRepository {
+        ' Inherits from UserJpaRepository
+    }
+    
+    ' NEW: Refresh Token Repository Architecture
+    interface RefreshTokenRepository {
+        +saveToken(refreshToken: RefreshToken): RefreshToken
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +findByToken(token: String): Optional<RefreshToken>
+        +deleteExpiredTokens(): void
+        +revokeAllUserTokens(userEmail: String): void
+        +count(): long
+    }
+    
+    interface JpaRefreshTokenRepository {
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +deleteByExpiryDateBefore(date: Instant): void
+        +deleteByUserEmail(userEmail: String): void
+        +findByUserEmailOrderByCreatedAtDesc(userEmail: String): List<RefreshToken>
+        +countByUserEmail(userEmail: String): long
+    }
+    
+    interface DefaultJpaRefreshTokenRepository {
+        ' Inherits from JpaRefreshTokenRepository
+    }
+    
+    class PostgreSQLRefreshTokenRepository {
+        -jdbcTemplate: JdbcTemplate
+        -tableName: String
+        +saveToken(refreshToken: RefreshToken): RefreshToken
+        +findByTokenRaw(token: String): Optional<RefreshToken>
+        +deleteExpiredTokens(): void
+        +revokeAllUserTokens(userEmail: String): void
+        +count(): long
+        -insert(token: RefreshToken): RefreshToken
+        -update(token: RefreshToken): RefreshToken
+        -mapRowToRefreshToken(rs: ResultSet): RefreshToken
+    }
+    
+    UserJpaRepository .up.|> UserRepository
     UserJpaRepository .up.|> JpaRepository
+    DefaultUserJpaRepository .up.|> UserJpaRepository
+    JpaRefreshTokenRepository .up.|> RefreshTokenRepository
+    JpaRefreshTokenRepository .up.|> JpaRepository
+    DefaultJpaRefreshTokenRepository .up.|> JpaRefreshTokenRepository
+    PostgreSQLRefreshTokenRepository .up.|> RefreshTokenRepository
 }
 
 package "Controller Layer" <<Rectangle>> {
@@ -192,19 +209,23 @@ package "Controller Layer" <<Rectangle>> {
     class AuthController {
         -jwtService: JwtService
         -authenticationManager: AuthenticationManager
-        +login(request: LoginRequestDTO): ResponseEntity<TokenDTO>
+        -refreshTokenService: RefreshTokenService
+        +login(request: LoginRequestDTO): ResponseEntity<TokenResponse>
+        +refreshToken(request: RefreshTokenRequest): ResponseEntity<TokenResponse>
         +getAuthenticatedUser(authentication: Authentication): ResponseEntity<AuthenticatedUserDTO>
     }
     
     class UserController {
         -userService: UserService<User, Long>
         -passwordEncoder: PasswordEncoder
+        -passwordPolicyService: PasswordPolicyService
         +createUser(request: CreateUserRequestDTO): ResponseEntity<UserDTO>
         +getUserById(id: Long): ResponseEntity<UserDTO>
         +getUserByEmail(email: String): ResponseEntity<UserDTO>
         +updateUser(id: Long, request: CreateUserRequestDTO): ResponseEntity<UserDTO>
         +deleteUser(id: Long): ResponseEntity<Void>
     }
+    
 }
 
 package "DTO Layer" <<Rectangle>> {
@@ -228,6 +249,13 @@ package "DTO Layer" <<Rectangle>> {
     
     class TokenDTO {
         -token: String
+    }
+    
+    ' NEW: Updated for refresh tokens
+    class TokenResponse {
+        -accessToken: String
+        -refreshToken: String
+        +TokenResponse(accessToken: String, refreshToken: String)
     }
     
     class AuthenticatedUserDTO {
@@ -268,23 +296,43 @@ package "Auto Configuration" <<Rectangle>> {
     class AuthAutoConfiguration {
         +jwtService(): JwtService
         +passwordPolicyService(authProperties: AuthProperties): PasswordPolicyService
-        +userService(userRepository: UserJpaRepository, passwordPolicy: PasswordPolicyService): UserService<User, Long>
-        +userDetailsService(userRepository: UserJpaRepository): UserDetailsServiceImpl
+        +userService(userRepository: UserRepository, passwordPolicy: PasswordPolicyService): UserService<User, Long>
+        +refreshTokenService(refreshTokenRepository: RefreshTokenRepository, userService: UserService, authProperties: AuthProperties): RefreshTokenService
+        +refreshTokenCleanupService(refreshTokenRepository: RefreshTokenRepository, authProperties: AuthProperties): RefreshTokenCleanupService
+        +userDetailsService(userRepository: UserRepository): UserDetailsServiceImpl
         +jwtAuthFilter(jwtService: JwtService): JwtAuthFilter
-        +authController(jwtService: JwtService, authManager: AuthenticationManager): AuthController
-        +userController(userService: UserService<User, Long>, passwordEncoder: PasswordEncoder): UserController
+        +authController(jwtService: JwtService, authManager: AuthenticationManager, refreshTokenService: RefreshTokenService): AuthController
+        +userController(userService: UserService<User, Long>, passwordEncoder: PasswordEncoder, passwordPolicyService: PasswordPolicyService): UserController
+        +postgresqlRefreshTokenRepository(dataSource: DataSource, authProperties: AuthProperties): PostgreSQLRefreshTokenRepository
     }
     
     class AuthProperties {
         -enabled: boolean
         -jwt: Jwt
+        -refreshTokens: RefreshTokens
         -passwordPolicy: PasswordPolicy
         -controllers: Controllers
     }
     
     class "AuthProperties.Jwt" as JwtProps {
         -secret: String
-        -expiration: long
+        -accessTokenExpiration: long
+        -refreshTokenExpiration: long
+    }
+    
+    ' NEW: Refresh Token Configuration
+    class "AuthProperties.RefreshTokens" as RefreshTokensProps {
+        -enabled: boolean
+        -maxTokensPerUser: int
+        -rotateOnRefresh: boolean
+        -cleanupInterval: long
+        -autoCleanup: boolean
+        -repository: Repository
+    }
+    
+    class "AuthProperties.RefreshTokens.Repository" as RepositoryProps {
+        -type: RefreshTokenRepositoryType
+        -database: Database
     }
     
     class "AuthProperties.PasswordPolicy" as PasswordPolicyProps {
@@ -304,9 +352,18 @@ package "Auto Configuration" <<Rectangle>> {
         -user: Controller
     }
     
+    enum RefreshTokenRepositoryType {
+        JPA
+        POSTGRESQL
+    }
+    
     AuthProperties *-- JwtProps
+    AuthProperties *-- RefreshTokensProps
     AuthProperties *-- PasswordPolicyProps
     AuthProperties *-- ControllersProps
+    RefreshTokensProps *-- RepositoryProps
+    RepositoryProps --> RefreshTokenRepositoryType
+
 }
 
 package "Exception Handling" <<Rectangle>> {
@@ -314,6 +371,7 @@ package "Exception Handling" <<Rectangle>> {
     class GlobalExceptionHandler {
         +handleDuplicateResourceException(ex: DuplicateResourceException): ResponseEntity<ErrorResponse>
         +handleResourceNotFoundException(ex: ResourceNotFoundException): ResponseEntity<ErrorResponse>
+        +handleTokenExpiredException(ex: TokenExpiredException): ResponseEntity<ErrorResponse>
         +handleValidationException(ex: MethodArgumentNotValidException): ResponseEntity<ErrorResponse>
         +handleGenericException(ex: Exception): ResponseEntity<ErrorResponse>
     }
@@ -326,20 +384,108 @@ package "Exception Handling" <<Rectangle>> {
         +ResourceNotFoundException(message: String)
     }
     
+    ' NEW: Token Exception
+    class TokenExpiredException {
+        +TokenExpiredException(message: String)
+    }
+    
     class ErrorResponse {
         -message: String
         -timestamp: LocalDateTime
     }
 }
 
+package "Service Layer" <<Rectangle>> {
+
+    class UserServiceImpl {
+        -userRepository: UserRepository
+        +createUser(user: User): User
+        +getUserByEmail(email: String): User
+        +emailExists(email: String): boolean
+        +usernameExists(username: String): boolean
+        +updateUser(id: Long, user: User): User
+        +deleteUser(id: Long): void
+        +getAllUsers(): List<User>
+    }
+
+    class JwtServiceImpl {
+        -secret: String
+        -accessTokenExpiration: long
+        -key: Key
+        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
+        +isTokenValid(token: String, email: String): boolean
+        -createToken(claims: Map<String, Object>, subject: String): String
+        -getKey(): Key
+    }
+
+    class PasswordPolicy {
+        -authProperties: AuthProperties
+        -minLength: int
+        -maxLength: int
+        -requireUpperCase: boolean
+        -requireLowerCase: boolean
+        -requireDigit: boolean
+        -requireSpecialChar: boolean
+        -specialCharacters: String
+        -preventCommonPasswords: boolean
+        -commonPasswords: Set<String>
+        +PasswordPolicy(authProperties: AuthProperties)
+        +validatePassword(password: String): boolean
+        +generateSecurePassword(): String
+        -loadCommonPasswords(): Set<String>
+        -validateLength(password: String): void
+        -validateCharacterRequirements(password: String): void
+        -validateCommonPassword(password: String): void
+    }
+
+    class UserDetailsServiceImpl {
+        -userService: UserService<User, Long>
+        +loadUserByUsername(email: String): UserDetails
+    }
+
+    ' NEW: Refresh Token Service Implementation
+    class RefreshTokenServiceImpl {
+        -refreshTokenRepository: RefreshTokenRepository
+        -userService: UserService
+        -authProperties: AuthProperties
+        +createRefreshToken(user: AuthUser): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+    }
+
+    ' NEW: Refresh Token Cleanup Service
+    class RefreshTokenCleanupService {
+        -refreshTokenRepository: RefreshTokenRepository
+        -authProperties: AuthProperties
+        +cleanupExpiredTokens(): void
+        +cleanupExpiredTokensForUser(userEmail: String): void
+    }
+
+    UserServiceImpl .up.|> UserService
+    JwtServiceImpl .up.|> JwtService
+    PasswordPolicy .up.|> PasswordPolicyService
+    UserDetailsServiceImpl .up.|> UserDetailsService
+    RefreshTokenServiceImpl .up.|> RefreshTokenService
+    UserServiceImpl --> PasswordPolicyService : validates passwords
+    RefreshTokenServiceImpl --> UserService : uses
+    RefreshTokenCleanupService --> RefreshTokenRepository : cleans up
+}
+
+
 ' Relationships
-UserServiceImpl --> UserJpaRepository : uses
+UserServiceImpl --> UserRepository : uses
 UserDetailsServiceImpl --> UserService : uses
 AuthController --> JwtService : uses
+AuthController --> RefreshTokenService : uses
 UserController --> UserService : uses
+UserController --> PasswordPolicyService : uses
 JwtAuthFilter --> JwtService : uses
 SecurityConfig --> JwtAuthFilter : configures
 UserDTOMapper --> User : maps
+RefreshTokenCleanupService --> RefreshTokenRepository : uses
+RefreshTokenServiceImpl --> RefreshTokenRepository : uses
 
 ' Notes with better styling
 note right of AuthUser #E8F4FD
@@ -360,6 +506,18 @@ note bottom of Username #E8F4FD
   immutability guarantees
 end note
 
+note bottom of RefreshToken #E8F4FD
+  **🆕 Refresh Token (v1.2.0)**
+  Secure token rotation with
+  configurable expiration
+end note
+
+note bottom of RefreshTokenRepository #E8F4FD
+  **🆕 Multi-Repository Support (v1.2.0)**
+  JPA and PostgreSQL implementations
+  with resolved interface conflicts
+end note
+
 note bottom of UserServiceImpl #E8F4FD
   **Generic Service**
   Supports different User types
@@ -376,6 +534,18 @@ note left of JwtAuthFilter #E8F4FD
   **JWT Security Filter**
   Handles token validation and
   authentication in filter chain
+end note
+
+note right of RefreshTokenServiceImpl #E8F4FD
+  **🆕 Refresh Token Service (v1.2.0)**
+  Manages token lifecycle with
+  automatic cleanup and rotation
+end note
+
+note right of PostgreSQLRefreshTokenRepository #E8F4FD
+  **🆕 PostgreSQL Repository (v1.2.0)**
+  Native queries with proper
+  timestamp handling
 end note
 
 @enduml
