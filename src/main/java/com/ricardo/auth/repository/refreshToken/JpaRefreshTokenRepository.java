@@ -80,6 +80,13 @@ public interface JpaRefreshTokenRepository
             """, nativeQuery = true)
     int deleteOldestTokensForUser(@Param("userEmail") String userEmail, @Param("maxTokens") int maxTokens);
 
+    /**
+     * Count active tokens by user int.
+     *
+     * @param userEmail the user email
+     * @param now       the now
+     * @return the int
+     */
     @Query("SELECT COUNT(rt) FROM RefreshToken rt WHERE rt.userEmail = :userEmail AND rt.expiryDate > :now AND rt.revoked = false")
     int countActiveTokensByUser(@Param("userEmail") String userEmail, @Param("now") Instant now);
 

@@ -49,6 +49,9 @@ class JpaRefreshTokenRepositoryTest {
     private User testUser;
     private User secondUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
 
@@ -71,6 +74,9 @@ class JpaRefreshTokenRepositoryTest {
         entityManager.persistAndFlush(secondUser);
     }
 
+    /**
+     * Should save and retrieve refresh token.
+     */
     @Test
     @DisplayName("Should save and retrieve refresh token")
     void shouldSaveAndRetrieveRefreshToken() {
@@ -94,6 +100,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(found.get().getCreatedAt()).isNotNull();
     }
 
+    /**
+     * Should find valid token only.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should find valid token only with findByToken")
     void shouldFindValidTokenOnly() throws InterruptedException {
@@ -124,6 +135,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(validFound).isPresent();
     }
 
+    /**
+     * Should not find revoked tokens with find by token.
+     */
     @Test
     @DisplayName("Should not find revoked tokens with findByToken")
     void shouldNotFindRevokedTokensWithFindByToken() {
@@ -146,6 +160,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(foundRaw.get().isRevoked()).isTrue();
     }
 
+    /**
+     * Should find valid token with specific timestamp.
+     */
     @Test
     @DisplayName("Should find valid token with specific timestamp")
     void shouldFindValidTokenWithSpecificTimestamp() {
@@ -166,6 +183,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(found.get().getExpiryDate()).isEqualTo(futureTime);
     }
 
+    /**
+     * Should revoke all user tokens.
+     */
     @Test
     @DisplayName("Should revoke all user tokens")
     void shouldRevokeAllUserTokens() {
@@ -208,6 +228,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(found3.get().isRevoked()).isFalse(); // Different user
     }
 
+    /**
+     * Should delete expired tokens.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should delete expired tokens")
     void shouldDeleteExpiredTokens() throws InterruptedException {
@@ -244,6 +269,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("valid-token")).isPresent();
     }
 
+    /**
+     * Should delete oldest tokens when user exceeds limit.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should delete oldest tokens when user exceeds max limit")
     void shouldDeleteOldestTokensWhenUserExceedsLimit() throws InterruptedException {
@@ -273,6 +303,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("token4")).isPresent();
     }
 
+    /**
+     * Should count active tokens for user.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should count active tokens for user")
     void shouldCountActiveTokensForUser() throws InterruptedException {
@@ -320,6 +355,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(activeCount).isEqualTo(2);
     }
 
+    /**
+     * Should verify jpa entity lifecycle callbacks.
+     */
     @Test
     @DisplayName("Should handle JPA entity lifecycle callbacks")
     void shouldVerifyJpaEntityLifecycleCallbacks() {
@@ -341,6 +379,11 @@ class JpaRefreshTokenRepositoryTest {
     }
 
 
+    /**
+     * Should delete tokens by user email and expiry date.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should delete tokens by user email and expiry date")
     void shouldDeleteTokensByUserEmailAndExpiryDate() throws InterruptedException {
@@ -371,6 +414,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("valid-token")).isPresent();
     }
 
+    /**
+     * Should count active tokens using jpa method.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should count active tokens using JPA method")
     void shouldCountActiveTokensUsingJpaMethod() throws InterruptedException {
@@ -421,6 +469,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(count).isEqualTo(2);
     }
 
+    /**
+     * Should delete token by token value.
+     */
     @Test
     @DisplayName("Should delete token by token value")
     void shouldDeleteTokenByTokenValue() {
@@ -441,6 +492,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("delete-token")).isEmpty();
     }
 
+    /**
+     * Should check token existence.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should check token existence correctly")
     void shouldCheckTokenExistence() throws InterruptedException {
@@ -475,6 +531,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.existsByToken("nonexistent-token")).isFalse();
     }
 
+    /**
+     * Should delete all tokens for user.
+     */
     @Test
     @DisplayName("Should delete all tokens for a specific user")
     void shouldDeleteAllTokensForUser() {
@@ -499,6 +558,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("token3")).isPresent(); // Different user
     }
 
+    /**
+     * Should return zero when user has fewer than max tokens.
+     */
     @Test
     @DisplayName("Should return zero when deleting oldest tokens and user has fewer than max")
     void shouldReturnZeroWhenUserHasFewerThanMaxTokens() {
@@ -522,6 +584,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("token2")).isPresent();
     }
 
+    /**
+     * Should count active tokens for user using helper method.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should count active tokens for user using helper method")
     void shouldCountActiveTokensForUserUsingHelperMethod() throws InterruptedException {
@@ -553,6 +620,11 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(activeCount).isEqualTo(2);
     }
 
+    /**
+     * Should handle concurrent token operations.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should handle concurrent token operations")
     void shouldHandleConcurrentTokenOperations() throws InterruptedException {
@@ -578,6 +650,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.countActiveTokensByUser(userEmail)).isEqualTo(5);
     }
 
+    /**
+     * Should handle database constraint violations.
+     */
     @Test
     @DisplayName("Should handle database constraint violations")
     void shouldHandleDatabaseConstraintViolations() {
@@ -593,6 +668,11 @@ class JpaRefreshTokenRepositoryTest {
                 .isInstanceOf(Exception.class); // Should throw constraint violation
     }
 
+    /**
+     * Should maintain data integrity during cleanup.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should maintain data integrity during cleanup operations")
     void shouldMaintainDataIntegrityDuringCleanup() throws InterruptedException {
@@ -630,6 +710,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(repository.countActiveTokensByUser(userEmail)).isEqualTo(3);
     }
 
+    /**
+     * Should handle null and empty parameters.
+     */
     @Test
     @DisplayName("Should handle null and empty parameters gracefully")
     void shouldHandleNullAndEmptyParameters() {
@@ -649,6 +732,11 @@ class JpaRefreshTokenRepositoryTest {
 
     }
 
+    /**
+     * Should handle large datasets efficiently.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should handle large datasets efficiently")
     void shouldHandleLargeDatasetsEfficiently() throws InterruptedException {
@@ -687,6 +775,9 @@ class JpaRefreshTokenRepositoryTest {
         assertThat(deleteTime).isLessThan(1000); // Delete should be < 1 second
     }
 
+    /**
+     * Should properly handle jpa query methods.
+     */
     @Test
     @DisplayName("Should properly handle JPA query methods")
     void shouldProperlyHandleJpaQueryMethods() {

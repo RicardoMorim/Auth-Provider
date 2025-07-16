@@ -46,12 +46,20 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Transactional
 class PostgreSQLRefreshTokenRepositoryTest {
 
+    /**
+     * The constant postgres.
+     */
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
             .withDatabaseName("AuthLibraryTest")
             .withUsername("postgres")
             .withPassword("8080");
 
+    /**
+     * Configure properties.
+     *
+     * @param registry the registry
+     */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
@@ -74,6 +82,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
     private User testUser;
     private String testUserEmail;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         // Generate unique user for each test to avoid conflicts
@@ -90,11 +101,17 @@ class PostgreSQLRefreshTokenRepositoryTest {
         repository.deleteAll();
     }
 
+    /**
+     * Should use postgre sql implementation.
+     */
     @Test
     void shouldUsePostgreSQLImplementation() {
         assertThat(repository).isInstanceOf(PostgreSQLRefreshTokenRepository.class);
     }
 
+    /**
+     * Should create and find token by raw.
+     */
     @Test
     void shouldCreateAndFindTokenByRaw() {
         // Arrange
@@ -116,6 +133,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found.get().getUserEmail()).isEqualTo(testUserEmail);
     }
 
+    /**
+     * Should find valid token only.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldFindValidTokenOnly() throws InterruptedException {
         // Arrange - Create expired token
@@ -148,6 +170,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(validFound).isPresent();
     }
 
+    /**
+     * Should not find revoked tokens with find by token.
+     */
     @Test
     void shouldNotFindRevokedTokensWithFindByToken() {
         // Arrange
@@ -169,6 +194,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(foundRaw).isPresent();
     }
 
+    /**
+     * Should revoke all user tokens.
+     */
     @Test
     void shouldRevokeAllUserTokens() {
         // Arrange
@@ -194,6 +222,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found2.get().isRevoked()).isTrue();
     }
 
+    /**
+     * Should delete expired tokens.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldDeleteExpiredTokens() throws InterruptedException {
         // Arrange
@@ -219,6 +252,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(validFound).isPresent();
     }
 
+    /**
+     * Should count active tokens for user.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldCountActiveTokensForUser() throws InterruptedException {
         // Arrange
@@ -247,6 +285,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(count).isEqualTo(2);
     }
 
+    /**
+     * Should update existing token.
+     */
     @Test
     void shouldUpdateExistingToken() {
         // Arrange
@@ -267,6 +308,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found.get().isRevoked()).isTrue();
     }
 
+    /**
+     * Should delete token by value.
+     */
     @Test
     void shouldDeleteTokenByValue() {
         // Arrange
@@ -282,6 +326,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    /**
+     * Should check token existence.
+     */
     @Test
     void shouldCheckTokenExistence() {
         // Arrange
@@ -294,6 +341,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(repository.existsByToken("nonexistent-token")).isFalse();
     }
 
+    /**
+     * Should delete oldest tokens when user exceeds limit.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should delete oldest tokens when user exceeds max token limit")
     void shouldDeleteOldestTokensWhenUserExceedsLimit() throws InterruptedException {
@@ -331,6 +383,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("token5")).isPresent();
     }
 
+    /**
+     * Should return zero when user has fewer than max tokens.
+     */
     @Test
     @DisplayName("Should return zero when deleting oldest tokens and user has fewer than max")
     void shouldReturnZeroWhenUserHasFewerThanMaxTokens() {
@@ -352,6 +407,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("token2")).isPresent();
     }
 
+    /**
+     * Should return zero when user has no tokens.
+     */
     @Test
     @DisplayName("Should return zero when deleting oldest tokens for user with no tokens")
     void shouldReturnZeroWhenUserHasNoTokens() {
@@ -365,6 +423,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(deletedCount).isEqualTo(0);
     }
 
+    /**
+     * Should delete all tokens for user.
+     */
     @Test
     @DisplayName("Should delete all tokens for a specific user")
     void shouldDeleteAllTokensForUser() {
@@ -393,6 +454,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(repository.findByTokenRaw("token3")).isPresent();
     }
 
+    /**
+     * Should count active tokens for users.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should count active tokens for user correctly")
     void shouldCountActiveTokensForUsers() throws InterruptedException {
@@ -429,6 +495,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(activeCount).isEqualTo(2);
     }
 
+    /**
+     * Should return zero when counting active tokens for user with no tokens.
+     */
     @Test
     @DisplayName("Should return zero when counting active tokens for user with no tokens")
     void shouldReturnZeroWhenCountingActiveTokensForUserWithNoTokens() {
@@ -442,6 +511,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(activeCount).isEqualTo(0);
     }
 
+    /**
+     * Should handle concurrent token creation and cleanup.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should handle concurrent token creation and cleanup")
     void shouldHandleConcurrentTokenCreationAndCleanup() throws InterruptedException {
@@ -476,6 +550,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(repository.countActiveTokensByUser(testUserEmail)).isEqualTo(5);
     }
 
+    /**
+     * Should handle postgre sql timestamp operations.
+     */
     @Test
     @DisplayName("Should properly handle PostgreSQL-specific timestamp operations")
     void shouldHandlePostgreSQLTimestampOperations() {
@@ -497,6 +574,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(retrievedToken.get().getCreatedAt()).isBeforeOrEqualTo(Instant.now());
     }
 
+    /**
+     * Should handle large token values.
+     */
     @Test
     @DisplayName("Should handle large token values correctly")
     void shouldHandleLargeTokenValues() {
@@ -515,6 +595,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(retrievedToken.get().getToken()).isEqualTo(largeTokenValue);
     }
 
+    /**
+     * Should handle database constraint violations.
+     */
     @Test
     @DisplayName("Should handle database constraint violations gracefully")
     void shouldHandleDatabaseConstraintViolations() {
@@ -529,6 +612,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
                 .isInstanceOf(Exception.class); // Should throw constraint violation
     }
 
+    /**
+     * Should maintain data integrity during cleanup.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should maintain data integrity during cleanup operations")
     void shouldMaintainDataIntegrityDuringCleanup() throws InterruptedException {
@@ -560,6 +648,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(repository.countActiveTokensByUser(testUserEmail)).isEqualTo(3);
     }
 
+    /**
+     * Should handle null and empty parameters.
+     */
     @Test
     @DisplayName("Should handle null and empty parameters gracefully")
     void shouldHandleNullAndEmptyParameters() {
@@ -576,6 +667,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(count).isEqualTo(0);
     }
 
+    /**
+     * Should verify created at field handling.
+     */
     @Test
     @DisplayName("Should verify createdAt field is properly set and retrieved")
     void shouldVerifyCreatedAtFieldHandling() {

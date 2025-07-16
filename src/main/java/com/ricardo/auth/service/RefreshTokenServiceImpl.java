@@ -36,7 +36,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
      *
      * @param refreshTokenRepository the refresh token repository
      * @param userService            the user service
-     * @param expiryDuration         the expiry duration in seconds
+     * @param authProperties         the auth properties
      */
     public RefreshTokenServiceImpl(RefreshTokenRepository refreshTokenRepository,
                                    UserService<U, ID> userService,
@@ -108,6 +108,8 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
 
     /**
      * Cleanup old tokens when user exceeds max token limit
+     *
+     * @param userEmail the user email
      */
     @Transactional
     public void cleanupOldestTokensForUser(String userEmail) {

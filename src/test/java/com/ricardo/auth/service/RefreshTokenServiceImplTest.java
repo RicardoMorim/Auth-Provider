@@ -47,6 +47,9 @@ class RefreshTokenServiceImplTest {
 
     private User testUser;
 
+    /**
+     * The Auth properties.
+     */
     @Autowired
     AuthProperties authProperties;
 
@@ -335,6 +338,9 @@ class RefreshTokenServiceImplTest {
         });
     }
 
+    /**
+     * Should cleanup expired tokens.
+     */
     @Test
     void shouldCleanupExpiredTokens() {
         // Create expired token

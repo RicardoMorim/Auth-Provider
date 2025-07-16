@@ -9,15 +9,28 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+/**
+ * The type Test jpa configuration.
+ */
 @TestConfiguration
 public class TestJpaConfiguration {
 
+    /**
+     * Password encoder password encoder.
+     *
+     * @return the password encoder
+     */
     @Bean
     @ConditionalOnMissingBean
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
 
+    /**
+     * Password policy service password policy service.
+     *
+     * @return the password policy service
+     */
     @Bean
     public PasswordPolicyService passwordPolicyService() {
         return new PasswordPolicy(createTestAuthProperties());

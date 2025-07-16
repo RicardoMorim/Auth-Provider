@@ -21,6 +21,7 @@ public interface RefreshTokenRepository {
      * Create a new refresh token for the user.
      *
      * @param refreshToken the refresh token to save
+     * @return the refresh token
      */
     RefreshToken saveToken(RefreshToken refreshToken);
 
@@ -54,6 +55,7 @@ public interface RefreshTokenRepository {
      * Delete expired tokens.
      *
      * @param now the now
+     * @return the int
      */
     int deleteExpiredTokens(Instant now);
 
@@ -99,6 +101,7 @@ public interface RefreshTokenRepository {
 
     /**
      * Delete all tokens for a specific user
+     *
      * @param userEmail user's email
      * @return number of deleted tokens
      */
@@ -106,6 +109,7 @@ public interface RefreshTokenRepository {
 
     /**
      * Delete oldest tokens for a user when they exceed the limit
+     *
      * @param userEmail user's email
      * @param maxTokens maximum allowed tokens per user
      * @return number of deleted tokens
@@ -114,10 +118,14 @@ public interface RefreshTokenRepository {
 
     /**
      * Count active tokens for a user
+     *
      * @param userEmail user's email
      * @return number of active tokens
      */
     int countActiveTokensByUser(String userEmail);
 
+    /**
+     * Delete all.
+     */
     void deleteAll();
 }

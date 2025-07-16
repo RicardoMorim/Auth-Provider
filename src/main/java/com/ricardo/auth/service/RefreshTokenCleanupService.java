@@ -12,6 +12,9 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
 
+/**
+ * The type Refresh token cleanup service.
+ */
 @Service
 @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens", name = "enabled", havingValue = "true")
 public class RefreshTokenCleanupService {
@@ -21,6 +24,12 @@ public class RefreshTokenCleanupService {
     private final RefreshTokenRepository refreshTokenRepository;
     private final AuthProperties authProperties;
 
+    /**
+     * Instantiates a new Refresh token cleanup service.
+     *
+     * @param refreshTokenRepository the refresh token repository
+     * @param authProperties         the auth properties
+     */
     public RefreshTokenCleanupService(RefreshTokenRepository refreshTokenRepository,
                                       AuthProperties authProperties) {
         this.refreshTokenRepository = refreshTokenRepository;
