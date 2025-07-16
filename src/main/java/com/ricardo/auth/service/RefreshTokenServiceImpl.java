@@ -45,7 +45,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
 
     @Override
     public RefreshToken createRefreshToken(U user) {
-        refreshTokenRepository.deleteUserExpiredTokens(user.getEmail());
+        refreshTokenRepository.deleteByUserEmailAndExpiryDateBefore(user.getEmail(), Instant.now());
         RefreshToken token = new RefreshToken(
                 generateSecureToken(),
                 user.getEmail(),
@@ -83,7 +83,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
 
     @Override
     public RefreshToken findByToken(String tokenValue) {
-        return refreshTokenRepository.findByRefreshToken(tokenValue)
+        return refreshTokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new ResourceNotFoundException("Token not found"));
     }
 

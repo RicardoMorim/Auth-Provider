@@ -9,6 +9,8 @@ import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import com.ricardo.auth.domain.tokenResponse.RefreshTokenRequest;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.*;
+import jakarta.validation.Valid;
+import org.slf4j.Logger;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -33,6 +35,8 @@ public class AuthController {
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService<User, Long> refreshTokenService;
     private final AuthProperties authProperties;
+
+    private final Logger logger = org.slf4j.LoggerFactory.getLogger(AuthController.class);
 
     /**
      * Constructor with optional refresh token service
@@ -77,13 +81,18 @@ public class AuthController {
     }
 
     @PostMapping("/refresh")
-    public ResponseEntity<?> refreshToken(@RequestBody RefreshTokenRequest request) {
+    public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         if (refreshTokenService == null) {
             return ResponseEntity.status(HttpStatus.NOT_IMPLEMENTED)
                     .body("Refresh tokens are not enabled");
         }
 
         try {
+            if (request == null || request.getRefreshToken() == null || request.getRefreshToken().trim().isEmpty()) {
+                return ResponseEntity.badRequest()
+                        .body(new ErrorResponse("Refresh token is required"));
+            }
+
             // Find and verify the refresh token
             RefreshToken refreshToken = refreshTokenService.findByToken(request.getRefreshToken());
             refreshToken = refreshTokenService.verifyExpiration(refreshToken);
@@ -107,9 +116,15 @@ public class AuthController {
 
             return ResponseEntity.ok(new TokenResponse(newAccessToken, newRefreshToken));
 
-        } catch (ResourceNotFoundException | TokenExpiredException e) {
+        } catch (ResourceNotFoundException e) {
+            // Token not found, expired, or revoked - this is an authentication failure
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ErrorResponse("Invalid or expired refresh token"));
+        } catch (Exception e) {
+            // Any other error - log it and return generic error
+            logger.error("Error refreshing token", e);
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ErrorResponse("An error occurred while refreshing the token"));
         }
     }
 

@@ -35,6 +35,7 @@ public interface JwtService {
      */
     boolean isTokenValid(String token);
 
+    boolean isTokenValid(String token, String email);
     /**
      * Extract roles list.
      *

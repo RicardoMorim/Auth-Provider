@@ -2,17 +2,15 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.io.Decoders;
 import io.jsonwebtoken.security.Keys;
+import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 
 import java.security.Key;
-import java.time.Instant;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -66,9 +64,10 @@ public class JwtServiceImpl implements JwtService {
         claims.put("roles", roleStrings);
 
         String tokenId = UUID.randomUUID().toString();
-        claims.put("jti", tokenId); // JWT ID for uniqueness
-
+        claims.put("jti", tokenId);
         claims.put("token_type", "access");
+        claims.put("iss", "ricardo-auth");
+        claims.put("aud", "ricardo-auth-client");
 
         return Jwts.builder()
                 .claims(claims)
@@ -78,7 +77,6 @@ public class JwtServiceImpl implements JwtService {
                 .signWith(key)
                 .compact();
     }
-
 
     @Override
     public String extractSubject(String token) {
@@ -92,10 +90,49 @@ public class JwtServiceImpl implements JwtService {
     }
 
     @Override
+    public boolean isTokenValid(String token, String email) {
+        try {
+            String tokenSubject = extractSubject(token);
+            return email.equals(tokenSubject) && isTokenValid(token);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
     public boolean isTokenValid(String token) {
         try {
+
+            Claims claims = extractAllClaims(token);
+
+            // Validate token type
+            String tokenType = (String) claims.get("token_type");
+            if (!"access".equals(tokenType)) {
+                return false;
+            }
+
+            // More specific validation
+            if (claims.getSubject() == null || claims.getSubject().trim().isEmpty()) {
+                return false;
+            }
+
+            if (claims.getExpiration() == null) {
+                return false;
+            }
+
             return !isTokenExpired(token);
+
+        } catch (io.jsonwebtoken.ExpiredJwtException e) {
+            // Token expired
+            return false;
+        } catch (SignatureException e) {
+            // Invalid signature
+            return false;
+        } catch (io.jsonwebtoken.MalformedJwtException e) {
+            // Malformed token
+            return false;
         } catch (Exception e) {
+            // Other errors
             return false;
         }
     }
