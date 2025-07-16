@@ -85,10 +85,10 @@ class RefreshTokenTest {
         RefreshToken tokenAtExpiryMoment = new RefreshToken(
                 "token-at-expiry",
                 "test@example.com",
-                Instant.now()
+                Instant.now().plusSeconds(1)
         );
 
-        Thread.sleep(100); // Sleep for a short time to ensure we cross the boundary
+        Thread.sleep(1200); // Sleep for a short time to ensure we cross the boundary
 
         // Should be considered expired at exactly the expiry time
         assertTrue(tokenAtExpiryMoment.isExpired());
