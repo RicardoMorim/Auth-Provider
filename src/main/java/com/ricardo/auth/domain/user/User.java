@@ -84,14 +84,29 @@ public class User implements AuthUser<AppRole> {
                 .collect(Collectors.toSet());
     }
 
+    /**
+     * Sets id.
+     *
+     * @param id the id
+     */
     public void setId(Long id) {
         this.id = id;
     }
 
+    /**
+     * Gets version.
+     *
+     * @return the version
+     */
     public Long getVersion() {
         return version;
     }
 
+    /**
+     * Sets version.
+     *
+     * @param version the version
+     */
     public void setVersion(Long version) {
         this.version = version;
     }

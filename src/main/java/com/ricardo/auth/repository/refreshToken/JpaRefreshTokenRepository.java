@@ -6,11 +6,13 @@ import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.NoRepositoryBean;
 import org.springframework.data.repository.query.Param;
-import org.springframework.stereotype.Component;
 
 import java.time.Instant;
 import java.util.Optional;
 
+/**
+ * The interface Jpa refresh token repository.
+ */
 @NoRepositoryBean
 public interface JpaRefreshTokenRepository
         extends RefreshTokenRepository, JpaRepository<RefreshToken, Long> {
@@ -50,6 +52,13 @@ public interface JpaRefreshTokenRepository
         return existsByTokenAndRevokedFalseAndExpiryDateAfter(token, Instant.now());
     }
 
+    /**
+     * Exists by token and revoked false and expiry date after boolean.
+     *
+     * @param token the token
+     * @param now   the now
+     * @return the boolean
+     */
     @Query("SELECT COUNT(rt) > 0 FROM RefreshToken rt WHERE rt.token = :token AND rt.revoked = false AND rt.expiryDate > :now")
     boolean existsByTokenAndRevokedFalseAndExpiryDateAfter(@Param("token") String token, @Param("now") Instant now);
 }

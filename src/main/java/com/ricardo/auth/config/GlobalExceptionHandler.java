@@ -23,6 +23,12 @@ public class GlobalExceptionHandler {
 
     private static final Logger logger = LoggerFactory.getLogger(GlobalExceptionHandler.class);
 
+    /**
+     * Handle validation exceptions response entity.
+     *
+     * @param ex the ex
+     * @return the response entity
+     */
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationExceptions(MethodArgumentNotValidException ex) {
         StringBuilder message = new StringBuilder("Validation failed: ");
@@ -35,6 +41,12 @@ public class GlobalExceptionHandler {
     }
 
 
+    /**
+     * Handle malformed json response entity.
+     *
+     * @param ex the ex
+     * @return the response entity
+     */
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleMalformedJson(HttpMessageNotReadableException ex) {
         return ResponseEntity.badRequest()

@@ -39,6 +39,9 @@ public class AuthProperties {
      */
     private RefreshTokens refreshTokens = new RefreshTokens();
 
+    /**
+     * The type Refresh tokens.
+     */
     @Getter
     @Setter
     public static class RefreshTokens {
@@ -54,6 +57,9 @@ public class AuthProperties {
         private RefreshTokenRepository repository = new RefreshTokenRepository();
     }
 
+    /**
+     * The type Refresh token repository.
+     */
     @Getter
     @Setter
     public static class RefreshTokenRepository {
@@ -68,6 +74,9 @@ public class AuthProperties {
         private Database database = new Database();
     }
 
+    /**
+     * The type Database.
+     */
     @Getter
     @Setter
     public static class Database {
@@ -77,8 +86,18 @@ public class AuthProperties {
         private String driverClassName;
     }
 
+    /**
+     * The enum Refresh token repository type.
+     */
     public enum RefreshTokenRepositoryType {
-        JPA ("jpa"), POSTGRESQL ("postgresql");
+        /**
+         * Jpa refresh token repository type.
+         */
+        JPA ("jpa"),
+        /**
+         * Postgresql refresh token repository type.
+         */
+        POSTGRESQL ("postgresql");
 
         @Getter
         private final String value;
@@ -188,19 +207,74 @@ public class AuthProperties {
         private String commonPasswordsFilePath = "/commonpasswords.txt";
     }
 
-    // Root level getters and setters
+    /**
+     * Is enabled boolean.
+     *
+     * @return the boolean
+     */
+// Root level getters and setters
     public boolean isEnabled() { return enabled; }
+
+    /**
+     * Sets enabled.
+     *
+     * @param enabled the enabled
+     */
     public void setEnabled(boolean enabled) { this.enabled = enabled; }
 
+    /**
+     * Gets jwt.
+     *
+     * @return the jwt
+     */
     public Jwt getJwt() { return jwt; }
+
+    /**
+     * Sets jwt.
+     *
+     * @param jwt the jwt
+     */
     public void setJwt(Jwt jwt) { this.jwt = jwt; }
 
+    /**
+     * Gets controllers.
+     *
+     * @return the controllers
+     */
     public Controllers getControllers() { return controllers; }
+
+    /**
+     * Sets controllers.
+     *
+     * @param controllers the controllers
+     */
     public void setControllers(Controllers controllers) { this.controllers = controllers; }
 
+    /**
+     * Gets password policy.
+     *
+     * @return the password policy
+     */
     public PasswordPolicy getPasswordPolicy() { return passwordPolicy; }
+
+    /**
+     * Sets password policy.
+     *
+     * @param passwordPolicy the password policy
+     */
     public void setPasswordPolicy(PasswordPolicy passwordPolicy) { this.passwordPolicy = passwordPolicy; }
 
+    /**
+     * Gets refresh tokens.
+     *
+     * @return the refresh tokens
+     */
     public RefreshTokens getRefreshTokens() { return refreshTokens; }
+
+    /**
+     * Sets refresh tokens.
+     *
+     * @param refreshTokens the refresh tokens
+     */
     public void setRefreshTokens(RefreshTokens refreshTokens) { this.refreshTokens = refreshTokens; }
 }

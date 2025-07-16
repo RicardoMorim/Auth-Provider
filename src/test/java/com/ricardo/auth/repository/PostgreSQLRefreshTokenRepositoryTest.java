@@ -1,11 +1,11 @@
 package com.ricardo.auth.repository;
 
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import com.ricardo.auth.domain.user.Email;
 import com.ricardo.auth.domain.user.Password;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.domain.user.Username;
-import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.repository.refreshToken.PostgreSQLRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -38,12 +38,20 @@ import static org.assertj.core.api.Assertions.assertThat;
 })
 @Transactional
 class PostgreSQLRefreshTokenRepositoryTest {
+    /**
+     * The constant postgres.
+     */
     @Container
     static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
             .withDatabaseName("AuthLibraryTest")
             .withUsername("postgres")
             .withPassword("8080");
 
+    /**
+     * Configure properties.
+     *
+     * @param registry the registry
+     */
     @DynamicPropertySource
     static void configureProperties(DynamicPropertyRegistry registry) {
         registry.add("spring.datasource.url", postgres::getJdbcUrl);
@@ -65,6 +73,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
 
     private User testUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         testUser = new User(
@@ -74,11 +85,17 @@ class PostgreSQLRefreshTokenRepositoryTest {
         );
     }
 
+    /**
+     * Should use postgre sql implementation.
+     */
     @Test
     void shouldUsePostgreSQLImplementation() {
         assertThat(repository).isInstanceOf(PostgreSQLRefreshTokenRepository.class);
     }
 
+    /**
+     * Should create and find token by raw.
+     */
     @Test
     void shouldCreateAndFindTokenByRaw() {
         // Arrange
@@ -99,6 +116,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found.get().getUserEmail()).isEqualTo(testUser.getEmail());
     }
 
+    /**
+     * Should find valid token only.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldFindValidTokenOnly() throws InterruptedException {
         // Arrange - Create expired token
@@ -128,6 +150,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(validFound).isPresent();
     }
 
+    /**
+     * Should not find revoked tokens with find by token.
+     */
     @Test
     void shouldNotFindRevokedTokensWithFindByToken() {
         // Arrange
@@ -148,6 +173,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(foundRaw).isPresent();
     }
 
+    /**
+     * Should revoke all user tokens.
+     */
     @Test
     void shouldRevokeAllUserTokens() {
         // Arrange
@@ -177,6 +205,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found2.get().isRevoked()).isTrue();
     }
 
+    /**
+     * Should delete expired tokens.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldDeleteExpiredTokens() throws InterruptedException {
         // Arrange
@@ -206,6 +239,11 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(validFound).isPresent();
     }
 
+    /**
+     * Should count active tokens for user.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldCountActiveTokensForUser() throws InterruptedException {
         // Arrange
@@ -248,6 +286,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(count).isEqualTo(2);
     }
 
+    /**
+     * Should update existing token.
+     */
     @Test
     void shouldUpdateExistingToken() {
         // Arrange
@@ -271,6 +312,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found.get().isRevoked()).isTrue();
     }
 
+    /**
+     * Should delete token by value.
+     */
     @Test
     void shouldDeleteTokenByValue() {
         // Arrange
@@ -289,6 +333,9 @@ class PostgreSQLRefreshTokenRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    /**
+     * Should check token existence.
+     */
     @Test
     void shouldCheckTokenExistence() {
         // Arrange

@@ -6,16 +6,13 @@ import jakarta.validation.Validation;
 import jakarta.validation.Validator;
 import jakarta.validation.ValidatorFactory;
 import org.junit.jupiter.api.Test;
-import org.springframework.boot.context.properties.bind.validation.BindValidationException;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.TestPropertySource;
-
 
 import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 /**
  * Tests for AuthProperties validation and configuration binding.
@@ -27,6 +24,9 @@ class AuthPropertiesTest {
     private final ValidatorFactory factory = Validation.buildDefaultValidatorFactory();
     private final Validator validator = factory.getValidator();
 
+    /**
+     * Should create with default values.
+     */
     @Test
     void shouldCreateWithDefaultValues() {
         // Act
@@ -40,6 +40,9 @@ class AuthPropertiesTest {
         assertThat(properties.getRefreshTokens().isEnabled()).isTrue();
     }
 
+    /**
+     * Should validate jwt secret length.
+     */
     @Test
     void shouldValidateJwtSecretLength() {
         // Arrange
@@ -54,6 +57,9 @@ class AuthPropertiesTest {
         assertThat(violations).isNotNull();
     }
 
+    /**
+     * Should validate password policy min length.
+     */
     @Test
     void shouldValidatePasswordPolicyMinLength() {
         // Arrange
@@ -67,6 +73,9 @@ class AuthPropertiesTest {
         });
     }
 
+    /**
+     * Should validate password policy max length.
+     */
     @Test
     void shouldValidatePasswordPolicyMaxLength() {
         // Arrange
@@ -80,6 +89,9 @@ class AuthPropertiesTest {
         });
     }
 
+    /**
+     * Should support repository type configuration.
+     */
     @Test
     void shouldSupportRepositoryTypeConfiguration() {
         // Arrange
@@ -92,6 +104,9 @@ class AuthPropertiesTest {
         assertThat(properties.getRefreshTokens().getRepository().getType()).isEqualTo(AuthProperties.RefreshTokenRepositoryType.POSTGRESQL.toString());
     }
 
+    /**
+     * Should support database table configuration.
+     */
     @Test
     void shouldSupportDatabaseTableConfiguration() {
         AuthProperties properties = new AuthProperties();
@@ -103,6 +118,9 @@ class AuthPropertiesTest {
         assertThat(properties.getRefreshTokens().getRepository().getDatabase().getRefreshTokensTable()).isEqualTo("custom_users");
     }
 
+    /**
+     * Should support controller configuration.
+     */
     @Test
     void shouldSupportControllerConfiguration() {
         // Arrange
@@ -117,6 +135,9 @@ class AuthPropertiesTest {
         assertThat(properties.getControllers().getUser().isEnabled()).isFalse();
     }
 
+    /**
+     * Should support jwt configuration.
+     */
     @Test
     void shouldSupportJwtConfiguration() {
         // Arrange

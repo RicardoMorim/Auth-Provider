@@ -1,5 +1,6 @@
 package com.ricardo.auth.integration;
 
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import com.ricardo.auth.domain.user.Email;
 import com.ricardo.auth.domain.user.Password;
@@ -8,7 +9,6 @@ import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.repository.refreshToken.JpaRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.PostgreSQLRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
-import com.ricardo.auth.core.PasswordPolicyService;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -27,6 +27,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class RepositorySwitchingTest {
 
+    /**
+     * The type Jpa repository test.
+     */
     @SpringBootTest
     @ActiveProfiles("test")
     @TestPropertySource(properties = {
@@ -44,11 +47,17 @@ class RepositorySwitchingTest {
         @Autowired
         private PasswordPolicyService passwordPolicyService;
 
+        /**
+         * Should use jpa repository.
+         */
         @Test
         void shouldUseJpaRepository() {
             assertThat(repository).isInstanceOf(JpaRefreshTokenRepository.class);
         }
 
+        /**
+         * Should perform basic operations.
+         */
         @Test
         void shouldPerformBasicOperations() {
             // Arrange
@@ -75,6 +84,9 @@ class RepositorySwitchingTest {
         }
     }
 
+    /**
+     * The type Postgre sql repository test.
+     */
     @SpringBootTest
     @ActiveProfiles("test")
     @TestPropertySource(properties = {
@@ -93,11 +105,17 @@ class RepositorySwitchingTest {
         @Autowired
         private PasswordPolicyService passwordPolicyService;
 
+        /**
+         * Should use postgre sql repository.
+         */
         @Test
         void shouldUsePostgreSQLRepository() {
             assertThat(repository).isInstanceOf(PostgreSQLRefreshTokenRepository.class);
         }
 
+        /**
+         * Should perform basic operations.
+         */
         @Test
         void shouldPerformBasicOperations() {
             // Arrange

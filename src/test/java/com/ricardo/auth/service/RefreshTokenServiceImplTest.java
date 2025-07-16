@@ -46,6 +46,9 @@ class RefreshTokenServiceImplTest {
 
     private User testUser;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         // Clean database
@@ -63,6 +66,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== CREATE REFRESH TOKEN TESTS ==========
 
+    /**
+     * Create refresh token should create valid token when user exists.
+     */
     @Test
     void createRefreshToken_shouldCreateValidToken_whenUserExists() {
         // Act
@@ -77,6 +83,9 @@ class RefreshTokenServiceImplTest {
         assertFalse(refreshToken.isExpired());
     }
 
+    /**
+     * Create refresh token should generate unique tokens when called multiple times.
+     */
     @Test
     void createRefreshToken_shouldGenerateUniqueTokens_whenCalledMultipleTimes() {
         // Act
@@ -88,6 +97,9 @@ class RefreshTokenServiceImplTest {
         assertEquals(token1.getUserEmail(), token2.getUserEmail());
     }
 
+    /**
+     * Create refresh token should cleanup expired tokens before creating new.
+     */
     @Test
     void createRefreshToken_shouldCleanupExpiredTokens_beforeCreatingNew() {
         // Arrange - Create an expired token manually
@@ -115,6 +127,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== VERIFY EXPIRATION TESTS ==========
 
+    /**
+     * Verify expiration should return token when token is valid.
+     */
     @Test
     void verifyExpiration_shouldReturnToken_whenTokenIsValid() {
         // Arrange
@@ -128,6 +143,9 @@ class RefreshTokenServiceImplTest {
         assertFalse(result.isExpired());
     }
 
+    /**
+     * Verify expiration should throw exception when token is expired.
+     */
     @Test
     void verifyExpiration_shouldThrowException_whenTokenIsExpired() {
         // Act & Assert
@@ -144,6 +162,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== FIND BY TOKEN TESTS ==========
 
+    /**
+     * Find by token should return token when token exists.
+     */
     @Test
     void findByToken_shouldReturnToken_whenTokenExists() {
         // Arrange
@@ -158,6 +179,9 @@ class RefreshTokenServiceImplTest {
         assertEquals(createdToken.getUserEmail(), foundToken.getUserEmail());
     }
 
+    /**
+     * Find by token should throw exception when token not found.
+     */
     @Test
     void findByToken_shouldThrowException_whenTokenNotFound() {
         // Act & Assert
@@ -168,6 +192,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== GET USER FROM REFRESH TOKEN TESTS ==========
 
+    /**
+     * Gets user from refresh token should return user when token is valid.
+     */
     @Test
     void getUserFromRefreshToken_shouldReturnUser_whenTokenIsValid() {
         // Arrange
@@ -183,6 +210,9 @@ class RefreshTokenServiceImplTest {
         assertEquals(testUser.getUsername(), result.getUsername());
     }
 
+    /**
+     * Gets user from refresh token should throw exception when user not found.
+     */
     @Test
     void getUserFromRefreshToken_shouldThrowException_whenUserNotFound() {
         // Arrange - Create token for non-existent user
@@ -200,6 +230,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== REVOKE TOKEN TESTS ==========
 
+    /**
+     * Revoke token should mark token as revoked when token exists.
+     */
     @Test
     void revokeToken_shouldMarkTokenAsRevoked_whenTokenExists() {
         // Arrange
@@ -220,6 +253,9 @@ class RefreshTokenServiceImplTest {
         });
     }
 
+    /**
+     * Revoke token should throw exception when token not found.
+     */
     @Test
     void revokeToken_shouldThrowException_whenTokenNotFound() {
         // Act & Assert
@@ -230,6 +266,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== REVOKE ALL USER TOKENS TESTS ==========
 
+    /**
+     * Revoke all user tokens should revoke all tokens for user.
+     */
     @Test
     void revokeAllUserTokens_shouldRevokeAllTokensForUser() {
         // Arrange
@@ -263,6 +302,11 @@ class RefreshTokenServiceImplTest {
 
     // ========== CLEANUP TESTS ==========
 
+    /**
+     * Cleanup expired tokens should remove expired tokens.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void cleanupExpiredTokens_shouldRemoveExpiredTokens() throws InterruptedException {
         // Arrange - Create expired and valid tokens
@@ -289,6 +333,9 @@ class RefreshTokenServiceImplTest {
 
     // ========== BUSINESS LOGIC TESTS ==========
 
+    /**
+     * Should handle multiple users with separate tokens.
+     */
     @Test
     void shouldHandleMultipleUsersWithSeparateTokens() {
         // Arrange - Create second user
@@ -317,6 +364,9 @@ class RefreshTokenServiceImplTest {
         assertEquals(secondUser.getId(), resolvedUser2.getId());
     }
 
+    /**
+     * Should maintain token lifecycle through user operations.
+     */
     @Test
     void shouldMaintainTokenLifecycleThroughUserOperations() {
         // Arrange

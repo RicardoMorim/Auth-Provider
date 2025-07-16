@@ -4,17 +4,22 @@ package com.ricardo.auth.domain.tokenResponse;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import jakarta.persistence.*;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 import java.time.Instant;
 
+/**
+ * The type Refresh token.
+ */
 @Entity
 @Getter
 @Table(name="refresh_tokens")
 public class RefreshToken {
 
 
+    /**
+     * Instantiates a new Refresh token.
+     */
     protected RefreshToken() {}
 
     @Id
@@ -35,6 +40,13 @@ public class RefreshToken {
     @Column(nullable = false)
     private boolean revoked;
 
+    /**
+     * Instantiates a new Refresh token.
+     *
+     * @param refreshToken the refresh token
+     * @param email        the email
+     * @param expiration   the expiration
+     */
     public RefreshToken(String refreshToken, String email, Instant expiration) {
         if (refreshToken == null || refreshToken.isBlank()) {
             throw new IllegalArgumentException("Refresh token cannot be null or blank");
@@ -63,10 +75,20 @@ public class RefreshToken {
                 '}';
     }
 
+    /**
+     * Is expired boolean.
+     *
+     * @return the boolean
+     */
     public boolean isExpired() {
         return Instant.now().isAfter(expiryDate);
     }
 
+    /**
+     * Is revoked boolean.
+     *
+     * @return the boolean
+     */
     public boolean isRevoked(){
         return revoked;
     }
@@ -90,7 +112,7 @@ public class RefreshToken {
      * JPA/HIBERNATE WILL SET THE ID AUTOMATICALLY.
      *
      * @param id the ID to set
-    **/
+     */
     @SuppressWarnings("unused")
     public void setId(Long id) {
         this.id = id;

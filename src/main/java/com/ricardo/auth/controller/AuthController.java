@@ -4,14 +4,12 @@ import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.RefreshTokenService;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import com.ricardo.auth.domain.tokenResponse.RefreshTokenRequest;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.*;
 import jakarta.validation.Valid;
 import org.slf4j.Logger;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -40,6 +38,11 @@ public class AuthController {
 
     /**
      * Constructor with optional refresh token service
+     *
+     * @param jwtService            the jwt service
+     * @param authenticationManager the authentication manager
+     * @param refreshTokenService   the refresh token service
+     * @param authProperties        the auth properties
      */
     public AuthController(
             JwtService jwtService,
@@ -52,6 +55,12 @@ public class AuthController {
         this.authProperties = authProperties;
     }
 
+    /**
+     * Login response entity.
+     *
+     * @param request the request
+     * @return the response entity
+     */
     @PostMapping("/login")
     public ResponseEntity<?> login(@RequestBody LoginRequestDTO request) {
         Authentication authentication = authenticationManager.authenticate(
@@ -80,6 +89,12 @@ public class AuthController {
         }
     }
 
+    /**
+     * Refresh token response entity.
+     *
+     * @param request the request
+     * @return the response entity
+     */
     @PostMapping("/refresh")
     public ResponseEntity<?> refreshToken(@Valid @RequestBody RefreshTokenRequest request) {
         if (refreshTokenService == null) {
@@ -145,6 +160,12 @@ public class AuthController {
         return true; // Default to rotating for better security
     }
 
+    /**
+     * Gets authenticated user.
+     *
+     * @param authentication the authentication
+     * @return the authenticated user
+     */
     @GetMapping("/me")
     public ResponseEntity<AuthenticatedUserDTO> getAuthenticatedUser(Authentication authentication) {
         // This method stays the same - works with any token type

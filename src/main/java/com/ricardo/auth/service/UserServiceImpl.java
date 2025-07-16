@@ -1,9 +1,9 @@
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
+import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.repository.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 

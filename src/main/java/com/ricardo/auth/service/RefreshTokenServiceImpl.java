@@ -32,8 +32,8 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
      * Instantiates a new Refresh token service.
      *
      * @param refreshTokenRepository the refresh token repository
-     * @param userService           the user service
-     * @param expiryDuration        the expiry duration in seconds
+     * @param userService            the user service
+     * @param expiryDuration         the expiry duration in seconds
      */
     public RefreshTokenServiceImpl(RefreshTokenRepository refreshTokenRepository,
                                    UserService<U, ID> userService,

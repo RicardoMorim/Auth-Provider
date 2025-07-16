@@ -2,7 +2,6 @@ package com.ricardo.auth.repository.user;
 
 import com.ricardo.auth.domain.user.User;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;
 
 /**

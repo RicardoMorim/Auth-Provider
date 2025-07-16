@@ -1,6 +1,5 @@
 package com.ricardo.auth.repository.refreshToken;
 
-import com.ricardo.auth.domain.tokenResponse.RefreshToken;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.stereotype.Repository;

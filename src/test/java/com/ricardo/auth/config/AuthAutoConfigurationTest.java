@@ -27,6 +27,9 @@ class AuthAutoConfigurationTest {
     @Autowired
     private ApplicationContext applicationContext;
 
+    /**
+     * Should auto configure all required beans.
+     */
     @Test
     void shouldAutoConfigureAllRequiredBeans() {
         // Core services
@@ -49,6 +52,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.containsBean("userController")).isTrue();
     }
 
+    /**
+     * Should load auth properties.
+     */
     @Test
     void shouldLoadAuthProperties() {
         AuthProperties properties = applicationContext.getBean(AuthProperties.class);
@@ -57,12 +63,18 @@ class AuthAutoConfigurationTest {
         assertThat(properties.getJwt().getAccessTokenExpiration()).isEqualTo(900000);
     }
 
+    /**
+     * Should handle generic user service.
+     */
     @Test
     void shouldHandleGenericUserService() {
         UserService<User, Long> userService = applicationContext.getBean(UserService.class);
         assertThat(userService).isNotNull();
     }
 
+    /**
+     * Should create complete security setup.
+     */
     @Test
     void shouldCreateCompleteSecuritySetup() {
         // Verify complete security setup
@@ -80,6 +92,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.containsBean("userController")).isTrue();
     }
 
+    /**
+     * Should configure repositories.
+     */
     @Test
     void shouldConfigureRepositories() {
         // Verify repositories are configured
@@ -87,6 +102,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.getBean(RefreshTokenRepository.class)).isNotNull();
     }
 
+    /**
+     * Should configure all services.
+     */
     @Test
     void shouldConfigureAllServices() {
         // Verify all services are configured
@@ -96,6 +114,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.getBean(PasswordPolicyService.class)).isNotNull();
     }
 
+    /**
+     * Should configure security components.
+     */
     @Test
     void shouldConfigureSecurityComponents() {
         // Verify security components
@@ -104,6 +125,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.containsBean("authenticationManager")).isTrue();
     }
 
+    /**
+     * Should configure controllers.
+     */
     @Test
     void shouldConfigureControllers() {
         // Verify controllers are configured
@@ -111,6 +135,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.containsBean("userController")).isTrue();
     }
 
+    /**
+     * Should verify bean types.
+     */
     @Test
     void shouldVerifyBeanTypes() {
         // Verify specific bean types
@@ -120,6 +147,9 @@ class AuthAutoConfigurationTest {
         assertThat(applicationContext.getBean(PasswordPolicyService.class)).isInstanceOf(PasswordPolicyService.class);
     }
 
+    /**
+     * Should verify auto configuration properties.
+     */
     @Test
     void shouldVerifyAutoConfigurationProperties() {
         // Verify auto-configuration properties are loaded
@@ -129,6 +159,9 @@ class AuthAutoConfigurationTest {
         assertThat(properties.getJwt().getRefreshTokenExpiration()).isGreaterThan(0);
     }
 
+    /**
+     * Should verify refresh token configuration.
+     */
     @Test
     void shouldVerifyRefreshTokenConfiguration() {
         // Verify refresh token configuration

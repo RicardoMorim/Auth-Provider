@@ -1,11 +1,10 @@
 package com.ricardo.auth.performance;
 
 import com.ricardo.auth.core.JwtService;
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
-import com.ricardo.auth.core.PasswordPolicyService;
-import org.h2.engine.Role;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -18,7 +17,6 @@ import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.annotation.DirtiesContext;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.jdbc.Sql;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.PlatformTransactionManager;
 import org.springframework.transaction.TransactionDefinition;
@@ -29,7 +27,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Set;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -65,11 +62,17 @@ class PerformanceTest {
     @Autowired
     private PlatformTransactionManager transactionManager;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
     }
 
+    /**
+     * Tear down.
+     */
     @AfterEach
     void tearDown() {
         // Additional cleanup
@@ -77,6 +80,9 @@ class PerformanceTest {
         SecurityContextHolder.clearContext();
     }
 
+    /**
+     * Should handle high volume token generation.
+     */
     @Test
     void shouldHandleHighVolumeTokenGeneration() {
         // Arrange
@@ -101,6 +107,11 @@ class PerformanceTest {
         assertThat(duration.toMillis()).isLessThan(5000); // Should complete within 5 seconds
     }
 
+    /**
+     * Should handle concurrent user creation.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleConcurrentUserCreation() throws Exception {
         // Arrange
@@ -145,6 +156,9 @@ class PerformanceTest {
         executor.shutdown();
     }
 
+    /**
+     * Should handle high volume token validation.
+     */
     @Test
     void shouldHandleHighVolumeTokenValidation() {
         // Arrange
@@ -170,6 +184,11 @@ class PerformanceTest {
         assertThat(duration.toMillis()).isLessThan(3000); // Should complete within 3 seconds
     }
 
+    /**
+     * Should handle concurrent user lookup.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DirtiesContext(methodMode = DirtiesContext.MethodMode.AFTER_METHOD)
     @Transactional
@@ -282,6 +301,10 @@ class PerformanceTest {
 
         System.out.println("✅ Concurrent lookup completed in " + (endTime - startTime) + "ms");
     }
+
+    /**
+     * Should handle password hashing performance.
+     */
     @Test
     void shouldHandlePasswordHashingPerformance() {
         // Arrange

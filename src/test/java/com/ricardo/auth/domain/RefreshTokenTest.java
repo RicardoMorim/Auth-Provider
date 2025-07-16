@@ -17,6 +17,9 @@ import static org.junit.jupiter.api.Assertions.*;
 @ActiveProfiles("test")
 class RefreshTokenTest {
 
+    /**
+     * Should create refresh token with valid data.
+     */
     @Test
     void shouldCreateRefreshToken_withValidData() {
         // Arrange
@@ -36,7 +39,9 @@ class RefreshTokenTest {
     }
 
 
-
+    /**
+     * Is expired should return false when token is not expired.
+     */
     @Test
     void isExpired_shouldReturnFalse_whenTokenIsNotExpired() {
         // Arrange
@@ -50,6 +55,9 @@ class RefreshTokenTest {
         assertFalse(validToken.isExpired());
     }
 
+    /**
+     * Sets revoked should mark token as revoked.
+     */
     @Test
     void setRevoked_shouldMarkTokenAsRevoked() {
         // Arrange
@@ -66,6 +74,11 @@ class RefreshTokenTest {
         assertTrue(token.isRevoked());
     }
 
+    /**
+     * Should handle edge case expiration times.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     void shouldHandleEdgeCaseExpirationTimes() throws InterruptedException {
         // Test exact moment of expiry
@@ -81,6 +94,9 @@ class RefreshTokenTest {
         assertTrue(tokenAtExpiryMoment.isExpired());
     }
 
+    /**
+     * Should handle null values.
+     */
     @Test
     void shouldHandleNullValues() {
         // Act & Assert - Should handle nulls gracefully
@@ -89,6 +105,9 @@ class RefreshTokenTest {
         });
     }
 
+    /**
+     * Should support token with long values.
+     */
     @Test
     void shouldSupportTokenWithLongValues() {
         // Arrange - Very long token and email

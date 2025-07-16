@@ -21,9 +21,12 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
-import static org.junit.jupiter.api.Assertions.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Integration tests for AuthController refresh token functionality.
@@ -56,6 +59,9 @@ class AuthControllerRefreshTokenTest {
     private User testUser;
     private RefreshToken testRefreshToken;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         // Clean database
@@ -76,6 +82,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== LOGIN WITH REFRESH TOKEN TESTS ==========
 
+    /**
+     * Login should return both tokens when refresh tokens enabled.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void login_shouldReturnBothTokens_whenRefreshTokensEnabled() throws Exception {
         // Arrange
@@ -103,6 +114,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== REFRESH TOKEN ENDPOINT TESTS ==========
 
+    /**
+     * Refresh token should return new access token when refresh token is valid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturnNewAccessToken_whenRefreshTokenIsValid() throws Exception {
         // Arrange
@@ -129,6 +145,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(jsonPath("$.name").value("test@example.com"));
     }
 
+    /**
+     * Refresh token should return 401 when refresh token is invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturn401_whenRefreshTokenIsInvalid() throws Exception {
         // Arrange
@@ -142,6 +163,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
     }
 
+    /**
+     * Refresh token should return 401 when refresh token is expired.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturn401_whenRefreshTokenIsExpired() throws Exception {
         // ✅ Fixed: Create an actual expired token that exists in the system
@@ -157,6 +183,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
     }
 
+    /**
+     * Refresh token should return 400 when request is invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturn400_whenRequestIsInvalid() throws Exception {
         // Arrange - Request with null token (this should trigger validation)
@@ -169,6 +200,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Refresh token should return 400 when request body is empty.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturn400_whenRequestBodyIsEmpty() throws Exception {
         // Act & Assert
@@ -178,6 +214,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Refresh token should return 400 when token is too short.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturn400_whenTokenIsTooShort() throws Exception {
         // Arrange - Token that's too short (violates @Size validation)
@@ -190,6 +231,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Refresh token should return 400 when token is blank.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldReturn400_whenTokenIsBlank() throws Exception {
         // Arrange - Blank token (violates @NotBlank validation)
@@ -204,6 +250,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== COMPLETE WORKFLOW TESTS ==========
 
+    /**
+     * Should complete full refresh token workflow.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldCompleteFullRefreshTokenWorkflow() throws Exception {
         // Step 1: Login and get tokens
@@ -247,6 +298,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(jsonPath("$.name").value("test@example.com"));
     }
 
+    /**
+     * Should handle multiple refresh operations.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void shouldHandleMultipleRefreshOperations() throws Exception {
         // Start with a valid refresh token from login (not the @BeforeEach one)
@@ -285,6 +341,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== ERROR HANDLING TESTS ==========
 
+    /**
+     * Refresh token should handle revoked token.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldHandleRevokedToken() throws Exception {
         // ✅ Fixed: Revoke token, then try to use it (should fail because findByToken won't return revoked tokens)
@@ -299,6 +360,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
     }
 
+    /**
+     * Refresh token should handle malformed request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldHandleMalformedRequest() throws Exception {
         // Act & Assert
@@ -308,6 +374,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Refresh token should not expose internal errors.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldNotExposeInternalErrors() throws Exception {
         // Arrange - Token that might cause internal errors
@@ -323,6 +394,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== TOKEN ROTATION TESTS ==========
 
+    /**
+     * Refresh token should rotate refresh token when rotation is enabled.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldRotateRefreshToken_whenRotationIsEnabled() throws Exception {
         // Arrange
@@ -347,6 +423,11 @@ class AuthControllerRefreshTokenTest {
                 "Refresh token should be rotated (different from original)");
     }
 
+    /**
+     * Refresh token should revoke old token after rotation.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldRevokeOldTokenAfterRotation() throws Exception {
         // Arrange
@@ -369,6 +450,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== VALIDATION TESTS ==========
 
+    /**
+     * Refresh token should validate request fields.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldValidateRequestFields() throws Exception {
         // Test missing refreshToken field
@@ -392,6 +478,11 @@ class AuthControllerRefreshTokenTest {
 
     // ========== SECURITY TESTS ==========
 
+    /**
+     * Refresh token should not allow reused tokens.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldNotAllowReusedTokens() throws Exception {
         // Arrange
@@ -412,6 +503,11 @@ class AuthControllerRefreshTokenTest {
                 .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
     }
 
+    /**
+     * Refresh token should handle concurrent requests.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void refreshToken_shouldHandleConcurrentRequests() throws Exception {
         // This test ensures no race conditions exist

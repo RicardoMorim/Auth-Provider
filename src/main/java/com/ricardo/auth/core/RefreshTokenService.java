@@ -1,8 +1,8 @@
 package com.ricardo.auth.core;
 
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
-import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.domain.tokenResponse.RefreshToken;
+import com.ricardo.auth.domain.user.AuthUser;
 
 /**
  * Service for managing refresh tokens in a JWT authentication system.
@@ -34,6 +34,7 @@ public interface RefreshTokenService<U extends AuthUser<?>, ID> {
      * Revokes a specific refresh token.
      *
      * @param tokenValue the token value to revoke
+     * @throws TokenExpiredException the token expired exception
      */
     void revokeToken(String tokenValue) throws TokenExpiredException;
 
@@ -57,7 +58,7 @@ public interface RefreshTokenService<U extends AuthUser<?>, ID> {
      *
      * @param tokenValue the token value
      * @return the refresh token
-     * @throws com.ricardo.auth.domain.exceptions.ResourceNotFoundException if token is not found
+     * @throws TokenExpiredException the token expired exception
      */
     RefreshToken findByToken(String tokenValue) throws TokenExpiredException;
 

@@ -2,12 +2,12 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
+import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.Email;
 import com.ricardo.auth.domain.user.Password;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.domain.user.Username;
-import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
-import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;

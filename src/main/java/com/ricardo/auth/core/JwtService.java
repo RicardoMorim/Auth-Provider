@@ -35,7 +35,15 @@ public interface JwtService {
      */
     boolean isTokenValid(String token);
 
+    /**
+     * Is token valid boolean.
+     *
+     * @param token the token
+     * @param email the email
+     * @return the boolean
+     */
     boolean isTokenValid(String token, String email);
+
     /**
      * Extract roles list.
      *

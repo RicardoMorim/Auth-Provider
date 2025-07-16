@@ -2,29 +2,31 @@ package com.ricardo.auth.repository.refreshToken;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.domain.tokenResponse.RefreshToken;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.GeneratedKeyHolder;
 import org.springframework.jdbc.support.KeyHolder;
-import org.springframework.stereotype.Component;
-import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
-import java.sql.SQLException;
-import java.sql.Statement;
-import java.sql.Timestamp;
+import java.sql.*;
 import java.time.Instant;
 import java.util.Optional;
 
+/**
+ * The type Postgre sql refresh token repository.
+ */
 public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository {
 
     private final JdbcTemplate jdbcTemplate;
     private final String tableName = "refresh_tokens";
 
+    /**
+     * Instantiates a new Postgre sql refresh token repository.
+     *
+     * @param dataSource     the data source
+     * @param authProperties the auth properties
+     */
     public PostgreSQLRefreshTokenRepository(DataSource dataSource, AuthProperties authProperties) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
     }
