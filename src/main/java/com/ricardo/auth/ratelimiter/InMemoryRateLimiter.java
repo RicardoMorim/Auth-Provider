@@ -37,7 +37,7 @@ public class InMemoryRateLimiter implements RateLimiter {
         if (windowMillis <= 0) {
             throw new IllegalArgumentException("windowMillis must be positive");
         }
-        this.enabled = properties.isEnabled();
+        this.enabled = properties.getRateLimiter().isEnabled();
     }
 
     @Override

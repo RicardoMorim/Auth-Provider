@@ -98,7 +98,11 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
         refreshTokenRepository.deleteExpiredTokens(now);
     }
 
-    // Generate more secure tokens
+    /**
+     * Generates a secure random token for use as a refresh token.
+     *
+     * @return a securely generated random token string
+     */
     private String generateSecureToken() {
         SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[64];

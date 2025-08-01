@@ -37,7 +37,7 @@ public class RedisRateLimiter implements RateLimiter {
         this.redisTemplate = redisTemplate;
         this.maxRequests = properties.getRateLimiter().getMaxRequests();
         this.windowMillis = properties.getRateLimiter().getTimeWindowMs();
-        this.enabled = properties.isEnabled();
+        this.enabled = properties.getRateLimiter().isEnabled();
         // Round up to ensure we don't expire too early
         this.ttlSeconds = (int) Math.ceil(windowMillis / 1000.0);
     }
