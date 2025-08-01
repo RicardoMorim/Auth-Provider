@@ -44,12 +44,12 @@ class UserDetailsServiceImplTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
-        
+
         // Create and save test user
         testUser = new User(
-            Username.valueOf("testuser"),
-            Email.valueOf("test@example.com"),
-            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
+                Username.valueOf("testuser"),
+                Email.valueOf("test@example.com"),
+                Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         testUser = userRepository.save(testUser);
     }
@@ -87,12 +87,12 @@ class UserDetailsServiceImplTest {
         // Assert
         assertNotNull(userDetails.getAuthorities());
         assertEquals(2, userDetails.getAuthorities().size());
-        
+
         boolean hasUserRole = userDetails.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER"));
         boolean hasAdminRole = userDetails.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
-        
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN"));
+
         assertTrue(hasUserRole);
         assertTrue(hasAdminRole);
     }
@@ -177,17 +177,17 @@ class UserDetailsServiceImplTest {
     void loadUserByUsername_shouldLoadCorrectUserWhenMultipleExist() {
         // Arrange - Create additional users
         User user2 = new User(
-            Username.valueOf("user2"),
-            Email.valueOf("user2@example.com"),
-            Password.valueOf("Password@456", passwordEncoder, passwordPolicyService)
+                Username.valueOf("user2"),
+                Email.valueOf("user2@example.com"),
+                Password.valueOf("Password@456", passwordEncoder, passwordPolicyService)
         );
         user2.addRole(AppRole.ADMIN);
         userRepository.save(user2);
 
         User user3 = new User(
-            Username.valueOf("user3"),
-            Email.valueOf("user3@example.com"),
-            Password.valueOf("Password@789", passwordEncoder, passwordPolicyService)
+                Username.valueOf("user3"),
+                Email.valueOf("user3@example.com"),
+                Password.valueOf("Password@789", passwordEncoder, passwordPolicyService)
         );
         userRepository.save(user3);
 
@@ -232,9 +232,9 @@ class UserDetailsServiceImplTest {
     void loadUserByUsername_shouldHandleEmailsWithSpecialCharacters() {
         // Arrange - Create user with special characters in email
         User specialUser = new User(
-            Username.valueOf("specialuser"),
-            Email.valueOf("test+tag@example.com"),
-            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
+                Username.valueOf("specialuser"),
+                Email.valueOf("test+tag@example.com"),
+                Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         userRepository.save(specialUser);
 
@@ -344,7 +344,7 @@ class UserDetailsServiceImplTest {
         // Assert - Should reflect database changes
         assertEquals(1, updatedUserDetails.getAuthorities().size());
         assertTrue(updatedUserDetails.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
     }
 
     // ========== TRANSACTIONAL BEHAVIOR TESTS ==========
@@ -355,7 +355,7 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsername_shouldWorkWithinTransaction() {
         // This test ensures the service works correctly within Spring transactions
-        
+
         // Act & Assert - Should work normally within @Transactional test
         assertDoesNotThrow(() -> {
             UserDetails userDetails = userDetailsService.loadUserByUsername("test@example.com");

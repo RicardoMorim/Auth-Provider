@@ -54,6 +54,14 @@ class PostgreSQLRefreshTokenRepositoryTest {
             .withDatabaseName("AuthLibraryTest")
             .withUsername("postgres")
             .withPassword("8080");
+    @Autowired
+    private RefreshTokenRepository repository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    @Autowired
+    private PasswordPolicyService passwordPolicyService;
+    private User testUser;
+    private String testUserEmail;
 
     /**
      * Configure properties.
@@ -69,18 +77,6 @@ class PostgreSQLRefreshTokenRepositoryTest {
         registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
-
-    @Autowired
-    private RefreshTokenRepository repository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    @Autowired
-    private PasswordPolicyService passwordPolicyService;
-
-    private User testUser;
-    private String testUserEmail;
 
     /**
      * Sets up.
