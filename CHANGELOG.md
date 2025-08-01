@@ -367,7 +367,7 @@ ricardo:
 
 ---
 
-## [Unreleased]
+## [2.0.0] - 2025-08-01
 
 ### Added
 
@@ -417,24 +417,26 @@ If you need any of these features, please consider contributing! See [CONTRIBUTI
 
 - **Social Login**: OAuth2 integration with Google, GitHub, Facebook
 - **Multi-Factor Authentication**: TOTP and SMS-based 2FA
-- **Rate Limiting**: Built-in rate limiting for authentication endpoints
+- ~~**Rate Limiting**: Built-in rate limiting for authentication endpoints~~ [Implemented in 2.0.0]
+- ~~**Token Revocation**: Enhanced token revocation with blocklist support~~ [Implemented in 2.0.0]
 - **Audit Logging**: Comprehensive security event logging
 - ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
 - ~~**Refresh Token Support**: Automatic token refresh mechanism~~ [Implemented in 1.2.0]
 - **Account Management**: Email verification, password reset, account locking
-- **Redis Cache**: Caching integration for improved performance
+- ~~**Redis Cache**: Caching integration for improved performance~~ [Implemented for both rate limiting and token revocation in 2.0.0]
 - **Metrics Integration**: Micrometer metrics for monitoring
 
 ### Breaking Changes (Future Versions)
 
-> No breaking changes planned for 1.x series. Major version increments will be used for breaking changes.
+> No breaking changes planned for 2.x series. Major version increments will be used for breaking changes.
 
 ## Version Support Policy
 
-| Version | Status | Support Until | Notes                  |
-|---------|--------|---------------|------------------------|
-| 1.x     | Active | TBD           | Current stable release |
-| 0.x     | N/A    | N/A           | Pre-release versions   |
+| Version | Status | Support Until | Notes                      |
+|---------|--------|---------------|----------------------------|
+| 2.x     | Active | TBD           | Latest stable safe release |
+| 1.x     | Active | TBD           | Less secure stable release |
+| 0.x     | N/A    | N/A           | Pre-release versions       |
 
 ## Security Updates
 
