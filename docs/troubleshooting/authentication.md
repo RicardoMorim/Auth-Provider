@@ -4,7 +4,8 @@ Resolve **login, token, and authentication problems** with Ricardo Auth quickly 
 
 ## 🚨 Breaking Changes in v2.0.0
 
-- **Authentication cookies** now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required in production.
+- **Authentication cookies** now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required in
+  production.
 - **Blocklist:** Both access and refresh tokens can be revoked instantly (logout, admin, or via endpoint).
 - **Rate limiting:** Protection against abuse, with in-memory or Redis implementation.
 - **Token revocation endpoint:** `/api/auth/revoke` (ADMIN) to revoke any token (access or refresh).
@@ -31,6 +32,7 @@ Resolve **login, token, and authentication problems** with Ricardo Auth quickly 
 ### Login Always Returns 401 Unauthorized
 
 **❌ Symptoms:**
+
 - Valid credentials return 401
 - All login attempts fail
 - "Bad credentials" error message
@@ -38,12 +40,14 @@ Resolve **login, token, and authentication problems** with Ricardo Auth quickly 
 **🔍 Diagnostic Steps:**
 
 **1. Verify User Exists:**
+
 ```bash
 # Check if user exists in database
 curl -X GET "http://localhost:8080/api/users/exists/test@example.com"
 ```
 
 **2. Check Password Encoding:**
+
 ```java
 // Debug password matching
 @RestController
@@ -61,6 +65,7 @@ public class DebugController {
 ```
 
 **3. Enable Authentication Debug Logging:**
+
 ```yaml
 logging:
   level:
@@ -71,6 +76,7 @@ logging:
 **✅ Common Solutions:**
 
 **1. Password Encoding Mismatch:**
+
 ```java
 // Ensure consistent password encoder
 @Bean
@@ -80,12 +86,14 @@ public PasswordEncoder passwordEncoder() {
 ```
 
 **2. User Not Found in Database:**
+
 ```sql
 -- Check users table directly
 SELECT id, username, email, password FROM users WHERE email = 'test@example.com';
 ```
 
 **3. Incorrect Login Endpoint:**
+
 ```bash
 # ✅ Correct endpoint
 curl -X POST http://localhost:8080/api/auth/login \
@@ -100,6 +108,7 @@ curl -X POST http://localhost:8080/login  # Missing /api/auth
 ```
 
 **4. Case-Sensitive Email Issues:**
+
 ```java
 // Ensure consistent email handling
 @PrePersist
@@ -114,6 +123,7 @@ public void normalizeEmail() {
 ### Invalid Credentials Error
 
 **❌ Error Message:**
+
 ```json
 {
   "error": "Unauthorized",
@@ -125,6 +135,7 @@ public void normalizeEmail() {
 **✅ Solutions:**
 
 **1. Check Request Format:**
+
 ```bash
 # ✅ Correct JSON format
 curl -X POST http://localhost:8080/api/auth/login \
@@ -144,6 +155,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **2. Verify Password Policy Compliance:**
+
 ```bash
 # Test with a simple password first
 curl -X POST http://localhost:8080/api/users/create \
@@ -156,6 +168,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **3. Debug User Creation:**
+
 ```java
 @RestController
 public class DebugUserController {
@@ -183,11 +196,13 @@ public class DebugUserController {
 > **Important:**
 > - Tokens are now checked against a blocklist (instant revocation via logout/admin/endpoint).
 > - Rate limiting may cause HTTP 429 if limits are exceeded.
-> - **Default authentication is via secure cookies (HttpOnly, Secure, SameSite).** Do not send tokens via header unless explicitly configured.
+> - **Default authentication is via secure cookies (HttpOnly, Secure, SameSite).** Do not send tokens via header unless
+    explicitly configured.
 
 ### JWT Token Not Working
 
 **❌ Symptoms:**
+
 - Token returns "Invalid token" error
 - Protected endpoints return 401 with valid token
 - Token appears valid but authentication fails
@@ -195,6 +210,7 @@ public class DebugUserController {
 **🔍 Diagnostic Steps:**
 
 **1. Verifique o uso de cookies:**
+
 ```bash
 # O acesso autenticado deve ser feito com cookies enviados automaticamente pelo navegador.
 # Exemplo usando curl (simulando browser):
@@ -202,6 +218,7 @@ curl -v --cookie "access_token=SEU_TOKEN_AQUI" http://localhost:8080/api/auth/me
 ```
 
 **2. Não envie Authorization header manualmente:**
+
 ```bash
 # ❌ NÃO recomendado (a menos que tenha configurado para aceitar header):
 curl -H "Authorization: Bearer seu-token" http://localhost:8080/api/auth/me
@@ -211,6 +228,7 @@ fetch('/api/auth/me', { credentials: 'include' });
 ```
 
 **3. Check Token Expiration:**
+
 ```javascript
 // Decode JWT token (client-side debugging)
 function decodeJWT(token) {
@@ -230,6 +248,7 @@ console.log('Is expired:', Date.now() > payload.exp * 1000);
 ```
 
 **4. Verify JWT Secret Consistency:**
+
 ```yaml
 # Ensure same secret across all services/restarts
 ricardo:
@@ -241,6 +260,7 @@ ricardo:
 **✅ Solutions:**
 
 **1. Token Expiration Issue:**
+
 ```yaml
 # Increase token expiration for testing
 ricardo:
@@ -250,12 +270,14 @@ ricardo:
 ```
 
 **2. JWT Secret Mismatch:**
+
 ```bash
 # Set consistent environment variable
 export JWT_SECRET="your-consistent-secret-key-across-all-environments"
 ```
 
 **3. Token Malformed:**
+
 ```bash
 # Get fresh token
 curl -X POST http://localhost:8080/api/auth/login \
@@ -273,6 +295,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 > - Use the `/api/auth/revoke` endpoint to revoke tokens manually (ADMIN).
 
 **❌ Error Messages:**
+
 ```json
 {
   "error": "Unauthorized",
@@ -283,6 +306,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 **✅ Solutions:**
 
 **1. Missing Authorization Header:**
+
 ```bash
 # ✅ Correct header format
 curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
@@ -293,6 +317,7 @@ curl http://localhost:8080/api/auth/me
 ```
 
 **2. Malformed Token:**
+
 ```bash
 # Verify token has 3 parts separated by dots
 echo "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZXhwIjoxNjQwOTk1MjAwfQ.signature" | tr '.' '\n' | wc -l
@@ -300,6 +325,7 @@ echo "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiZ
 ```
 
 **3. Debug Token Validation:**
+
 ```java
 @RestController
 public class TokenDebugController {
@@ -336,6 +362,7 @@ public class TokenDebugController {
 ### User Creation Fails
 
 **❌ Common Errors:**
+
 ```json
 {
   "error": "Bad Request",
@@ -346,12 +373,14 @@ public class TokenDebugController {
 **✅ Solutions:**
 
 **1. Check for Existing Users:**
+
 ```bash
 # Check if email is already registered
 curl -X GET "http://localhost:8080/api/users/exists/test@example.com"
 ```
 
 **2. Use Different Email/Username:**
+
 ```bash
 curl -X POST http://localhost:8080/api/users/create \
   -H "Content-Type: application/json" \
@@ -363,6 +392,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **3. Password Policy Violations:**
+
 ```bash
 # Check password meets requirements
 curl -X POST http://localhost:8080/api/users/create \
@@ -377,6 +407,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ### Database Constraint Violations
 
 **❌ Error:**
+
 ```
 Duplicate entry 'test@example.com' for key 'users.UK_email'
 ```
@@ -384,6 +415,7 @@ Duplicate entry 'test@example.com' for key 'users.UK_email'
 **✅ Solutions:**
 
 **1. Handle Duplicate Gracefully:**
+
 ```java
 @RestControllerAdvice
 public class UserExceptionHandler {
@@ -405,6 +437,7 @@ public class UserExceptionHandler {
 ```
 
 **2. Pre-validate Before Creation:**
+
 ```java
 @Service
 public class UserValidationService {
@@ -425,6 +458,7 @@ public class UserValidationService {
 ### Access Denied for Protected Endpoints
 
 **❌ Error:**
+
 ```json
 {
   "error": "Forbidden",
@@ -435,6 +469,7 @@ public class UserValidationService {
 **✅ Solutions:**
 
 **1. Check User Roles:**
+
 ```bash
 # Get current user info including roles
 curl -H "Authorization: Bearer YOUR_TOKEN" \
@@ -442,6 +477,7 @@ curl -H "Authorization: Bearer YOUR_TOKEN" \
 ```
 
 **2. Verify Role Assignment:**
+
 ```java
 // Assign roles during user creation
 User user = new User(username, email, password);
@@ -451,6 +487,7 @@ userService.createUser(user);
 ```
 
 **3. Check Endpoint Security Configuration:**
+
 ```java
 @GetMapping("/admin/users")
 @PreAuthorize("hasRole('ADMIN')")  // Ensure correct role name
@@ -464,6 +501,7 @@ public ResponseEntity<List<UserDTO>> getUsers() {
 **✅ Debug Role Issues:**
 
 **1. Enable Security Logging:**
+
 ```yaml
 logging:
   level:
@@ -472,6 +510,7 @@ logging:
 ```
 
 **2. Check Role Prefix:**
+
 ```java
 // Spring Security expects "ROLE_" prefix
 // Ricardo Auth handles this automatically, but verify:
@@ -480,6 +519,7 @@ logging:
 ```
 
 **3. Custom Role Check:**
+
 ```java
 @RestController
 public class RoleDebugController {
@@ -501,6 +541,7 @@ public class RoleDebugController {
 ### Cross-Origin Request Blocked
 
 **❌ Error:**
+
 ```
 Access to fetch at 'http://localhost:8080/api/auth/login' from origin 'http://localhost:3000' 
 has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is present on the requested resource.
@@ -509,6 +550,7 @@ has been blocked by CORS policy: No 'Access-Control-Allow-Origin' header is pres
 **✅ Solutions:**
 
 **1. Configure CORS in Application Properties:**
+
 ```yaml
 spring:
   web:
@@ -527,6 +569,7 @@ spring:
 ```
 
 **2. Custom CORS Configuration:**
+
 ```java
 @Configuration
 public class CorsConfig {
@@ -547,6 +590,7 @@ public class CorsConfig {
 ```
 
 **3. Controller-Level CORS:**
+
 ```java
 @RestController
 @CrossOrigin(origins = "http://localhost:3000", allowCredentials = "true")
@@ -559,11 +603,13 @@ public class AuthController {
 ### Preflight Request Issues
 
 **❌ Error:**
+
 ```
 CORS policy: Response to preflight request doesn't pass access control check
 ```
 
 **✅ Solution - Handle OPTIONS Requests:**
+
 ```java
 @RequestMapping(value = "/**", method = RequestMethod.OPTIONS)
 public ResponseEntity<?> handleOptions() {
@@ -578,7 +624,8 @@ public ResponseEntity<?> handleOptions() {
 ## Session Problems
 
 > **New:**
-> - Session now depends on secure cookies and HTTPS. If the user is logged out immediately, check cookie flags and HTTPS.
+> - Session now depends on secure cookies and HTTPS. If the user is logged out immediately, check cookie flags and
+    HTTPS.
 
 ### Session Not Persisting
 
@@ -587,6 +634,7 @@ public ResponseEntity<?> handleOptions() {
 **✅ Solutions:**
 
 **1. Check JWT Expiration:**
+
 ```yaml
 ricardo:
   auth:
@@ -595,6 +643,7 @@ ricardo:
 ```
 
 **2. Check Cookie Settings:**
+
 ```yaml
 ricardo:
   auth:
@@ -610,6 +659,7 @@ ricardo:
 ```
 
 **3. HTTPS enforcement:**
+
 ```yaml
 ricardo:
   auth:
@@ -628,11 +678,13 @@ curl -X POST http://localhost:8080/api/auth/revoke \
   -H "Content-Type: application/json" \
   -d '"TOKEN_TO_REVOKE"'
 ```
+
 - Revoked tokens are rejected immediately on all protected routes.
 
 ### Rate Limiting
 
 - If you receive HTTP 429, check the configuration:
+
 ```yaml
 ricardo:
   auth:
@@ -659,4 +711,5 @@ logging:
 
 ---
 
-This guide covers the main changes and common issues after upgrading to v2.0.0. See also the troubleshooting files for refresh token, CORS, and password policy.
+This guide covers the main changes and common issues after upgrading to v2.0.0. See also the troubleshooting files for
+refresh token, CORS, and password policy.

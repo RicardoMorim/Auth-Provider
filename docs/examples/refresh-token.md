@@ -104,9 +104,9 @@ export const useAuth = () => {
   // API call with automatic token refresh
   const apiCall = useCallback(async (url, options = {}) => {
     const makeRequest = async (token) => {
-
+```
 ### React/Next.js Example
-
+New best practice for v2.0.0 and later:
 ```javascript
 // hooks/useAuth.js
 import { useState, useCallback } from 'react';

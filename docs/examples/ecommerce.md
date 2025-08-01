@@ -1,11 +1,14 @@
 # E-commerce Platform Example
 
-Build a **complete e-commerce platform** with Ricardo Auth, featuring customer accounts, order management, and admin functionality.
+Build a **complete e-commerce platform** with Ricardo Auth, featuring customer accounts, order management, and admin
+functionality.
 
 ---
 
 > **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+    development only.
 > - New blocklist and rate limiting features are available (see below).
 > - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
 
@@ -23,6 +26,7 @@ Build a **complete e-commerce platform** with Ricardo Auth, featuring customer a
 ## Overview
 
 **What You'll Build:**
+
 - Customer registration and authentication
 - Shopping cart with session management
 - Order processing and history
@@ -32,6 +36,7 @@ Build a **complete e-commerce platform** with Ricardo Auth, featuring customer a
 - **Token blocklist and rate limiting (optional)**
 
 **Features:**
+
 - Guest checkout option
 - Customer account management
 - Order tracking
@@ -42,6 +47,7 @@ Build a **complete e-commerce platform** with Ricardo Auth, featuring customer a
 ## Project Setup
 
 ### Dependencies (pom.xml)
+
 ```xml
 <dependencies>
     <!-- Ricardo Auth Starter -->
@@ -91,6 +97,7 @@ Build a **complete e-commerce platform** with Ricardo Auth, featuring customer a
 ```
 
 ### Configuration
+
 ```yaml
 # application.yml
 spring:
@@ -181,11 +188,11 @@ logging:
 ### Token Blocklist and Rate Limiting (NEW)
 
 - **Token Blocklist:**
-  - Prevents usage of revoked tokens (access or refresh). Supports in-memory or Redis for distributed setups.
-  - Configure with `ricardo.auth.token-blocklist.type: memory|redis`.
+    - Prevents usage of revoked tokens (access or refresh). Supports in-memory or Redis for distributed setups.
+    - Configure with `ricardo.auth.token-blocklist.type: memory|redis`.
 - **Rate Limiting:**
-  - Protects endpoints from brute-force and abuse. Supports in-memory or Redis for distributed setups.
-  - Configure with `ricardo.auth.rate-limiter.type: memory|redis` and set `max-requests` and `time-window-ms`.
+    - Protects endpoints from brute-force and abuse. Supports in-memory or Redis for distributed setups.
+    - Configure with `ricardo.auth.rate-limiter.type: memory|redis` and set `max-requests` and `time-window-ms`.
 
 ---
 
@@ -200,6 +207,7 @@ Content-Type: application/json
 
 "<token-to-revoke>"
 ```
+
 - Only users with `ADMIN` role can call this endpoint.
 - Works for both access and refresh tokens.
 
@@ -277,6 +285,7 @@ public class Customer {
 ```
 
 ### Customer Registration Controller
+
 ```java
 package com.mycompany.ecommerce.controller;
 
@@ -325,6 +334,7 @@ public class CustomerRegistrationController {
 ```
 
 ### Customer DTOs
+
 ```java
 // CustomerRegistrationRequestDTO.java
 public class CustomerRegistrationRequestDTO {
@@ -381,6 +391,7 @@ public class CustomerLoginResponseDTO {
 ## Shopping Cart Integration
 
 ### Cart Service
+
 ```java
 package com.mycompany.ecommerce.service;
 
@@ -507,6 +518,7 @@ public class CartService {
 ```
 
 ### Cart Controller
+
 ```java
 @RestController
 @RequestMapping("/api/cart")
@@ -558,6 +570,7 @@ public class CartController {
 ## Order Management
 
 ### Order Entity
+
 ```java
 @Entity
 @Table(name = "orders")
@@ -625,6 +638,7 @@ public enum PaymentStatus {
 ```
 
 ### Order Service
+
 ```java
 @Service
 @Transactional
@@ -728,6 +742,7 @@ public class OrderService {
 ## Admin Dashboard
 
 ### Admin Controller
+
 ```java
 @RestController
 @RequestMapping("/api/admin")
@@ -805,6 +820,7 @@ public class AdminController {
 ## Payment Integration
 
 ### Payment Service
+
 ```java
 @Service
 public class PaymentService {
@@ -888,6 +904,7 @@ public class PaymentService {
 ## Testing
 
 ### Integration Test
+
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -985,4 +1002,6 @@ public class EcommerceIntegrationTest {
 }
 ```
 
-This e-commerce example demonstrates how to build a complete online shopping platform with Ricardo Auth, featuring customer registration, shopping cart management, order processing, and admin functionality with proper authentication and authorization.
+This e-commerce example demonstrates how to build a complete online shopping platform with Ricardo Auth, featuring
+customer registration, shopping cart management, order processing, and admin functionality with proper authentication
+and authorization.

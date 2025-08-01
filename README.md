@@ -6,7 +6,8 @@
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/RicardoMorim/Auth-Provider)
 [![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/RicardoMorim/Auth-Provider/graphs/commit-activity)
 
-A **plug-and-play** Spring Boot starter that adds JWT authentication and user management to your application with minimal configuration required.
+A **plug-and-play** Spring Boot starter that adds JWT authentication and user management to your application with
+minimal configuration required.
 
 > 🚀 **Zero-configuration setup** - Just add the dependency and you're ready to go!  
 > 🔐 **Production-ready security** - Built-in password policies, JWT tokens, and role-based access  
@@ -15,6 +16,7 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 ## ✨ What You Get
 
 **Authentication & Security**
+
 - 🔑 JWT access and refresh token generation, validation, and refresh
 - 🔄 Secure refresh token system with automatic rotation
 - 🛡️ Configurable password policies with strength validation
@@ -27,6 +29,7 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 - 🍪 Secure cookies para tokens, com flags de segurança e opção de forçar HTTPS
 
 **Ready-to-Use API Endpoints**
+
 - `/api/auth/login` - User authentication with refresh token
 - `/api/auth/refresh` - Refresh access token using refresh token
 - `/api/auth/register` - User registration
@@ -34,12 +37,14 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 - `/api/users/*` - Complete user management CRUD
 
 **Developer Experience**
+
 - 🚀 **Zero-configuration** - Works out of the box with sensible defaults
 - ⚙️ **Highly customizable** - Configure everything through `application.yml`
 - 🧪 **Test-friendly** - Includes test utilities and examples
 - 📖 **Comprehensive docs** - Step-by-step guides for all use cases
 
 **Production Ready**
+
 - 🏗️ Clean architecture with Domain-Driven Design principles
 - 🔧 Spring Boot auto-configuration
 - 📊 Built-in error handling and validation
@@ -52,6 +57,7 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 Add the following dependency to your `pom.xml`:
 
 ```xml
+
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
@@ -64,6 +70,7 @@ Add the following dependency to your `pom.xml`:
 1. Add the GitHub Packages repository to your `pom.xml`:
 
 ```xml
+
 <repositories>
     <repository>
         <id>github</id>
@@ -75,6 +82,7 @@ Add the following dependency to your `pom.xml`:
 2. Configure authentication in your `~/.m2/settings.xml`:
 
 ```xml
+
 <servers>
     <server>
         <id>github</id>
@@ -87,6 +95,7 @@ Add the following dependency to your `pom.xml`:
 3. Add the dependency:
 
 ```xml
+
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
@@ -101,23 +110,24 @@ Add the following dependency to your `pom.xml`:
 ### Step 1: Add the Dependency
 
 ```xml
+
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
     <version>1.2.0</version>
 </dependency>
 
-<!-- Required: JPA support -->
+        <!-- Required: JPA support -->
 <dependency>
-    <groupId>org.springframework.boot</groupId>
-    <artifactId>spring-boot-starter-data-jpa</artifactId>
+<groupId>org.springframework.boot</groupId>
+<artifactId>spring-boot-starter-data-jpa</artifactId>
 </dependency>
 
-<!-- Choose your database (H2 for quick testing) -->
+        <!-- Choose your database (H2 for quick testing) -->
 <dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <scope>runtime</scope>
+<groupId>com.h2database</groupId>
+<artifactId>h2</artifactId>
+<scope>runtime</scope>
 </dependency>
 ```
 
@@ -148,6 +158,7 @@ ricardo:
 ### Step 3: Start Your Application
 
 ```java
+
 @SpringBootApplication
 public class MyApplication {
     public static void main(String[] args) {
@@ -159,6 +170,7 @@ public class MyApplication {
 ### Step 4: Test the API
 
 **Create a user:**
+
 ```bash
 curl -X POST http://localhost:8080/api/users/create \
   -H "Content-Type: application/json" \
@@ -170,6 +182,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **Login to get JWT tokens:**
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -180,6 +193,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **Refresh your access token:**
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/refresh \
   -H "Content-Type: application/json" \
@@ -189,6 +203,7 @@ curl -X POST http://localhost:8080/api/auth/refresh \
 ```
 
 **Use the access token to access protected endpoints (cookie-based authentication):**
+
 ```bash
 curl --cookie "access_token=YOUR_ACCESS_TOKEN_HERE" \
      http://localhost:8080/api/auth/me
@@ -201,13 +216,13 @@ curl --cookie "access_token=YOUR_ACCESS_TOKEN_HERE" \
 
 ## 📖 Documentation
 
-| Guide | Purpose | When to Use |
-|-------|---------|-------------|
-| **[Configuration Guide](docs/configuration-guide.md)** | Complete setup options | Customizing behavior |
-| **[API Reference](docs/api-reference.md)** | All endpoints & examples | Frontend integration |
-| **[Security Guide](docs/security-guide.md)** | Production security | Deploying safely |
-| **[Examples](docs/examples.md)** | Real-world use cases | Learning patterns |
-| **[Troubleshooting](docs/troubleshooting.md)** | Common issues & fixes | Debugging problems |
+| Guide                                                  | Purpose                  | When to Use          |
+|--------------------------------------------------------|--------------------------|----------------------|
+| **[Configuration Guide](docs/configuration-guide.md)** | Complete setup options   | Customizing behavior |
+| **[API Reference](docs/api-reference.md)**             | All endpoints & examples | Frontend integration |
+| **[Security Guide](docs/security-guide.md)**           | Production security      | Deploying safely     |
+| **[Examples](docs/examples.md)**                       | Real-world use cases     | Learning patterns    |
+| **[Troubleshooting](docs/troubleshooting.md)**         | Common issues & fixes    | Debugging problems   |
 
 ## 🔧 Configuration
 
@@ -323,16 +338,17 @@ RICARDO_AUTH_JWT_EXPIRATION=604800000
 The starter requires a JPA implementation. Add to your `pom.xml`:
 
 ```xml
+
 <dependency>
     <groupId>org.springframework.boot</groupId>
     <artifactId>spring-boot-starter-data-jpa</artifactId>
 </dependency>
 
-<!-- Choose your database -->
+        <!-- Choose your database -->
 <dependency>
-    <groupId>com.h2database</groupId>
-    <artifactId>h2</artifactId>
-    <scope>runtime</scope>
+<groupId>com.h2database</groupId>
+<artifactId>h2</artifactId>
+<scope>runtime</scope>
 </dependency>
 ```
 
@@ -341,12 +357,15 @@ The starter requires a JPA implementation. Add to your `pom.xml`:
 ### Authentication Endpoints
 
 #### POST `/api/auth/login`
+
 Authenticates the user and returns tokens in secure cookies.
 
 #### POST `/api/auth/refresh`
+
 Generates a new access token using the refresh token from the cookie.
 
 #### POST `/api/auth/revoke` (ADMIN only)
+
 Revokes an access or refresh token. Example usage:
 
 ```bash
@@ -357,94 +376,112 @@ curl -X POST http://localhost:8080/api/auth/revoke \
 ```
 
 #### GET `/api/auth/me`
+
 Returns information about the authenticated user.
 
 **Authentication:**
+
 - All endpoints (except user endpoints) require authentication via secure cookies (`access_token`, `refresh_token`).
 - The Authorization header is no longer used for authentication (except for legacy user endpoints).
 
 **Response:**
+
 ```json
 {
-    "username": "user@example.com",
-    "authorities": ["ROLE_USER"]
+  "username": "user@example.com",
+  "authorities": [
+    "ROLE_USER"
+  ]
 }
 ```
 
 ### User Management Endpoints
 
 #### POST `/api/users/create`
+
 Create a new user account with password policy validation.
 
 **Request:**
+
 ```json
 {
-    "username": "johndoe",
-    "email": "john@example.com",
-    "password": "SecurePass@123!"
+  "username": "johndoe",
+  "email": "john@example.com",
+  "password": "SecurePass@123!"
 }
 ```
 
 **Password Requirements:**
+
 - Minimum 10 characters (configurable)
 - At least one uppercase letter
-- At least one lowercase letter  
+- At least one lowercase letter
 - At least one numeric digit
 - At least one special character: `!@#$%^&*()`
 - Not in common passwords list
 
 **Response (Success):**
+
 ```json
 {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com"
 }
 ```
 
 **Response (Example Password Policy Error):**
+
 ```json
 {
-    "error": "Bad Request",
-    "message": "Password must contain at least one uppercase letter",
-    "timestamp": "2024-01-15T10:30:00Z"
+  "error": "Bad Request",
+  "message": "Password must contain at least one uppercase letter",
+  "timestamp": "2024-01-15T10:30:00Z"
 }
 ```
 
 #### GET `/api/users/{id}`
+
 Get user by ID (requires authentication).
 
 **Response:**
+
 ```json
 {
-    "id": 1,
-    "username": "johndoe",
-    "email": "john@example.com"
+  "id": 1,
+  "username": "johndoe",
+  "email": "john@example.com"
 }
 ```
 
 #### GET `/api/users/email/{email}`
+
 Get user by email (requires authentication).
 
 #### GET `/api/users/exists/{email}`
+
 Check if a user exists by email.
 
 **Response:**
+
 ```json
 true
 ```
 
 #### PUT `/api/users/update/{id}`
+
 Update user information (requires ADMIN role or ownership).
 
 #### DELETE `/api/users/delete/{id}`
+
 Delete a user (requires ADMIN role or ownership).
 
 ## 🔐 Security
 
 ### Cookie-Based Tokens (BREAKING CHANGE)
 
-Tokens are now sent via HTTP-only, Secure cookies with configurable flags (Secure, SameSite, Path). This increases protection against XSS and CSRF.
+Tokens are now sent via HTTP-only, Secure cookies with configurable flags (Secure, SameSite, Path). This increases
+protection against XSS and CSRF.
 
 - By default, cookies are `Secure` and `SameSite=Strict`.
 - Cookies require HTTPS in production (`redirect-https: true`).
@@ -482,6 +519,7 @@ Protects sensitive endpoints from brute-force and abuse. Supports in-memory or R
 ### Basic Spring Boot Application
 
 ```java
+
 @SpringBootApplication
 public class MyApplication {
     public static void main(String[] args) {
@@ -495,11 +533,12 @@ public class MyApplication {
 You can extend the provided User entity:
 
 ```java
+
 @Entity
 public class CustomUser extends User {
     private String firstName;
     private String lastName;
-    
+
     // constructors, getters, setters
 }
 ```
@@ -509,15 +548,16 @@ public class CustomUser extends User {
 Inject the JwtService to customize token generation:
 
 ```java
+
 @Service
 public class CustomAuthService {
-    
+
     private final JwtService jwtService;
-    
+
     public CustomAuthService(JwtService jwtService) {
         this.jwtService = jwtService;
     }
-    
+
     public String generateCustomToken(String username, Collection<? extends GrantedAuthority> authorities) {
         return jwtService.generateToken(username, authorities);
     }
@@ -545,10 +585,11 @@ ricardo:
 Override the default security configuration:
 
 ```java
+
 @Configuration
 @EnableWebSecurity
 public class CustomSecurityConfig {
-    
+
     @Bean
     @Primary
     public SecurityFilterChain customFilterChain(HttpSecurity http) throws Exception {
@@ -563,6 +604,7 @@ public class CustomSecurityConfig {
 Implement your own user service:
 
 ```java
+
 @Service
 @Primary
 public class CustomUserService implements UserService<User, Long> {
@@ -575,18 +617,22 @@ public class CustomUserService implements UserService<User, Long> {
 ### Common Issues
 
 #### 1. "JWT secret not configured"
+
 **Problem:** Missing or empty JWT secret.
 **Solution:** Set `ricardo.auth.jwt.secret` in your configuration.
 
 #### 2. "No qualifying bean of type 'EntityManagerFactory'"
+
 **Problem:** Missing JPA dependency.
 **Solution:** Add `spring-boot-starter-data-jpa` to your dependencies.
 
 #### 3. "Table 'USER' doesn't exist"
+
 **Problem:** Database schema not created.
 **Solution:** Set `spring.jpa.hibernate.ddl-auto=create-drop` for development.
 
 #### 4. Authentication always fails
+
 **Problem:** Incorrect password encoding or user not found.
 **Solution:** Ensure user exists and password is correctly encoded.
 
@@ -616,17 +662,20 @@ management:
 ## 🚀 Project Status
 
 This project is **production-ready** for its current feature set:
+
 - ✅ JWT Authentication with Refresh Tokens
 - ✅ User Management CRUD
 - ✅ Password Policy System
 - ✅ Role-Based Access Control
 - ✅ Multiple Database Support
 
-**Future enhancements** are planned based on community needs and contributions. See [CHANGELOG.md](CHANGELOG.md) for details.
+**Future enhancements** are planned based on community needs and contributions. See [CHANGELOG.md](CHANGELOG.md) for
+details.
 
 ## 🤝 Contributing
 
-This project is actively maintained. Bug fixes and security issues will be addressed promptly. Feature contributions are welcome!
+This project is actively maintained. Bug fixes and security issues will be addressed promptly. Feature contributions are
+welcome!
 
 1. Fork the repository
 2. Create your feature branch (`git checkout -b feature/AmazingFeature`)
@@ -647,6 +696,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 ## 👨‍💻 Author
 
 **Ricardo**
+
 - Email: ricardomorim05@gmail.com
 - Portfolio: [ricardoportfolio.vercel.app](https://ricardoportfolio.vercel.app)
 - GitHub: [@RicardoMorim](https://github.com/RicardoMorim)

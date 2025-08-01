@@ -1,7 +1,9 @@
 # Configuration Overview
 
 > **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+    development only.
 > - New blocklist and rate limiting features are available (see below).
 > - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
 
@@ -9,10 +11,10 @@ Complete guide to configuring Ricardo Auth for your specific needs.
 
 ## 🚀 Quick Setup (2 minutes)
 
-
 **Minimum required configuration to get started:**
 
-> **Note:** The legacy `expiration` property is deprecated. Use `access-token-expiration` and `refresh-token-expiration` for all new configurations.
+> **Note:** The legacy `expiration` property is deprecated. Use `access-token-expiration` and `refresh-token-expiration`
+> for all new configurations.
 
 ```yaml
 ricardo:
@@ -44,54 +46,54 @@ ricardo:
         path: /api/auth/refresh
     redirect-https: true   # Enforce HTTPS (recommended for production)```
 
-That's it! Ricardo Auth will use sensible defaults for everything else.
+  That's it! Ricardo Auth will use sensible defaults for everything else.
 
 ## 📋 Configuration Checklist
 
 ### ✅ **Required (Must Have)**
-- [ ] [JWT secret key configured](basic.md#jwt-configuration) - `ricardo.auth.jwt.secret`
-- [ ] [Database dependency added](basic.md#database-setup) - `spring-boot-starter-data-jpa`
-- [ ] [Database configured](database.md) - Connection details in `application.yml`
+- [ ] [ JWT secret key configured ](basic.md#jwt-configuration) - `ricardo.auth.jwt.secret`
+- [ ] [ Database dependency added ](basic.md#database-setup) - `spring-boot-starter-data-jpa`
+- [ ] [ Database configured ](database.md) - Connection details in `application.yml`
 
 ### 🎯 **Recommended for Production**
-- [ ] [Environment variables for secrets](environment.md) - Don't hardcode secrets
-- [ ] [Password policy configured](password-policy.md) - Strengthen password requirements
-- [ ] [Database connection pooling](database.md#connection-pooling) - Performance optimization
-- [ ] [Security configuration](security.md) - HTTPS, CORS, headers
-- [ ] [Logging levels](basic.md#logging-configuration) - Appropriate for environment
+- [ ] [ Environment variables for secrets ](environment.md) - Don't hardcode secrets
+- [ ] [ Password policy configured ](password-policy.md) - Strengthen password requirements
+- [ ] [ Database connection pooling ](database.md#connection-pooling) - Performance optimization
+- [ ] [ Security configuration ](security.md) - HTTPS, CORS, headers
+- [ ] [ Logging levels ](basic.md#logging-configuration) - Appropriate for environment
 
 ### ⚙️ **Optional Customizations**
-- [ ] [Custom token expiration](basic.md#jwt-configuration) - Adjust for your use case
-- [ ] [Disabled endpoints](basic.md#endpoint-configuration) - Turn off unused features
-- [ ] [Custom security rules](security.md#custom-security) - Advanced security needs
-- [ ] [Advanced features](advanced.md) - Rate limiting, caching, etc.
+- [ ] [ Custom token expiration ](basic.md#jwt-configuration) - Adjust for your use case
+- [ ] [ Disabled endpoints ](basic.md#endpoint-configuration) - Turn off unused features
+- [ ] [ Custom security rules ](security.md#custom-security) - Advanced security needs
+- [ ] [ Advanced features ](advanced.md) - Rate limiting, caching, etc.
 
 ## 📚 Configuration Guides
 
 ### **Getting Started**
-| Guide | Purpose | Time | When to Use |
-|-------|---------|------|-------------|
-| **[Basic Configuration](basic.md)** | Essential setup options | 5 min | First time setup |
-| **[Database Configuration](database.md)** | Database connection and settings | 10 min | Setting up persistence |
+  | Guide | Purpose | Time | When to Use |
+  |-------|---------|------|-------------|
+  | **[Basic Configuration](basic.md)** | Essential setup options | 5 min | First time setup |
+  | **[Database Configuration](database.md)** | Database connection and settings | 10 min | Setting up persistence |
 
 ### **Security & Policies** 
-| Guide | Purpose | Time | When to Use |
-|-------|---------|------|-------------|
-| **[Password Policy](password-policy.md)** 🆕 | Password strength requirements | 10 min | Enhancing security |
-| **[Refresh Token Configuration](refresh-token.md)** 🆕 | Token refresh and storage | 15 min | Session management |
-| **[Security Configuration](security.md)** | Production security settings | 15 min | Production deployment |
+  | Guide | Purpose | Time | When to Use |
+  |-------|---------|------|-------------|
+  | **[Password Policy](password-policy.md)** 🆕 | Password strength requirements | 10 min | Enhancing security |
+  | **[Refresh Token Configuration](refresh-token.md)** 🆕 | Token refresh and storage | 15 min | Session management |
+  | **[Security Configuration](security.md)** | Production security settings | 15 min | Production deployment |
 
 ### **Production Ready**
-| Guide | Purpose | Time | When to Use |
-|-------|---------|------|-------------|
-| **[Environment Variables](environment.md)** | Secure configuration management | 10 min | Multiple environments |
-| **[Advanced Configuration](advanced.md)** | Performance and customization | 20 min | Complex requirements |
+  | Guide | Purpose | Time | When to Use |
+  |-------|---------|------|-------------|
+  | **[Environment Variables](environment.md)** | Secure configuration management | 10 min | Multiple environments |
+  | **[Advanced Configuration](advanced.md)** | Performance and customization | 20 min | Complex requirements |
 
 ## 🎯 Configuration by Use Case
 
 ### **Development Environment**
 Quick setup for local development:
-```yaml
+  ```yaml
 ricardo:
   auth:
     jwt:
@@ -124,10 +126,13 @@ ricardo:
         path: /api/auth/refresh
   redirect-https: false   # Disable HTTPS redirect for development
 ```
+
 👉 **See:** [Basic Configuration](basic.md#development-setup)
 
 ### **Production Environment**
+
 Secure setup for production:
+
 ```yaml
 ricardo:
   auth:
@@ -165,10 +170,14 @@ ricardo:
         path: /api/auth/refresh
   redirect-https: true
 ```
-👉 **See:** [Environment Variables](environment.md), [Security Configuration](security.md), [Refresh Token Configuration](refresh-token.md)
+
+👉 **See:
+** [Environment Variables](environment.md), [Security Configuration](security.md), [Refresh Token Configuration](refresh-token.md)
 
 ### **Mobile API Backend**
+
 Optimized for mobile applications:
+
 ```yaml
 ricardo:
   auth:
@@ -203,10 +212,13 @@ ricardo:
         path: /api/auth/refresh
   redirect-https: true
 ```
+
 👉 **See:** [Mobile API Example](../examples/mobile-api.md), [Refresh Token Configuration](refresh-token.md)
 
 ### **High-Security Application**
+
 Maximum security settings:
+
 ```yaml
 ricardo:
   auth:
@@ -243,6 +255,7 @@ ricardo:
         path: /api/auth/refresh
   redirect-https: true
 ```
+
 👉 **See:** [Security Configuration](security.md), [Password Policy](password-policy.md)
 
 ## 🔧 Configuration Management
@@ -273,13 +286,14 @@ ricardo:
    ```
 
 4. **Move to production:**
-   - Replace secrets with environment variables
-   - Use production database
-   - Strengthen security policies
+    - Replace secrets with environment variables
+    - Use production database
+    - Strengthen security policies
 
 ### **Environment-Specific Configuration**
 
 #### **Using Spring Profiles**
+
 ```yaml
 # application.yml (default)
 ricardo:
@@ -315,6 +329,7 @@ ricardo:
 ```
 
 #### **Using Environment Variables**
+
 ```bash
 # Development
 export RICARDO_AUTH_JWT_SECRET="dev-secret"
@@ -351,16 +366,17 @@ export RICARDO_AUTH_JWT_REFRESH_TOKEN_EXPIRATION="604800000"
 
 ### **Common Configuration Issues**
 
-| Issue | Solution | Guide |
-|-------|----------|-------|
-| JWT secret not set | Add `ricardo.auth.jwt.secret` | [Basic Configuration](basic.md) |
-| Database connection fails | Check datasource configuration | [Database Configuration](database.md) |
+| Issue                      | Solution                       | Guide                                 |
+|----------------------------|--------------------------------|---------------------------------------|
+| JWT secret not set         | Add `ricardo.auth.jwt.secret`  | [Basic Configuration](basic.md)       |
+| Database connection fails  | Check datasource configuration | [Database Configuration](database.md) |
 | Password validation errors | Check password policy settings | [Password Policy](password-policy.md) |
-| Authentication fails | Verify JWT secret consistency | [Security Configuration](security.md) |
+| Authentication fails       | Verify JWT secret consistency  | [Security Configuration](security.md) |
 
 ## 📊 Configuration Templates
 
 ### **Minimal Template**
+
 ```yaml
 # Absolute minimum configuration
 ricardo:
@@ -378,18 +394,19 @@ spring:
 ```
 
 ### **Complete Template**
+
 ```yaml
 # Comprehensive configuration example
 spring:
   application:
     name: my-app
-  
+
   datasource:
     url: ${DATABASE_URL:jdbc:h2:mem:testdb}
     username: ${DATABASE_USERNAME:sa}
     password: ${DATABASE_PASSWORD:password}
     driver-class-name: ${DATABASE_DRIVER:org.h2.Driver}
-  
+
   jpa:
     hibernate:
       ddl-auto: ${DDL_AUTO:create-drop}
@@ -398,7 +415,7 @@ spring:
 ricardo:
   auth:
     enabled: ${RICARDO_AUTH_ENABLED:true}
-    
+
     jwt:
       secret: ${JWT_SECRET}
       access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
@@ -457,34 +474,40 @@ Content-Type: application/json
 
 "<token-to-revoke>"
 ```
+
 - Only users with `ADMIN` role can call this endpoint.
 - Works for both access and refresh tokens.
 
 ## 🔗 Quick Links
 
 ### **Essential Reading**
+
 - **[Basic Configuration](basic.md)** - Start here for first-time setup
 - **[Password Policy](password-policy.md)** 🆕 - Configure password requirements
 - **[Environment Variables](environment.md)** - Secure configuration management
 
 ### **Production Ready**
+
 - **[Database Configuration](database.md)** - Production database setup
 - **[Security Configuration](security.md)** - Production security settings
 - **[Advanced Configuration](advanced.md)** - Performance optimization
 
 ### **Examples & Troubleshooting**
+
 - **[Configuration Examples](../examples/index.md)** - Real-world configurations
 - **[Troubleshooting](../troubleshooting/index.md)** - Common configuration issues
 
 ## 🆘 Need Help?
 
 ### **Common Questions**
+
 - **"What's the minimum configuration?"** → [Basic Configuration](basic.md#minimum-configuration)
 - **"How do I secure for production?"** → [Security Configuration](security.md)
 - **"How do I configure passwords?"** → [Password Policy](password-policy.md)
 - **"Configuration not working?"** → [Troubleshooting](../troubleshooting/index.md)
 
 ### **Get Support**
+
 - 📖 [Full Documentation](../index.md)
 - 🐛 [GitHub Issues](https://github.com/RicardoMorim/Auth-Provider/issues)
 - 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)

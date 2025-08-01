@@ -15,13 +15,15 @@ Fix **application startup problems** with Ricardo Auth quickly and efficiently.
 ## Common Startup Errors
 
 > **Novidade v2.0.0:**
-> - Cookies de autenticação agora usam flags de segurança (`HttpOnly`, `Secure`, `SameSite`) por padrão. HTTPS é obrigatório para produção.
+> - Cookies de autenticação agora usam flags de segurança (`HttpOnly`, `Secure`, `SameSite`) por padrão. HTTPS é
+    obrigatório para produção.
 > - Blocklist e rate limiting (memória/Redis) são ativados por padrão para maior proteção.
 > - Endpoint de revogação de token disponível em `/api/auth/revoke` (ADMIN).
 
 ### JWT Secret Not Configured
 
 **❌ Error:**
+
 ```
 ***************************
 APPLICATION FAILED TO START
@@ -35,6 +37,7 @@ Configure the JWT secret in your application.yml or set the RICARDO_AUTH_JWT_SEC
 ```
 
 **✅ Solution:**
+
 ```yaml
 # application.yml
 ricardo:
@@ -44,15 +47,18 @@ ricardo:
 ```
 
 **Or use environment variable:**
+
 ```bash
 export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
 ```
 
-**❗ Importante:** O segredo JWT deve ser longo, aleatório e nunca exposto publicamente. Use variáveis de ambiente em produção.
+**❗ Importante:** O segredo JWT deve ser longo, aleatório e nunca exposto publicamente. Use variáveis de ambiente em
+produção.
 
 ### Missing JPA Dependencies
 
 **❌ Error:**
+
 ```
 ***************************
 APPLICATION FAILED TO START
@@ -68,6 +74,7 @@ Consider the following:
 ```
 
 **✅ Solution - Add Dependencies:**
+
 ```xml
 <dependencies>
     <!-- Spring Boot JPA (Required) -->
@@ -94,6 +101,7 @@ Consider the following:
 ```
 
 **✅ Solution - Add Database Configuration:**
+
 ```yaml
 # For H2 (Development)
 spring:
@@ -116,6 +124,7 @@ spring:
 ### Bean Creation Errors
 
 **❌ Error:**
+
 ```
 Error creating bean with name 'authAutoConfiguration': 
 Injection of autowired dependencies failed; nested exception is 
@@ -123,6 +132,7 @@ java.lang.NoSuchMethodError: 'org.springframework.security.config.annotation.web
 ```
 
 **✅ Solution - Check Spring Boot Version:**
+
 ```xml
 <!-- Ensure compatible Spring Boot version -->
 <parent>
@@ -134,6 +144,7 @@ java.lang.NoSuchMethodError: 'org.springframework.security.config.annotation.web
 ```
 
 **✅ Solution - Check Java Version:**
+
 ```xml
 <properties>
     <java.version>21</java.version>  <!-- Use Java 21 or later -->
@@ -143,6 +154,7 @@ java.lang.NoSuchMethodError: 'org.springframework.security.config.annotation.web
 ### Port Already in Use
 
 **❌ Error:**
+
 ```
 Web server failed to start. Port 8080 was already in use.
 
@@ -153,6 +165,7 @@ Identify and stop the process that's listening on port 8080 or configure this ap
 **✅ Solutions:**
 
 **1. Use Different Port:**
+
 ```yaml
 # application.yml
 server:
@@ -160,6 +173,7 @@ server:
 ```
 
 **2. Find and Kill Process:**
+
 ```bash
 # Find process using port 8080
 netstat -tlnp | grep :8080
@@ -171,6 +185,7 @@ kill -9 <PID>
 ```
 
 **3. Use Random Port:**
+
 ```yaml
 # application.yml
 server:
@@ -184,12 +199,14 @@ server:
 ### Invalid YAML Syntax
 
 **❌ Error:**
+
 ```
 Caused by: org.yaml.snakeyaml.scanner.ScannerException: 
 mapping values are not allowed here
 ```
 
 **✅ Solution - Check YAML Indentation:**
+
 ```yaml
 # ❌ Wrong (missing spaces)
 ricardo:
@@ -207,12 +224,14 @@ ricardo:
 ### Profile-Specific Issues
 
 **❌ Error:**
+
 ```
 The following profiles are active: prod
 But production database configuration is missing
 ```
 
 **✅ Solution - Set Active Profile:**
+
 ```yaml
 # application.yml
 spring:
@@ -241,6 +260,7 @@ spring:
 ### Property Binding Errors
 
 **❌ Error:**
+
 ```
 Binding to target failed:
 Property: ricardo.auth.jwt.expiration
@@ -249,6 +269,7 @@ Reason: Failed to convert property value of type 'java.lang.String' to required 
 ```
 
 **✅ Solution - Use Correct Data Types:**
+
 ```yaml
 # ❌ Wrong (string value)
 ricardo:
@@ -268,11 +289,13 @@ ricardo:
 ### Version Conflicts
 
 **❌ Error:**
+
 ```
 java.lang.NoSuchMethodError: 'org.springframework.security.config.annotation.web.builders.HttpSecurity.authorizeHttpRequests()'
 ```
 
 **✅ Solution - Check Dependency Versions:**
+
 ```bash
 # Check dependency tree
 mvn dependency:tree
@@ -282,6 +305,7 @@ mvn dependency:tree | grep -E "(spring-security|spring-boot)"
 ```
 
 **✅ Solution - Use BOM for Version Management:**
+
 ```xml
 <dependencyManagement>
     <dependencies>
@@ -299,11 +323,13 @@ mvn dependency:tree | grep -E "(spring-security|spring-boot)"
 ### Missing Required Dependencies
 
 **❌ Error:**
+
 ```
 java.lang.ClassNotFoundException: org.springframework.security.web.SecurityFilterChain
 ```
 
 **✅ Solution - Add Missing Dependencies:**
+
 ```xml
 <!-- Often missing dependencies -->
 <dependency>
@@ -320,11 +346,13 @@ java.lang.ClassNotFoundException: org.springframework.security.web.SecurityFilte
 ### Conflicting Auto-Configuration
 
 **❌ Error:**
+
 ```
 Field authConfiguration in com.ricardo.auth.config.AuthAutoConfiguration required a bean of type 'javax.sql.DataSource' that could not be found.
 ```
 
 **✅ Solution - Exclude Conflicting Auto-Configuration:**
+
 ```java
 @SpringBootApplication(exclude = {
     DataSourceAutoConfiguration.class  // If you want to configure DataSource manually
@@ -341,6 +369,7 @@ public class MyApplication {
 ### Database Connection Failed
 
 **❌ Error:**
+
 ```
 java.sql.SQLException: Connection refused. Check that the hostname and port are correct and that the postmaster is accepting TCP/IP connections.
 ```
@@ -348,6 +377,7 @@ java.sql.SQLException: Connection refused. Check that the hostname and port are 
 **✅ Solutions:**
 
 **1. Check Database is Running:**
+
 ```bash
 # PostgreSQL
 sudo systemctl status postgresql
@@ -361,6 +391,7 @@ brew services list | grep mysql
 ```
 
 **2. Check Connection Details:**
+
 ```yaml
 spring:
   datasource:
@@ -370,6 +401,7 @@ spring:
 ```
 
 **3. Test Connection Manually:**
+
 ```bash
 # PostgreSQL
 psql -h localhost -p 5432 -U myuser -d myapp
@@ -381,11 +413,13 @@ mysql -h localhost -P 3306 -u myuser -p myapp
 ### Schema/Table Creation Issues
 
 **❌ Error:**
+
 ```
 Caused by: org.hibernate.tool.schema.spi.SchemaManagementException: Unable to execute schema management to JDBC target
 ```
 
 **✅ Solution - Check DDL Mode:**
+
 ```yaml
 spring:
   jpa:
@@ -396,6 +430,7 @@ spring:
 ```
 
 **✅ Solution - Check Database Permissions:**
+
 ```sql
 -- Grant necessary permissions
 GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT ON myapp.* TO 'myuser'@'%';
@@ -406,11 +441,13 @@ GRANT CREATE, ALTER, DROP, INSERT, UPDATE, DELETE, SELECT ON myapp.* TO 'myuser'
 ### Out of Memory Errors
 
 **❌ Error:**
+
 ```
 java.lang.OutOfMemoryError: Java heap space
 ```
 
 **✅ Solution - Increase Heap Size:**
+
 ```bash
 # Set JVM options
 export JAVA_OPTS="-Xms512m -Xmx2048m"
@@ -422,11 +459,13 @@ java -Xms512m -Xmx2048m -jar myapp.jar
 ### Java Version Issues
 
 **❌ Error:**
+
 ```
 java.lang.UnsupportedClassVersionError: com/ricardo/auth/AuthAutoConfiguration has been compiled by a more recent version of the Java Runtime
 ```
 
 **✅ Solution - Use Compatible Java Version:**
+
 ```bash
 # Check current Java version
 java -version
@@ -440,6 +479,7 @@ sdk use java 21.0.1-tem
 ### Classpath Issues
 
 **❌ Error:**
+
 ```
 java.lang.NoClassDefFoundError: Could not initialize class com.ricardo.auth.AuthAutoConfiguration
 ```
@@ -447,18 +487,21 @@ java.lang.NoClassDefFoundError: Could not initialize class com.ricardo.auth.Auth
 **✅ Solutions:**
 
 **1. Clean and Rebuild:**
+
 ```bash
 mvn clean compile
 mvn clean install
 ```
 
 **2. Check Classpath:**
+
 ```bash
 # Verify JAR is in classpath
 mvn dependency:tree | grep auth-spring-boot-starter
 ```
 
 **3. IDE Cache Issues:**
+
 ```bash
 # IntelliJ IDEA
 File → Invalidate Caches and Restart
@@ -473,12 +516,14 @@ Project → Clean → Clean all projects
 
 **❌ Problem:** Configuration not recognized
 **✅ Solution:**
+
 1. `File → Reload Gradle/Maven Project`
 2. `Build → Rebuild Project`
 3. `File → Invalidate Caches and Restart`
 
 **❌ Problem:** Auto-completion not working
 **✅ Solution:**
+
 1. `File → Project Structure → Modules`
 2. Ensure `src/main/java` is marked as Sources
 3. Ensure `src/main/resources` is marked as Resources
@@ -487,6 +532,7 @@ Project → Clean → Clean all projects
 
 **❌ Problem:** Build path errors
 **✅ Solution:**
+
 1. `Project → Properties → Java Build Path`
 2. `Libraries → Add Library → User Library`
 3. Add required JARs manually if needed
@@ -495,6 +541,7 @@ Project → Clean → Clean all projects
 
 **❌ Problem:** Java extension not recognizing project
 **✅ Solution:**
+
 1. Install "Extension Pack for Java"
 2. `Ctrl+Shift+P → Java: Reload Projects`
 3. Ensure `pom.xml` or `build.gradle` is in workspace root
@@ -602,8 +649,11 @@ env | grep SPRING
 ### Debug Mode Startup
 
 **Dica extra:**
-- Para depurar problemas de cookies, use ferramentas como DevTools do navegador e verifique as flags `Secure`, `HttpOnly` e `SameSite`.
-- Se o login não funcionar em produção, verifique se HTTPS está ativo e se o navegador não está bloqueando cookies inseguros.
+
+- Para depurar problemas de cookies, use ferramentas como DevTools do navegador e verifique as flags `Secure`,
+  `HttpOnly` e `SameSite`.
+- Se o login não funcionar em produção, verifique se HTTPS está ativo e se o navegador não está bloqueando cookies
+  inseguros.
 
 ```yaml
 logging:
@@ -625,7 +675,8 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--debug"
 ### Get Help
 
 > **Mudança importante:**
-> - Se você atualizou da v1.x.x, revise as configurações de cookies, HTTPS e blocklist. Veja o [Guia de Segurança](../security-guide.md) para detalhes.
+> - Se você atualizou da v1.x.x, revise as configurações de cookies, HTTPS e blocklist. Veja
+    o [Guia de Segurança](../security-guide.md) para detalhes.
 
 If these solutions don't work:
 

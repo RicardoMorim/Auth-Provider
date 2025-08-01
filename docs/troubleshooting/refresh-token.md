@@ -53,6 +53,7 @@ ricardo:
 ### 3. Rate Limiting (HTTP 429)
 
 - If you receive HTTP 429, check the configuration:
+
 ```yaml
 ricardo:
   auth:
@@ -86,12 +87,14 @@ ricardo:
 ### 5. Token Revocation (Blocklist)
 
 - To revoke a token (access or refresh), use:
+
 ```bash
 curl -X POST https://localhost:8443/api/auth/revoke \
   -H "Authorization: Bearer <ADMIN_TOKEN>" \
   -H "Content-Type: application/json" \
   -d '"TOKEN_TO_REVOKE"'
 ```
+
 - Revoked tokens are rejected immediately on all protected routes.
 
 ### 6. Debug and Logging
@@ -107,4 +110,5 @@ logging:
 
 ---
 
-This guide covers the main changes and common issues after upgrading to v2.0.0. See also the troubleshooting files for authentication, CORS, and password policy.
+This guide covers the main changes and common issues after upgrading to v2.0.0. See also the troubleshooting files for
+authentication, CORS, and password policy.

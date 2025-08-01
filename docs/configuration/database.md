@@ -1,7 +1,9 @@
 # Database Configuration
 
 > **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+    development only.
 > - New blocklist and rate limiting features are available (see below).
 > - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
 
@@ -22,20 +24,21 @@ Configure **Ricardo Auth with various databases** for development, testing, and 
 
 Ricardo Auth supports all databases compatible with Spring Boot JPA:
 
-| Database | Status | Best For | Configuration Complexity |
-|----------|--------|----------|--------------------------|
-| **H2** | ✅ Supported | Development, Testing | ⭐ Easy |
-| **PostgreSQL** | ✅ Recommended | Production, Development | ⭐⭐ Medium |
-| **MySQL** | ✅ Supported | Production, Legacy systems | ⭐⭐ Medium |
-| **SQL Server** | ✅ Supported | Enterprise, Windows environments | ⭐⭐⭐ Advanced |
-| **Oracle** | ✅ Supported | Enterprise | ⭐⭐⭐ Advanced |
-| **SQLite** | ✅ Supported | Embedded, Testing | ⭐ Easy |
+| Database       | Status        | Best For                         | Configuration Complexity |
+|----------------|---------------|----------------------------------|--------------------------|
+| **H2**         | ✅ Supported   | Development, Testing             | ⭐ Easy                   |
+| **PostgreSQL** | ✅ Recommended | Production, Development          | ⭐⭐ Medium                |
+| **MySQL**      | ✅ Supported   | Production, Legacy systems       | ⭐⭐ Medium                |
+| **SQL Server** | ✅ Supported   | Enterprise, Windows environments | ⭐⭐⭐ Advanced             |
+| **Oracle**     | ✅ Supported   | Enterprise                       | ⭐⭐⭐ Advanced             |
+| **SQLite**     | ✅ Supported   | Embedded, Testing                | ⭐ Easy                   |
 
 ## H2 (Development)
 
 Perfect for **development and testing** - no external database required.
 
 ### In-Memory Database (Temporary)
+
 ```yaml
 # application-dev.yml
 spring:
@@ -77,6 +80,7 @@ ricardo:
 ```
 
 ### File-Based Database (Persistent)
+
 ```yaml
 # application-dev.yml
 spring:
@@ -93,6 +97,7 @@ spring:
 ```
 
 ### Dependencies
+
 ```xml
 <dependency>
     <groupId>com.h2database</groupId>
@@ -102,18 +107,20 @@ spring:
 ```
 
 ### H2 Console Access
+
 1. Start your application
 2. Visit: http://localhost:8080/h2-console
 3. Use connection details:
-   - **JDBC URL:** `jdbc:h2:mem:authdb` (or your configured URL)
-   - **Username:** `sa`
-   - **Password:** `password`
+    - **JDBC URL:** `jdbc:h2:mem:authdb` (or your configured URL)
+    - **Username:** `sa`
+    - **Password:** `password`
 
 ## PostgreSQL (Recommended)
 
 **Best choice for production** - excellent performance, reliability, and features.
 
 ### Basic Configuration
+
 ```yaml
 # application-prod.yml
 spring:
@@ -137,6 +144,7 @@ spring:
 ```
 
 ### With Connection Pooling (HikariCP)
+
 ```yaml
 spring:
   datasource:
@@ -154,6 +162,7 @@ spring:
 ```
 
 ### Dependencies
+
 ```xml
 <dependency>
     <groupId>org.postgresql</groupId>
@@ -163,6 +172,7 @@ spring:
 ```
 
 ### Docker Setup
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -184,6 +194,7 @@ volumes:
 ```
 
 ### Manual Database Setup
+
 ```sql
 -- Create database
 CREATE DATABASE auth_db;
@@ -206,6 +217,7 @@ GRANT ALL ON SCHEMA public TO auth_user;
 Popular choice for **web applications** and existing MySQL infrastructure.
 
 ### Basic Configuration
+
 ```yaml
 # application.yml
 spring:
@@ -226,6 +238,7 @@ spring:
 ```
 
 ### With Connection Pooling
+
 ```yaml
 spring:
   datasource:
@@ -242,6 +255,7 @@ spring:
 ```
 
 ### Dependencies
+
 ```xml
 <dependency>
     <groupId>com.mysql</groupId>
@@ -251,6 +265,7 @@ spring:
 ```
 
 ### Docker Setup
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -272,6 +287,7 @@ volumes:
 ```
 
 ### Manual Database Setup
+
 ```sql
 -- Create database
 CREATE DATABASE auth_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
@@ -289,6 +305,7 @@ FLUSH PRIVILEGES;
 Enterprise choice for **Windows environments** and Microsoft ecosystems.
 
 ### Basic Configuration
+
 ```yaml
 # application.yml
 spring:
@@ -306,6 +323,7 @@ spring:
 ```
 
 ### Dependencies
+
 ```xml
 <dependency>
     <groupId>com.microsoft.sqlserver</groupId>
@@ -315,6 +333,7 @@ spring:
 ```
 
 ### Docker Setup
+
 ```yaml
 # docker-compose.yml
 version: '3.8'
@@ -336,6 +355,7 @@ volumes:
 ## Connection Pooling
 
 ### HikariCP (Default and Recommended)
+
 ```yaml
 spring:
   datasource:
@@ -360,6 +380,7 @@ spring:
 ```
 
 ### Connection Pool Monitoring
+
 ```yaml
 # Enable metrics
 management:
@@ -383,16 +404,17 @@ management:
 ### Pool Size Guidelines
 
 | Application Type | Max Pool Size | Min Idle |
-|-----------------|---------------|----------|
-| Small web app | 10-15 | 2-5 |
-| Medium web app | 15-25 | 5-10 |
-| Large web app | 25-50 | 10-15 |
-| Microservice | 5-15 | 2-5 |
-| High-traffic API | 30-100 | 15-25 |
+|------------------|---------------|----------|
+| Small web app    | 10-15         | 2-5      |
+| Medium web app   | 15-25         | 5-10     |
+| Large web app    | 25-50         | 10-15    |
+| Microservice     | 5-15          | 2-5      |
+| High-traffic API | 30-100        | 15-25    |
 
 ## Schema Management
 
 ### Development (Auto-create)
+
 ```yaml
 spring:
   jpa:
@@ -403,6 +425,7 @@ spring:
 ```
 
 ### Production (Manual control)
+
 ```yaml
 spring:
   jpa:
@@ -411,6 +434,7 @@ spring:
 ```
 
 ### Using Flyway (Recommended for Production)
+
 ```xml
 <dependency>
     <groupId>org.flywaydb</groupId>
@@ -427,6 +451,7 @@ spring:
 ```
 
 **Migration files in `src/main/resources/db/migration/`:**
+
 ```sql
 -- V1__Create_users_table.sql
 CREATE TABLE users (
@@ -448,6 +473,7 @@ CREATE TABLE user_roles (
 ```
 
 ### Using Liquibase
+
 ```xml
 <dependency>
     <groupId>org.liquibase</groupId>
@@ -466,6 +492,7 @@ spring:
 Ricardo Auth creates these tables automatically:
 
 ### Users Table
+
 ```sql
 CREATE TABLE users (
     id BIGINT AUTO_INCREMENT PRIMARY KEY,
@@ -478,6 +505,7 @@ CREATE TABLE users (
 ```
 
 ### User Roles Table
+
 ```sql
 CREATE TABLE user_roles (
     user_id BIGINT NOT NULL,
@@ -488,6 +516,7 @@ CREATE TABLE user_roles (
 ```
 
 ### Indexes (Automatically created)
+
 ```sql
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
@@ -497,6 +526,7 @@ CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
 ## Environment-Specific Configuration
 
 ### Development
+
 ```yaml
 # application-dev.yml
 spring:
@@ -511,6 +541,7 @@ spring:
 ```
 
 ### Testing
+
 ```yaml
 # application-test.yml
 spring:
@@ -525,6 +556,7 @@ spring:
 ```
 
 ### Production
+
 ```yaml
 # application-prod.yml
 spring:
@@ -547,39 +579,51 @@ spring:
 ### Common Database Issues
 
 **1. Connection Refused**
+
 ```
 Error: Connection refused to database
 ```
+
 **Solutions:**
+
 - Check database is running
 - Verify connection URL, username, password
 - Check firewall settings
 - Ensure database accepts connections from your IP
 
 **2. Schema/Table Not Found**
+
 ```
 Error: Table 'users' doesn't exist
 ```
+
 **Solutions:**
+
 - Set `ddl-auto: create` or `ddl-auto: update`
 - Run database migrations manually
 - Check database name is correct
 
 **3. Pool Exhaustion**
+
 ```
 Error: Connection is not available, request timed out
 ```
+
 **Solutions:**
+
 - Increase `maximum-pool-size`
 - Check for connection leaks
 - Optimize query performance
 - Monitor connection usage
 
 **4. Authentication Failed**
+
 ```
 Error: Access denied for user
 ```
+
 **Solutions:**
+
 - Verify database credentials
 - Check user has necessary permissions
 - Ensure user can connect from application host
@@ -587,6 +631,7 @@ Error: Access denied for user
 ### Connection Testing
 
 **Test connection without starting full application:**
+
 ```java
 @Test
 public void testDatabaseConnection() {
@@ -607,6 +652,7 @@ public void testDatabaseConnection() {
 ```
 
 ### Health Checks
+
 ```bash
 # Check database connectivity
 curl http://localhost:8080/actuator/health
@@ -616,6 +662,7 @@ curl http://localhost:8080/actuator/health/db
 ```
 
 ### Performance Monitoring
+
 ```yaml
 # Enable detailed metrics
 management:
@@ -630,6 +677,7 @@ management:
 ```
 
 **View metrics:**
+
 ```bash
 # Connection pool metrics
 curl http://localhost:8080/actuator/metrics/hikaricp.connections.active
@@ -641,17 +689,20 @@ curl http://localhost:8080/actuator/metrics/jdbc.connections.active
 ## Migration from Other Databases
 
 ### From H2 to PostgreSQL
+
 1. Export H2 data: `SCRIPT TO 'backup.sql'`
 2. Convert SQL syntax for PostgreSQL
 3. Update configuration to PostgreSQL
 4. Import data to PostgreSQL
 
 ### From MySQL to PostgreSQL
+
 1. Use migration tools like `pgloader`
 2. Update configuration
 3. Test thoroughly
 
 **Example pgloader config:**
+
 ```
 load database
     from mysql://user:pass@localhost/auth_db
@@ -659,4 +710,5 @@ load database
 alter schema 'auth_db' rename to 'public';
 ```
 
-This comprehensive database configuration guide covers all major database systems and deployment scenarios for Ricardo Auth.
+This comprehensive database configuration guide covers all major database systems and deployment scenarios for Ricardo
+Auth.

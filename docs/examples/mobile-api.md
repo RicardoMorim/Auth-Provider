@@ -2,11 +2,12 @@
 
 **Perfect for:** REST APIs, mobile applications, single-page applications  
 **Complexity:** ⭐⭐ Medium  
-**Time:** 25 minutes  
+**Time:** 25 minutes
 
 ## What You'll Build
 
 A robust REST API backend for mobile applications with:
+
 - ✅ Mobile-optimized JWT authentication
 - ✅ User management endpoints
 - ✅ Extended token expiration for mobile use
@@ -133,6 +134,7 @@ mobile-api-backend/
 ## Step 2: Mobile-Optimized Configuration
 
 ### application.yml
+
 ```yaml
 spring:
   application:
@@ -629,6 +631,7 @@ Content-Type: application/json
 
 "<token-to-revoke>"
 ```
+
 - Works for both access and refresh tokens.
 - Revoked tokens are blocked in memory or Redis (depending on config).
 
@@ -858,6 +861,7 @@ public class MobileUserService {
 ### Test Scripts
 
 #### 1. User Registration
+
 ```bash
 curl -X POST http://localhost:8080/api/users/create \
   -H "Content-Type: application/json" \
@@ -869,6 +873,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 #### 2. Mobile Login
+
 ```bash
 curl -X POST http://localhost:8080/api/mobile/auth/login \
   -H "Content-Type: application/json" \
@@ -879,12 +884,14 @@ curl -X POST http://localhost:8080/api/mobile/auth/login \
 ```
 
 #### 3. Get User Profile
+
 ```bash
 curl -X GET http://localhost:8080/api/mobile/users/profile \
   --cookie "access_token=YOUR_ACCESS_TOKEN"
 ```
 
 #### 4. Validate Token
+
 ```bash
 curl -X POST http://localhost:8080/api/mobile/auth/validate \
   --cookie "access_token=YOUR_ACCESS_TOKEN"
@@ -893,6 +900,7 @@ curl -X POST http://localhost:8080/api/mobile/auth/validate \
 ### Mobile App Integration Examples
 
 #### React Native Example
+
 ```javascript
 // MobileAuthService.js
 class MobileAuthService {
@@ -960,6 +968,7 @@ export default new MobileAuthService();
 ```
 
 #### Flutter Example
+
 ```dart
 // mobile_auth_service.dart
 import 'dart:convert';
@@ -1052,12 +1061,14 @@ class MobileAuthService {
 ## 🚀 Next Steps
 
 ### Enhance Your Mobile API
+
 - Add push notification support
 - Implement offline data synchronization
 - Add file upload for profile pictures
 - Create admin management endpoints
 
 ### Production Deployment
+
 - Set up PostgreSQL database
 - Configure environment variables
 - Add rate limiting
@@ -1065,6 +1076,7 @@ class MobileAuthService {
 - Implement monitoring and logging
 
 ### Mobile App Development
+
 - **[React Native Integration](https://reactnative.dev/)** - Build cross-platform mobile apps
 - **[Flutter Integration](https://flutter.dev/)** - Build native mobile apps
 - **[Ionic Integration](https://ionicframework.com/)** - Build hybrid mobile apps
@@ -1072,12 +1084,14 @@ class MobileAuthService {
 ## 🆘 Troubleshooting
 
 ### Common Mobile-Specific Issues
+
 - **CORS errors** → Check your CORS configuration and allowed origins
 - **Token expiration too short** → Adjust JWT expiration time for mobile use
 - **Network timeouts** → Configure appropriate connection timeouts
 - **Token storage** → Use secure storage (Keychain, Android Keystore)
 
 ### Need Help?
+
 - 📖 [Troubleshooting Guide](../troubleshooting/index.md)
 - 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)
 
@@ -1087,7 +1101,9 @@ class MobileAuthService {
 
 # ⚠️ Breaking Changes in v2.0.0
 
-- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`, and `sameSite` flags by default. You must update your frontend to use cookies instead of Authorization headers for most endpoints.
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`,
+  and `sameSite` flags by default. You must update your frontend to use cookies instead of Authorization headers for
+  most endpoints.
 - **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
 - **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
 - **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
@@ -1096,6 +1112,7 @@ class MobileAuthService {
 ## Updated Configuration Examples
 
 ### application.yml (Development)
+
 ```yaml
 spring:
   application:
@@ -1198,6 +1215,7 @@ logging:
 ```
 
 ### application.yml (Production)
+
 ```yaml
 spring:
   config:

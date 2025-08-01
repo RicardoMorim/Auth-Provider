@@ -1,6 +1,7 @@
 # Contributing to Ricardo Auth Spring Boot Starter
 
-Thank you for your interest in contributing to the Ricardo Auth Spring Boot Starter! This document provides guidelines and instructions for contributing to the project.
+Thank you for your interest in contributing to the Ricardo Auth Spring Boot Starter! This document provides guidelines
+and instructions for contributing to the project.
 
 ## Table of Contents
 
@@ -17,7 +18,10 @@ Thank you for your interest in contributing to the Ricardo Auth Spring Boot Star
 
 ## Code of Conduct
 
-This project follows the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). By participating, you are expected to uphold this code. Please report unacceptable behavior to [ricardomorim05@gmail.com](mailto:ricardomorim05@gmail.com).
+This project follows
+the [Contributor Covenant Code of Conduct](https://www.contributor-covenant.org/version/2/1/code_of_conduct/). By
+participating, you are expected to uphold this code. Please report unacceptable behavior
+to [ricardomorim05@gmail.com](mailto:ricardomorim05@gmail.com).
 
 ### Our Pledge
 
@@ -103,12 +107,12 @@ We welcome the following types of contributions:
 #### IntelliJ IDEA
 
 1. **Import Project**: File → Open → Select the `pom.xml`
-2. **Code Style**: 
-   - File → Settings → Editor → Code Style → Java
-   - Import the project's code style (if available)
-3. **Enable Annotations**: 
-   - File → Settings → Build → Compiler → Annotation Processors
-   - Enable annotation processing
+2. **Code Style**:
+    - File → Settings → Editor → Code Style → Java
+    - Import the project's code style (if available)
+3. **Enable Annotations**:
+    - File → Settings → Build → Compiler → Annotation Processors
+    - Enable annotation processing
 
 #### Eclipse
 
@@ -136,21 +140,20 @@ spring:
 
 ## Coding Standards
 
-
 #### Naming Conventions
 
 ```java
 // Classes: PascalCase
 public class UserService {
 
-// Methods: camelCase
-public void createUser() {
+    // Methods: camelCase
+    public void createUser() {
 
 // Variables: camelCase
-private String userName;
+        private String userName;
 
 // Constants: UPPER_SNAKE_CASE
-private static final String DEFAULT_ROLE = "USER";
+        private static final String DEFAULT_ROLE = "USER";
 
 // Packages: lowercase with dots
 package com.ricardo.auth.service;
@@ -159,35 +162,37 @@ package com.ricardo.auth.service;
 #### Code Examples
 
 **Good:**
+
 ```java
+
 @Service
 @Transactional
 public class UserServiceImpl implements UserService {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(UserServiceImpl.class);
-    
+
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
-    
+
     public UserServiceImpl(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
     }
-    
+
     @Override
     public User createUser(User user) {
         validateUser(user);
-        
+
         if (userRepository.existsByEmail(user.getEmail().getValue())) {
             throw new UserAlreadyExistsException("User already exists: " + user.getEmail().getValue());
         }
-        
+
         User savedUser = userRepository.save(user);
         logger.info("Created user with ID: {}", savedUser.getId());
-        
+
         return savedUser;
     }
-    
+
     private void validateUser(User user) {
         if (user == null) {
             throw new IllegalArgumentException("User cannot be null");
@@ -206,23 +211,23 @@ All public classes and methods should have comprehensive JavaDoc:
 ```java
 /**
  * Service for managing user accounts and authentication.
- * 
+ *
  * <p>This service provides comprehensive user management functionality including
  * user creation, authentication, and profile management. It integrates with
  * Spring Security for authentication and authorization.
- * 
+ *
  * @author Ricardo
  * @since 1.0.0
  */
 @Service
 public class UserService {
-    
+
     /**
      * Creates a new user account with the provided information.
-     * 
+     *
      * <p>This method validates the user information, checks for duplicates,
      * encrypts the password, and persists the user to the database.
-     * 
+     *
      * @param user the user to create, must not be null
      * @return the created user with generated ID
      * @throws UserAlreadyExistsException if a user with the same email exists
@@ -258,6 +263,7 @@ BCryptPasswordEncoder encoder = new BCryptPasswordEncoder();
 Follow the AAA pattern (Arrange, Act, Assert):
 
 ```java
+
 @Test
 void shouldCreateUserSuccessfully() {
     // Arrange
@@ -265,38 +271,41 @@ void shouldCreateUserSuccessfully() {
     request.setUsername("testuser");
     request.setEmail("test@example.com");
     request.setPassword("password123");
-    
+
     // Act
     UserDTO result = userService.createUser(request);
-    
+
     // Assert
     assertThat(result).isNotNull();
-assertThat(result.getUsername()).isEqualTo("testuser");
+    assertThat(result.getUsername()).isEqualTo("testuser");
     assertThat(result.getEmail()).isEqualTo("test@example.com");
 }
 ```
 
-- Ensure tests reflect the new authentication flow: use secure cookies for authentication, not Authorization headers (except for legacy user endpoints).
+- Ensure tests reflect the new authentication flow: use secure cookies for authentication, not Authorization headers (
+  except for legacy user endpoints).
 - When writing integration tests for authentication, simulate cookie-based login and token refresh.
-- For rate limiting and blocklist, add tests that verify correct enforcement and revocation using the new endpoints and cookie-based tokens.
+- For rate limiting and blocklist, add tests that verify correct enforcement and revocation using the new endpoints and
+  cookie-based tokens.
 
 ### Test Categories
 
 #### Unit Tests
 
 ```java
+
 @ExtendWith(MockitoExtension.class)
 class UserServiceTest {
-    
+
     @Mock
     private UserRepository userRepository;
-    
+
     @Mock
     private PasswordEncoder passwordEncoder;
-    
+
     @InjectMocks
     private UserServiceImpl userService;
-    
+
     @Test
     void shouldCreateUserWhenValidInput() {
         // Test implementation
@@ -307,14 +316,15 @@ class UserServiceTest {
 #### Integration Tests
 
 ```java
+
 @SpringBootTest
 @AutoConfigureTestDatabase(replace = AutoConfigureTestDatabase.Replace.ANY)
 @Transactional
 class UserControllerIntegrationTest {
-    
+
     @Autowired
     private TestRestTemplate restTemplate;
-    
+
     @Test
     void shouldCreateUserViaRestAPI() {
         // Test implementation
@@ -325,13 +335,14 @@ class UserControllerIntegrationTest {
 #### Security Tests
 
 ```java
+
 @SpringBootTest
 @AutoConfigureTestDatabase
 class SecurityIntegrationTest {
-    
+
     @Autowired
     private MockMvc mockMvc;
-    
+
     @Test
     @WithMockUser(roles = "USER")
     void shouldAllowAuthenticatedUserAccess() {
@@ -379,8 +390,10 @@ mvn test -Dtest=*IntegrationTest
 - **Examples**: Include practical examples
 - **Completeness**: Cover all public APIs
 - **Maintenance**: Keep documentation up-to-date
-- Update documentation and code examples to use cookie-based authentication and highlight the removal of Authorization header for most endpoints.
-- Clearly document any breaking changes, especially around authentication, blocklist, rate limiting, and HTTPS enforcement.
+- Update documentation and code examples to use cookie-based authentication and highlight the removal of Authorization
+  header for most endpoints.
+- Clearly document any breaking changes, especially around authentication, blocklist, rate limiting, and HTTPS
+  enforcement.
 
 ### Updating Documentation
 
@@ -429,20 +442,24 @@ When creating a pull request, include:
 
 ```markdown
 ## Description
+
 Brief description of changes
 
 ## Type of Change
+
 - [ ] Bug fix
 - [ ] New feature
 - [ ] Breaking change
 - [ ] Documentation update
 
 ## Testing
+
 - [ ] Unit tests added/updated
 - [ ] Integration tests added/updated
 - [ ] Manual testing completed
 
 ## Checklist
+
 - [ ] Code follows style guidelines
 - [ ] Self-review completed
 - [ ] Documentation updated
@@ -471,6 +488,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 ```
 
 **Types:**
+
 - `feat`: New feature
 - `fix`: Bug fix
 - `docs`: Documentation changes
@@ -480,6 +498,7 @@ Follow [Conventional Commits](https://www.conventionalcommits.org/):
 - `chore`: Build/tooling changes
 
 **Examples:**
+
 ```
 feat(auth): add refresh token support
 fix(security): resolve JWT validation issue
@@ -504,6 +523,7 @@ Steps to reproduce the behavior
 What you expected to happen
 
 **Environment:**
+
 - OS: [e.g., Windows 10]
 - Java Version: [e.g., 17]
 - Spring Boot Version: [e.g., 3.5.3]
@@ -534,6 +554,7 @@ Any other context or screenshots
 ### Security Issues
 
 For security issues:
+
 1. **Do not create a public issue**
 2. **Email**: [ricardomorim05@gmail.com](mailto:ricardomorim05@gmail.com)
 3. **Include**: Detailed description and steps to reproduce
@@ -557,6 +578,7 @@ For security issues:
 ### Recognition
 
 Contributors will be recognized in:
+
 - **Contributors section** in README
 - **Changelog** for significant contributions
 - **GitHub releases** notes
@@ -567,4 +589,5 @@ By contributing, you agree that your contributions will be licensed under the MI
 
 ---
 
-Thank you for contributing to Ricardo Auth Spring Boot Starter! Your contributions help make authentication easier for Spring Boot developers worldwide.
+Thank you for contributing to Ricardo Auth Spring Boot Starter! Your contributions help make authentication easier for
+Spring Boot developers worldwide.

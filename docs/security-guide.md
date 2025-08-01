@@ -40,29 +40,36 @@ String token = jwtService.generateToken(username, authorities);
 #### Generating Secure Secrets
 
 **OpenSSL (Recommended):**
+
 ```bash
 openssl rand -base64 32
 ```
 
 **Node.js:**
+
 ```javascript
 require('crypto').randomBytes(32).toString('base64')
 ```
 
 **Python:**
+
 ```python
 import secrets, base64
 base64.b64encode(secrets.token_bytes(32)).decode()
 ```
 
 **Java:**
+
 ```java
 import java.security.SecureRandom;
 import java.util.Base64;
 
 SecureRandom random = new SecureRandom();
 byte[] bytes = new byte[32];
-random.nextBytes(bytes);
+random.
+
+nextBytes(bytes);
+
 String secret = Base64.getEncoder().encodeToString(bytes);
 ```
 
@@ -79,11 +86,11 @@ Rotate your JWT secret regularly:
 
 Configure appropriate token expiration based on your security requirements:
 
-| Security Level | Recommended Expiration | Use Case |
-|----------------|----------------------|----------|
-| High Security | 15-60 minutes | Banking, financial apps |
-| Standard Security | 1-8 hours | Business applications |
-| Low Security | 24 hours - 7 days | Social apps, blogs |
+| Security Level    | Recommended Expiration | Use Case                |
+|-------------------|------------------------|-------------------------|
+| High Security     | 15-60 minutes          | Banking, financial apps |
+| Standard Security | 1-8 hours              | Business applications   |
+| Low Security      | 24 hours - 7 days      | Social apps, blogs      |
 
 ```yaml
 ricardo:
@@ -105,6 +112,7 @@ ricardo:
    ```
 
 **Avoid:**
+
 - LocalStorage (vulnerable to XSS)
 - URL parameters (logged in server logs)
 - Unencrypted cookies
@@ -133,7 +141,7 @@ function validatePassword(password) {
         hasNumbers: /\d/.test(password),
         hasSpecialChar: /[!@#$%^&*(),.?":{}|<>]/.test(password)
     };
-    
+
     return Object.values(requirements).every(req => req);
 }
 ```
@@ -143,12 +151,14 @@ function validatePassword(password) {
 **Never store passwords in plain text:**
 
 ✅ **Good:**
+
 ```java
 // The starter handles this automatically
 String hashedPassword = passwordEncoder.encode(plainTextPassword);
 ```
 
 ❌ **Bad:**
+
 ```java
 // Never do this
 String password = "plaintext"; // Stored in database
@@ -158,7 +168,8 @@ String password = "plaintext"; // Stored in database
 
 ### Overview
 
-The Ricardo Auth Starter includes a comprehensive password policy system that enforces configurable password requirements to enhance security.
+The Ricardo Auth Starter includes a comprehensive password policy system that enforces configurable password
+requirements to enhance security.
 
 ### Password Requirements
 
@@ -195,6 +206,7 @@ ricardo:
 #### Built-in Common Passwords
 
 The system includes 10,000+ common passwords including:
+
 - Dictionary words
 - Common patterns (123456, password, etc.)
 - Keyboard patterns (qwerty, asdf, etc.)
@@ -246,6 +258,7 @@ logging:
 ```
 
 Monitor these metrics:
+
 - Password policy violation rates
 - Common password attempt frequency
 - Password strength distribution
@@ -255,6 +268,7 @@ Monitor these metrics:
 ### Default Roles
 
 The starter provides these roles:
+
 - `USER`: Standard user permissions
 - `ADMIN`: Administrative permissions
 
@@ -267,13 +281,13 @@ public enum CustomRole implements Role {
     MANAGER("ROLE_MANAGER"),
     MODERATOR("ROLE_MODERATOR"),
     PREMIUM_USER("ROLE_PREMIUM_USER");
-    
+
     private final String authority;
-    
+
     CustomRole(String authority) {
         this.authority = authority;
     }
-    
+
     @Override
     public String getAuthority() {
         return authority;
@@ -286,21 +300,22 @@ public enum CustomRole implements Role {
 Secure individual methods:
 
 ```java
+
 @RestController
 public class SecureController {
-    
+
     @PreAuthorize("hasRole('ADMIN')")
     @GetMapping("/admin-only")
     public ResponseEntity<String> adminEndpoint() {
         return ResponseEntity.ok("Admin content");
     }
-    
+
     @PreAuthorize("hasRole('USER') or hasRole('ADMIN')")
     @GetMapping("/user-content")
     public ResponseEntity<String> userEndpoint() {
         return ResponseEntity.ok("User content");
     }
-    
+
     @PreAuthorize("@userSecurityService.isOwner(authentication.name, #userId)")
     @GetMapping("/users/{userId}/profile")
     public ResponseEntity<UserDTO> getUserProfile(@PathVariable Long userId) {
@@ -315,11 +330,12 @@ public class SecureController {
 Implement complex authorization logic:
 
 ```java
+
 @Service("userSecurityService")
 public class UserSecurityService {
-    
+
     private final UserService userService;
-    
+
     public boolean isOwner(String email, Long userId) {
         try {
             User user = userService.getUserByEmail(email);
@@ -328,16 +344,16 @@ public class UserSecurityService {
             return false;
         }
     }
-    
+
     public boolean canEditUser(String email, Long targetUserId) {
         try {
             User currentUser = userService.getUserByEmail(email);
-            
+
             // Admins can edit anyone
             if (currentUser.hasRole(AppRole.ADMIN)) {
                 return true;
             }
-            
+
             // Users can edit themselves
             return currentUser.getId().equals(targetUserId);
         } catch (Exception e) {
@@ -416,16 +432,16 @@ Configure CORS properly to prevent unauthorized cross-origin requests:
 spring:
   web:
     cors:
-      allowed-origins: 
+      allowed-origins:
         - "https://yourdomain.com"
         - "https://app.yourdomain.com"
-      allowed-methods: 
+      allowed-methods:
         - "GET"
-        - "POST" 
+        - "POST"
         - "PUT"
         - "DELETE"
         - "OPTIONS"
-      allowed-headers: 
+      allowed-headers:
         - "Content-Type"
         - "X-Requested-With"
       allow-credentials: true
@@ -433,6 +449,7 @@ spring:
 ```
 
 **Security Notes:**
+
 - Never use `*` for `allowed-origins` in production
 - Only include necessary HTTP methods
 - Be specific about allowed headers
@@ -445,9 +462,10 @@ spring:
 Always validate input data:
 
 ```java
+
 @RestController
 public class SecureUserController {
-    
+
     @PostMapping("/users")
     public ResponseEntity<UserDTO> createUser(@Valid @RequestBody CreateUserRequestDTO request) {
         // @Valid annotation triggers validation
@@ -457,17 +475,17 @@ public class SecureUserController {
 
 // DTO with validation
 public class CreateUserRequestDTO {
-    
+
     @NotBlank(message = "Username is required")
     @Size(min = 3, max = 50, message = "Username must be between 3 and 50 characters")
     @Pattern(regexp = "^[a-zA-Z0-9_]+$", message = "Username can only contain letters, numbers, and underscores")
     private String username;
-    
+
     @NotBlank(message = "Email is required")
     @Email(message = "Email must be valid")
     @Size(max = 255, message = "Email must not exceed 255 characters")
     private String email;
-    
+
     @NotBlank(message = "Password is required")
     @Size(min = 8, max = 128, message = "Password must be between 8 and 128 characters")
     private String password;
@@ -479,12 +497,15 @@ public class CreateUserRequestDTO {
 The starter uses JPA/Hibernate, which provides automatic protection:
 
 ✅ **Safe (Parameterized queries):**
+
 ```java
+
 @Query("SELECT u FROM User u WHERE u.email = :email")
 Optional<User> findByEmail(@Param("email") String email);
 ```
 
 ❌ **Dangerous (String concatenation):**
+
 ```java
 // Never do this - vulnerable to SQL injection
 @Query("SELECT u FROM User u WHERE u.email = '" + email + "'")
@@ -495,9 +516,10 @@ Optional<User> findByEmail(@Param("email") String email);
 Add security headers to your responses:
 
 ```java
+
 @Configuration
 public class SecurityHeadersConfig {
-    
+
     @Bean
     public FilterRegistrationBean<SecurityHeadersFilter> securityHeadersFilter() {
         FilterRegistrationBean<SecurityHeadersFilter> registration = new FilterRegistrationBean<>();
@@ -508,24 +530,24 @@ public class SecurityHeadersConfig {
 }
 
 public class SecurityHeadersFilter implements Filter {
-    
+
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
-        
+
         HttpServletResponse httpResponse = (HttpServletResponse) response;
-        
+
         // Prevent XSS attacks
         httpResponse.setHeader("X-Content-Type-Options", "nosniff");
         httpResponse.setHeader("X-Frame-Options", "DENY");
         httpResponse.setHeader("X-XSS-Protection", "1; mode=block");
-        
+
         // HTTPS enforcement
         httpResponse.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains");
-        
+
         // Content Security Policy
         httpResponse.setHeader("Content-Security-Policy", "default-src 'self'");
-        
+
         chain.doFilter(request, response);
     }
 }
@@ -551,20 +573,21 @@ logging:
 Track important security events:
 
 ```java
+
 @EventListener
 public class SecurityAuditEventListener {
-    
+
     private static final Logger logger = LoggerFactory.getLogger(SecurityAuditEventListener.class);
-    
+
     @EventListener
     public void onAuthenticationSuccess(AuthenticationSuccessEvent event) {
         logger.info("Successful authentication for user: {}", event.getAuthentication().getName());
     }
-    
+
     @EventListener
     public void onAuthenticationFailure(AbstractAuthenticationFailureEvent event) {
-        logger.warn("Failed authentication attempt for user: {}", 
-                   event.getAuthentication().getName());
+        logger.warn("Failed authentication attempt for user: {}",
+                event.getAuthentication().getName());
     }
 }
 ```
@@ -577,6 +600,7 @@ public class SecurityAuditEventListener {
 - Configure via `ricardo.auth.rate-limiter`.
 - Implementations: `memory` (default) and `redis`.
 - Example:
+
 ```yaml
 ricardo:
   auth:
@@ -586,6 +610,7 @@ ricardo:
       max-requests: 100
       time-window-ms: 60000
 ```
+
 - If the limit is exceeded, HTTP 429 is returned.
 
 ### Token Blocklist (Revocation)
@@ -594,23 +619,28 @@ ricardo:
 - Blocklist implemented in memory or Redis.
 - Revocation endpoint: `/api/auth/revoke` (ADMIN, accepts access or refresh token).
 - Example usage:
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/revoke \
   -H "Content-Type: application/json" \
   --cookie "access_token=<ADMIN_TOKEN>" \
   -d '{"token": "TOKEN_TO_REVOKE"}'
 ```
+
 - Revoked tokens are rejected immediately.
 
 > **Breaking change v2.0.0:**
-> - Authentication cookies now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required for production.
+> - Authentication cookies now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required for
+    production.
 > - Blocklist and rate limiting are enabled by default.
 > - Revocation endpoint `/api/auth/revoke` was added and requires ADMIN permission.
-> - The Authorization header is deprecated for authentication (except for legacy user endpoints). Use secure cookies for all authentication flows.
+> - The Authorization header is deprecated for authentication (except for legacy user endpoints). Use secure cookies for
+    all authentication flows.
 
 ## Security Checklist
 
 ### Development
+
 - [x] Use strong JWT secret keys
 - [x] Set appropriate token expiration times
 - [x] Implement input validation
@@ -621,6 +651,7 @@ curl -X POST http://localhost:8080/api/auth/revoke \
 - [x] Use cookies for all tokens
 
 ### Staging/Testing
+
 - [ ] Test with realistic data volumes
 - [ ] Perform security penetration testing
 - [ ] Validate rate limiting
@@ -628,6 +659,7 @@ curl -X POST http://localhost:8080/api/auth/revoke \
 - [ ] Verify CORS configuration
 
 ### Production
+
 - [ ] Use environment variables for secrets
 - [ ] Enable HTTPS with valid certificates
 - [ ] Configure proper CORS policies
@@ -641,6 +673,7 @@ curl -X POST http://localhost:8080/api/auth/revoke \
 ### 1. Weak JWT Secrets
 
 ❌ **Problem:**
+
 ```yaml
 ricardo:
   auth:
@@ -649,6 +682,7 @@ ricardo:
 ```
 
 ✅ **Solution:**
+
 ```yaml
 ricardo:
   auth:
@@ -659,12 +693,14 @@ ricardo:
 ### 2. Token Storage in LocalStorage
 
 ❌ **Problem:**
+
 ```javascript
 // Vulnerable to XSS attacks
 localStorage.setItem('token', token);
 ```
 
 ✅ **Solution:**
+
 ```javascript
 // Use HttpOnly cookies or sessionStorage
 sessionStorage.setItem('token', token);
@@ -673,11 +709,13 @@ sessionStorage.setItem('token', token);
 ### 3. No HTTPS
 
 ❌ **Problem:**
+
 ```
 http://myapp.com/api/auth/login  // Credentials sent in plain text
 ```
 
 ✅ **Solution:**
+
 ```
 https://myapp.com/api/auth/login  // Encrypted transport
 ```
@@ -685,6 +723,7 @@ https://myapp.com/api/auth/login  // Encrypted transport
 ### 4. Overly Permissive CORS
 
 ❌ **Problem:**
+
 ```yaml
 spring:
   web:
@@ -693,6 +732,7 @@ spring:
 ```
 
 ✅ **Solution:**
+
 ```yaml
 spring:
   web:
@@ -703,6 +743,7 @@ spring:
 ### 5. Long Token Expiration
 
 ❌ **Problem:**
+
 ```yaml
 ricardo:
   auth:
@@ -711,6 +752,7 @@ ricardo:
 ```
 
 ✅ **Solution:**
+
 ```yaml
 ricardo:
   auth:

@@ -13,7 +13,8 @@ https://yourdomain.com # Production
 
 ## Authentication
 
-Most endpoints require authentication via secure cookies (`access_token`, `refresh_token`). **The Authorization header is no longer used for authentication (BREAKING CHANGE).**
+Most endpoints require authentication via secure cookies (`access_token`, `refresh_token`). **The Authorization header
+is no longer used for authentication (BREAKING CHANGE).**
 
 - Tokens are now set and read via HTTP-only, Secure cookies for improved security.
 - The frontend must send cookies with each request (see CORS and credentials).
@@ -99,6 +100,7 @@ Cookie: refresh_token=...;
 #### Response
 
 **Success (200 OK):**
+
 - Sets new `access_token` and (optionally) new `refresh_token` cookies.
 - No body is returned by default.
 
@@ -133,12 +135,13 @@ curl -X POST http://localhost:8080/api/auth/refresh \
 
 ### POST /api/auth/revoke (ADMIN only)
 
-
-Revokes a token (either access or refresh). Requires ADMIN role. The request body must be a JSON object with a `token` field specifying the token to revoke.
+Revokes a token (either access or refresh). Requires ADMIN role. The request body must be a JSON object with a `token`
+field specifying the token to revoke.
 
 #### Request
 
 **Headers:**
+
 ```
 Content-Type: application/json
 Cookie: access_token=...;
@@ -155,8 +158,11 @@ Cookie: access_token=...;
 #### Response
 
 **Success (200 OK):**
+
 ```json
-{"message": "Token revoked successfully"}
+{
+  "message": "Token revoked successfully"
+}
 ```
 
 ### GET /api/auth/me
@@ -222,7 +228,7 @@ Content-Type: application/json
 {
   "username": "string",
   // Required: Unique username (3-50 characters)
-  "email": "string", 
+  "email": "string",
   // Required: Valid email address (unique)
   "password": "string"
   // Required: Password meeting policy requirements
@@ -230,9 +236,10 @@ Content-Type: application/json
 ```
 
 **Password Requirements with default settings:**
+
 - Minimum 10 characters (configurable)
 - At least one uppercase letter
-- At least one lowercase letter  
+- At least one lowercase letter
 - At least one numeric digit
 - At least one special character: `!@#$%^&*()`
 - Not in common passwords list
@@ -295,11 +302,13 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **Valid Password Examples:**
+
 - `MySecure@Pass123!`
 - `StrongP@ssw0rd`
 - `Secure123!@#`
 
 **Invalid Password Examples:**
+
 - `password123` (no uppercase, no special chars)
 - `PASSWORD123` (no lowercase)
 - `MyPassword` (no digits, no special chars)
@@ -310,7 +319,6 @@ curl -X POST http://localhost:8080/api/users/create \
 Get user information by ID.
 
 #### Request
-
 
 **Headers:**
 
@@ -359,7 +367,6 @@ curl -X GET http://localhost:8080/api/users/1 \
 Get user information by email address.
 
 #### Request
-
 
 **Headers:**
 
@@ -441,7 +448,6 @@ Update user information.
 
 #### Request
 
-
 **Headers:**
 
 ```
@@ -510,7 +516,6 @@ Delete a user account.
 **Authorization Required:** Must be the user owner or have ADMIN role.
 
 #### Request
-
 
 **Headers:**
 
@@ -639,7 +644,6 @@ The API implements rate limiting (in-memory or Redis). When rate limited, you'll
 - Revoked tokens are rejected for all endpoints.
 - Use `/api/auth/revoke` to revoke any token (access or refresh).
 
-
 ## Cookie Security (BREAKING CHANGE)
 
 - All tokens are now sent via HTTP-only, Secure cookies.
@@ -648,7 +652,10 @@ The API implements rate limiting (in-memory or Redis). When rate limited, you'll
 - The Authorization header is no longer used for authentication.
 
 > **Note:**
-> If you are integrating with a third-party frontend, mobile app, or any cross-domain/embedded context where cookies are the only authentication method, you **must** set `SameSite=None` and `Secure=true` for the relevant cookies. This is required for browsers to send cookies in cross-site requests and is essential for proper login and session functionality in embedded or cross-site scenarios.
+> If you are integrating with a third-party frontend, mobile app, or any cross-domain/embedded context where cookies are
+> the only authentication method, you **must** set `SameSite=None` and `Secure=true` for the relevant cookies. This is
+> required for browsers to send cookies in cross-site requests and is essential for proper login and session functionality
+> in embedded or cross-site scenarios.
 
 ## Postman Collection
 
@@ -760,7 +767,7 @@ You can import the following Postman collection to test the API:
 ```javascript
 // Use fetch with credentials to send cookies
 fetch('/api/auth/me', {
-  credentials: 'include'
+    credentials: 'include'
 });
 ```
 

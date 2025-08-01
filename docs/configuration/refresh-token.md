@@ -1,7 +1,9 @@
 # Refresh Token Configuration
 
 > **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+    development only.
 > - New blocklist and rate limiting features are available (see below).
 > - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
 
@@ -9,7 +11,8 @@ Complete guide to configuring refresh tokens for secure, long-lived user session
 
 ## 🔄 Overview
 
-Refresh tokens provide a secure way to maintain user sessions without requiring frequent re-authentication. The Ricardo Auth starter includes a comprehensive refresh token system with:
+Refresh tokens provide a secure way to maintain user sessions without requiring frequent re-authentication. The Ricardo
+Auth starter includes a comprehensive refresh token system with:
 
 - **Secure token generation** with unique identifiers
 - **Configurable storage backends** (JPA and PostgreSQL)
@@ -88,6 +91,7 @@ ricardo:
 ```
 
 **Advantages:**
+
 - ✅ Works with any JPA-compatible database
 - ✅ Automatic schema creation
 - ✅ Simple configuration
@@ -108,6 +112,7 @@ ricardo:
 ```
 
 **Advantages:**
+
 - ✅ High performance with native queries
 - ✅ Optimized for PostgreSQL features
 - ✅ Better concurrency handling
@@ -140,32 +145,32 @@ ricardo:
 
 ### Property Details
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `refresh-tokens.enabled` | Boolean | `true` | Enable/disable refresh token functionality |
-| `refresh-tokens.repository.type` | String | `"jpa"` | Storage backend (`"jpa"` or `"postgresql"`) |
-| `jwt.refresh-token-expiration` | Long | `604800000` | Token expiration time in milliseconds (7 days) |
-| `refresh-tokens.cleanup-interval` | Long | `3600000` | Cleanup interval for expired tokens (1 hour) |
-| `refresh-tokens.max-tokens-per-user` | Integer | `5` | Maximum active tokens per user |
-| `refresh-tokens.rotate-on-refresh` | Boolean | `true` | Rotate tokens on each refresh |
-| `refresh-tokens.auto-cleanup` | Boolean | `true` | Enable automatic token cleanup |
-| `refresh-tokens.repository.database.refresh-tokens-table` | String | `"refresh_tokens"` | Database table name |
-| `refresh-tokens.repository.database.schema` | String | `""` | Database schema (optional) |
-| `token-blocklist.enabled` | Boolean | `true` | Enable/disable token blocklist |
-| `token-blocklist.type` | String | `"memory"` | Blocklist backend (`"memory"` or `"redis"`) |
-| `rate-limiter.enabled` | Boolean | `true` | Enable/disable rate limiting |
-| `rate-limiter.type` | String | `"memory"` | Rate limiter backend (`"memory"` or `"redis"`) |
-| `rate-limiter.max-requests` | Integer | `100` | Max requests per window |
-| `rate-limiter.time-window-ms` | Long | `60000` | Time window in ms |
-| `cookies.access.secure` | Boolean | `true` | Use secure cookies for access token |
-| `cookies.access.http-only` | Boolean | `true` | Use httpOnly flag for access token cookie |
-| `cookies.access.same-site` | String | `Strict` | SameSite policy for access token cookie (`Strict`, `Lax`, or `None`) |
-| `cookies.access.path` | String | `/` | Path for access token cookie |
-| `cookies.refresh.secure` | Boolean | `true` | Use secure cookies for refresh token |
-| `cookies.refresh.http-only` | Boolean | `true` | Use httpOnly flag for refresh token cookie |
-| `cookies.refresh.same-site` | String | `Strict` | SameSite policy for refresh token cookie (`Strict`, `Lax`, or `None`) |
-| `cookies.refresh.path` | String | `/api/auth/refresh` | Path for refresh token cookie |
-| `redirect-https` | Boolean | `true` | Enforce HTTPS for all endpoints |
+| Property                                                  | Type    | Default             | Description                                                           |
+|-----------------------------------------------------------|---------|---------------------|-----------------------------------------------------------------------|
+| `refresh-tokens.enabled`                                  | Boolean | `true`              | Enable/disable refresh token functionality                            |
+| `refresh-tokens.repository.type`                          | String  | `"jpa"`             | Storage backend (`"jpa"` or `"postgresql"`)                           |
+| `jwt.refresh-token-expiration`                            | Long    | `604800000`         | Token expiration time in milliseconds (7 days)                        |
+| `refresh-tokens.cleanup-interval`                         | Long    | `3600000`           | Cleanup interval for expired tokens (1 hour)                          |
+| `refresh-tokens.max-tokens-per-user`                      | Integer | `5`                 | Maximum active tokens per user                                        |
+| `refresh-tokens.rotate-on-refresh`                        | Boolean | `true`              | Rotate tokens on each refresh                                         |
+| `refresh-tokens.auto-cleanup`                             | Boolean | `true`              | Enable automatic token cleanup                                        |
+| `refresh-tokens.repository.database.refresh-tokens-table` | String  | `"refresh_tokens"`  | Database table name                                                   |
+| `refresh-tokens.repository.database.schema`               | String  | `""`                | Database schema (optional)                                            |
+| `token-blocklist.enabled`                                 | Boolean | `true`              | Enable/disable token blocklist                                        |
+| `token-blocklist.type`                                    | String  | `"memory"`          | Blocklist backend (`"memory"` or `"redis"`)                           |
+| `rate-limiter.enabled`                                    | Boolean | `true`              | Enable/disable rate limiting                                          |
+| `rate-limiter.type`                                       | String  | `"memory"`          | Rate limiter backend (`"memory"` or `"redis"`)                        |
+| `rate-limiter.max-requests`                               | Integer | `100`               | Max requests per window                                               |
+| `rate-limiter.time-window-ms`                             | Long    | `60000`             | Time window in ms                                                     |
+| `cookies.access.secure`                                   | Boolean | `true`              | Use secure cookies for access token                                   |
+| `cookies.access.http-only`                                | Boolean | `true`              | Use httpOnly flag for access token cookie                             |
+| `cookies.access.same-site`                                | String  | `Strict`            | SameSite policy for access token cookie (`Strict`, `Lax`, or `None`)  |
+| `cookies.access.path`                                     | String  | `/`                 | Path for access token cookie                                          |
+| `cookies.refresh.secure`                                  | Boolean | `true`              | Use secure cookies for refresh token                                  |
+| `cookies.refresh.http-only`                               | Boolean | `true`              | Use httpOnly flag for refresh token cookie                            |
+| `cookies.refresh.same-site`                               | String  | `Strict`            | SameSite policy for refresh token cookie (`Strict`, `Lax`, or `None`) |
+| `cookies.refresh.path`                                    | String  | `/api/auth/refresh` | Path for refresh token cookie                                         |
+| `redirect-https`                                          | Boolean | `true`              | Enforce HTTPS for all endpoints                                       |
 
 ## 🏗️ Repository Implementation Details
 
@@ -208,6 +213,7 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 ```
 
 This design ensures:
+
 - ✅ No method signature conflicts
 - ✅ Type-safe operations
 - ✅ Proper inheritance hierarchy
@@ -281,6 +287,7 @@ private RefreshToken insert(RefreshToken token) {
 ```
 
 This ensures:
+
 - ✅ Proper timestamp precision handling
 - ✅ Timezone-aware operations
 - ✅ Optimal PostgreSQL performance
@@ -462,14 +469,17 @@ public class CustomRefreshTokenRepository implements RefreshTokenRepository {
 ### Common Issues
 
 #### 1. "RefreshToken not found"
+
 **Cause:** Token expired or doesn't exist
 **Solution:** Check token expiration and storage configuration
 
 #### 2. "Too many refresh tokens"
+
 **Cause:** Exceeded `max-tokens-per-user` limit
 **Solution:** Increase limit or implement token cleanup
 
 #### 3. "Database connection issues"
+
 **Cause:** Database not configured or connection pool exhausted
 **Solution:** Verify database configuration and connection pooling
 
@@ -503,4 +513,5 @@ logging:
 
 ---
 
-💡 **Need help?** Check the [troubleshooting guide](../troubleshooting/) or [open an issue](https://github.com/RicardoMorim/Auth-Provider/issues).
+💡 **Need help?** Check the [troubleshooting guide](../troubleshooting/)
+or [open an issue](https://github.com/RicardoMorim/Auth-Provider/issues).
