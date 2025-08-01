@@ -23,20 +23,6 @@ public class Email implements Serializable {
     }
 
     /**
-     * Gets email.
-     *
-     * @return the email
-     */
-    public String getEmail() {
-        return email;
-    }
-
-    @Override
-    public String toString() {
-        return email;
-    }
-
-    /**
      * Value of email.
      *
      * @param email the email
@@ -60,5 +46,19 @@ public class Email implements Serializable {
         }
 
         return new Email(email);
+    }
+
+    /**
+     * Gets email.
+     *
+     * @return the email
+     */
+    public String getEmail() {
+        return email;
+    }
+
+    @Override
+    public String toString() {
+        return email;
     }
 }

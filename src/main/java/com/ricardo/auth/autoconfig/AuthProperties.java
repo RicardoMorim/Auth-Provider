@@ -12,33 +12,206 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Also enables users to create their own custom configuration class that extends this one, allowing them to
  * override the default values.
  */
+@Setter
+@Getter
 @ConfigurationProperties(prefix = "ricardo.auth")
 public class AuthProperties {
 
+    // Root level getters and setters
+    /**
+     * Rate limiter configuration
+     * -- GETTER --
+     * Gets rate limiter.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets rate limiter.
+     *
+     * @return the rate limiter
+     * @param rateLimiter the rate limiter
+     */
+    RateLimiter rateLimiter = new RateLimiter();
+    /**
+     * The Token blocklist.
+     */
+    TokenBlocklist tokenBlocklist = new TokenBlocklist();
+    /**
+     * Redis configuration
+     * -- GETTER --
+     * Gets redis.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets redis.
+     *
+     * @return the redis
+     * @param redis the redis
+     */
+    Redis redis = new Redis();
+    /**
+     * The Cookies.
+     */
+    Cookies cookies = new Cookies();
     /**
      * Whether auth is enabled
+     * -- GETTER --
+     * Is enabled boolean.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets enabled.
+     *
+     * @return the boolean
+     * @param enabled the enabled
      */
     private boolean enabled = true;
-
     /**
      * JWT configuration
+     * -- GETTER --
+     * Gets jwt.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets jwt.
+     *
+     * @return the jwt
+     * @param jwt the jwt
      */
     private Jwt jwt = new Jwt();
-
     /**
      * Controller configuration
+     * -- GETTER --
+     * Gets controllers.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets controllers.
+     *
+     * @return the controllers
+     * @param controllers the controllers
      */
     private Controllers controllers = new Controllers();
-
     /**
      * Password policy configuration
+     * -- GETTER --
+     * Gets password policy.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets password policy.
+     *
+     * @return the password policy
+     * @param passwordPolicy the password policy
      */
     private PasswordPolicy passwordPolicy = new PasswordPolicy();
-
     /**
      * Refresh token configuration
+     * -- GETTER --
+     * Gets refresh tokens.
+     * <p>
+     * <p>
+     * -- SETTER --
+     * Sets refresh tokens.
+     *
+     * @return the refresh tokens
+     * @param refreshTokens the refresh tokens
      */
     private RefreshTokens refreshTokens = new RefreshTokens();
+    private boolean redirectHttps = true;
+
+    /**
+     * The enum Refresh token repository type.
+     */
+    public enum RefreshTokenRepositoryType {
+        /**
+         * Jpa refresh token repository type.
+         */
+        JPA("jpa"),
+        /**
+         * Postgresql refresh token repository type.
+         */
+        POSTGRESQL("postgresql");
+
+        @Getter
+        private final String value;
+
+        RefreshTokenRepositoryType(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public final String toString() {
+            return value;
+        }
+    }
+
+    /**
+     * The type Cookies.
+     */
+    @Getter
+    @Setter
+    public static class Cookies {
+        private AccessCookie access = new AccessCookie();
+        private RefreshCookie refresh = new RefreshCookie();
+
+        /**
+         * The type Access cookie.
+         */
+        @Getter
+        @Setter
+        public static class AccessCookie {
+            private boolean secure = true;
+            private boolean httpOnly = true;
+            private String sameSite = "Strict"; // Options: Strict, Lax, None
+            private String path = "/";
+        }
+
+        /**
+         * The type Refresh cookie.
+         */
+        @Getter
+        @Setter
+        public static class RefreshCookie {
+            private boolean secure = true;
+            private boolean httpOnly = true;
+            private String sameSite = "Strict"; // Options: Strict, Lax, None
+            private String path = "/api/auth/refresh";
+        }
+    }
+
+    /**
+     * The type Redis.
+     */
+    @Getter
+    @Setter
+    public static class Redis {
+        private String host = "localhost";
+        private int port = 6379;
+        private String password;
+        private int database = 0;
+    }
+
+    /**
+     * The type Rate limiter.
+     */
+    @Getter
+    @Setter
+    public static class RateLimiter {
+        private boolean enabled = true;
+        private String type = "memory"; // memory|redis
+        private int maxRequests = 100;
+        private long timeWindowMs = 60000L;
+    }
+
+    /**
+     * The type Token blocklist.
+     */
+    @Getter
+    @Setter
+    public static class TokenBlocklist {
+        private boolean enabled = true;
+        private String type = "memory"; // memory|redis
+    }
 
     /**
      * The type Refresh tokens.
@@ -93,32 +266,6 @@ public class AuthProperties {
         private String schema;
         private String url;
         private String driverClassName;
-    }
-
-    /**
-     * The enum Refresh token repository type.
-     */
-    public enum RefreshTokenRepositoryType {
-        /**
-         * Jpa refresh token repository type.
-         */
-        JPA ("jpa"),
-        /**
-         * Postgresql refresh token repository type.
-         */
-        POSTGRESQL ("postgresql");
-
-        @Getter
-        private final String value;
-
-        RefreshTokenRepositoryType(String value) {
-            this.value = value;
-        }
-
-        @Override
-        public final String toString() {
-            return value;
-        }
     }
 
     /**
@@ -216,74 +363,4 @@ public class AuthProperties {
         private String commonPasswordsFilePath = "/commonpasswords.txt";
     }
 
-    /**
-     * Is enabled boolean.
-     *
-     * @return the boolean
-     */
-// Root level getters and setters
-    public boolean isEnabled() { return enabled; }
-
-    /**
-     * Sets enabled.
-     *
-     * @param enabled the enabled
-     */
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
-
-    /**
-     * Gets jwt.
-     *
-     * @return the jwt
-     */
-    public Jwt getJwt() { return jwt; }
-
-    /**
-     * Sets jwt.
-     *
-     * @param jwt the jwt
-     */
-    public void setJwt(Jwt jwt) { this.jwt = jwt; }
-
-    /**
-     * Gets controllers.
-     *
-     * @return the controllers
-     */
-    public Controllers getControllers() { return controllers; }
-
-    /**
-     * Sets controllers.
-     *
-     * @param controllers the controllers
-     */
-    public void setControllers(Controllers controllers) { this.controllers = controllers; }
-
-    /**
-     * Gets password policy.
-     *
-     * @return the password policy
-     */
-    public PasswordPolicy getPasswordPolicy() { return passwordPolicy; }
-
-    /**
-     * Sets password policy.
-     *
-     * @param passwordPolicy the password policy
-     */
-    public void setPasswordPolicy(PasswordPolicy passwordPolicy) { this.passwordPolicy = passwordPolicy; }
-
-    /**
-     * Gets refresh tokens.
-     *
-     * @return the refresh tokens
-     */
-    public RefreshTokens getRefreshTokens() { return refreshTokens; }
-
-    /**
-     * Sets refresh tokens.
-     *
-     * @param refreshTokens the refresh tokens
-     */
-    public void setRefreshTokens(RefreshTokens refreshTokens) { this.refreshTokens = refreshTokens; }
 }

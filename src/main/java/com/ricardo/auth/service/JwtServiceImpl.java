@@ -20,6 +20,8 @@ import java.util.stream.Collectors;
  * * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 public class JwtServiceImpl implements JwtService {
+    private static final String ISSUER = "ricardo-auth";
+    private static final String AUDIENCE = "ricardo-auth-client";
 
     private String secret;
 
@@ -65,9 +67,10 @@ public class JwtServiceImpl implements JwtService {
 
         String tokenId = UUID.randomUUID().toString();
         claims.put("jti", tokenId);
+
         claims.put("token_type", "access");
-        claims.put("iss", "ricardo-auth");
-        claims.put("aud", "ricardo-auth-client");
+        claims.put("iss", ISSUER);
+        claims.put("aud", AUDIENCE);
 
         return Jwts.builder()
                 .claims(claims)
@@ -117,6 +120,15 @@ public class JwtServiceImpl implements JwtService {
             }
 
             if (claims.getExpiration() == null) {
+                return false;
+            }
+
+
+            if (!ISSUER.equals(claims.getIssuer())) {
+                return false;
+            }
+
+            if (claims.getAudience().stream().noneMatch(AUDIENCE::equals)) {
                 return false;
             }
 

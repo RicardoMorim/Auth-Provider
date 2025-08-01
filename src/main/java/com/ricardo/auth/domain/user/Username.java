@@ -8,9 +8,6 @@ import lombok.Getter;
  */
 @Embeddable
 public class Username {
-    @Getter
-    private String username;
-
     private static final int MAX_LENGTH = 20;
     private static final int MIN_LENGTH = 3;
     private static final String REGEX = "^[a-zA-Z0-9._-]+$";
@@ -18,6 +15,8 @@ public class Username {
     private static final String LONG_USERNAME_MESSAGE = "Username cannot be longer than 20 characters";
     private static final String SHORT_USERNAME_MESSAGE = "Username must be at least 3 characters long";
     private static final String INVALID_CHARACTERS_MESSAGE = "Username can only contain letters, numbers, dots, underscores, and hyphens";
+    @Getter
+    private String username;
 
     private Username(String username) {
         if (username == null || username.isEmpty()) {

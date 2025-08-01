@@ -23,6 +23,13 @@ public class UserDetailsServiceImpl implements UserDetailsService {
         this.userService = userService;
     }
 
+    /**
+     * Load user by username user details.
+     *
+     * @param email the email
+     * @return the user details
+     * @throws UsernameNotFoundException the username not found exception
+     */
     @Override
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         return userService.getUserByEmail(email);

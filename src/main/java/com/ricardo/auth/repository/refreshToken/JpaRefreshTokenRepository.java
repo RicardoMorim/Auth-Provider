@@ -19,7 +19,7 @@ public interface JpaRefreshTokenRepository
         extends RefreshTokenRepository, JpaRepository<RefreshToken, Long> {
 
     @Override
-    default RefreshToken saveToken(RefreshToken refreshToken){
+    default RefreshToken saveToken(RefreshToken refreshToken) {
         return save(refreshToken);
     }
 
