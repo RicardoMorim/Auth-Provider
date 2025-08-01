@@ -1,12 +1,13 @@
 package com.ricardo.auth.autoconfig;
 
+import com.ricardo.auth.blocklist.InMemoryTokenBlocklist;
+import com.ricardo.auth.blocklist.RedisTokenBlockList;
 import com.ricardo.auth.controller.AuthController;
 import com.ricardo.auth.controller.UserController;
-import com.ricardo.auth.core.JwtService;
-import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.core.RefreshTokenService;
-import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.core.*;
 import com.ricardo.auth.domain.user.User;
+import com.ricardo.auth.ratelimiter.InMemoryRateLimiter;
+import com.ricardo.auth.ratelimiter.RedisRateLimiter;
 import com.ricardo.auth.repository.refreshToken.DefaultJpaRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.PostgreSQLRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
@@ -25,6 +26,10 @@ import org.springframework.context.annotation.ComponentScan;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.FilterType;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
+import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -54,33 +59,8 @@ public class AuthAutoConfiguration {
     // ========== REFRESH TOKEN REPOSITORY (CONFIGURABLE) ==========
 
 
-     // JPA Refresh Token Repository Configuration (DEFAULT) (Spring data will automatically bean scan this)
+    // JPA Refresh Token Repository Configuration (DEFAULT) (Spring data will automatically bean scan this)
 
-
-    /**
-     * PostgreSQL Refresh Token Repository Configuration (EXPLICIT ONLY)
-     */
-    @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens.repository", name = "type", havingValue = "postgresql")
-    @ConditionalOnMissingBean(RefreshTokenRepository.class)
-    static class PostgreSQLRefreshTokenRepositoryConfiguration {
-        /**
-         * Refresh token repository refresh token repository.
-         *
-         * @param dataSource     the data source
-         * @param authProperties the auth properties
-         * @return the refresh token repository
-         */
-        @Bean
-        public RefreshTokenRepository refreshTokenRepository(
-                DataSource dataSource,
-                AuthProperties authProperties) {
-            System.out.println("✅ Creating PostgreSQL RefreshTokenRepository (EXPLICIT)");
-            return new PostgreSQLRefreshTokenRepository(dataSource, authProperties);
-        }
-    }
-
-    // ========== COMMON SERVICES ==========
 
     /**
      * Jwt service jwt service.
@@ -93,6 +73,8 @@ public class AuthAutoConfiguration {
     public JwtService jwtService(AuthProperties authProperties) {
         return new JwtServiceImpl(authProperties);
     }
+
+    // ========== COMMON SERVICES ==========
 
     /**
      * User service user service.
@@ -140,13 +122,14 @@ public class AuthAutoConfiguration {
     /**
      * Jwt auth filter jwt auth filter.
      *
-     * @param jwtService the jwt service
+     * @param jwtService     the jwt service
+     * @param tokenBlocklist the token blocklist
      * @return the jwt auth filter
      */
     @Bean
     @ConditionalOnMissingBean
-    public JwtAuthFilter jwtAuthFilter(JwtService jwtService) {
-        return new JwtAuthFilter(jwtService);
+    public JwtAuthFilter jwtAuthFilter(JwtService jwtService, TokenBlocklist tokenBlocklist) {
+        return new JwtAuthFilter(jwtService, tokenBlocklist);
     }
 
     /**
@@ -161,8 +144,6 @@ public class AuthAutoConfiguration {
         return new PasswordPolicy(authProperties);
     }
 
-    // ========== CONTROLLERS ==========
-
     /**
      * Auth controller auth controller.
      *
@@ -170,6 +151,7 @@ public class AuthAutoConfiguration {
      * @param authManager         the auth manager
      * @param refreshTokenService the refresh token service
      * @param authProperties      the auth properties
+     * @param tokenBlocklist      the token blocklist
      * @return the auth controller
      */
     @Bean
@@ -179,9 +161,12 @@ public class AuthAutoConfiguration {
             JwtService jwtService,
             AuthenticationManager authManager,
             RefreshTokenService<User, Long> refreshTokenService,
-            AuthProperties authProperties) {
-        return new AuthController(jwtService, authManager, refreshTokenService, authProperties);
+            AuthProperties authProperties,
+            TokenBlocklist tokenBlocklist) {
+        return new AuthController(jwtService, authManager, refreshTokenService, authProperties, tokenBlocklist);
     }
+
+    // ========== CONTROLLERS ==========
 
     /**
      * User controller user controller.
@@ -199,5 +184,132 @@ public class AuthAutoConfiguration {
             PasswordEncoder passwordEncoder,
             PasswordPolicyService passwordPolicyService) {
         return new UserController(userService, passwordEncoder, passwordPolicyService);
+    }
+
+    /**
+     * Redis connection factory redis connection factory.
+     *
+     * @param properties the properties
+     * @return the redis connection factory
+     */
+    @Bean
+    public RedisConnectionFactory redisConnectionFactory(AuthProperties properties) {
+        RedisStandaloneConfiguration config = new RedisStandaloneConfiguration(
+                properties.getRedis().getHost(),
+                properties.getRedis().getPort()
+        );
+        config.setPassword(properties.getRedis().getPassword());
+        config.setDatabase(properties.getRedis().getDatabase());
+
+        return new LettuceConnectionFactory(config);
+    }
+
+    /**
+     * PostgreSQL Refresh Token Repository Configuration (EXPLICIT ONLY)
+     */
+    @Configuration
+    @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens.repository", name = "type", havingValue = "POSTGRESQL")
+    @ConditionalOnMissingBean(RefreshTokenRepository.class)
+    static class PostgreSQLRefreshTokenRepositoryConfiguration {
+        /**
+         * Refresh token repository refresh token repository.
+         *
+         * @param dataSource     the data source
+         * @param authProperties the auth properties
+         * @return the refresh token repository
+         */
+        @Bean
+        public RefreshTokenRepository refreshTokenRepository(
+                DataSource dataSource,
+                AuthProperties authProperties) {
+            System.out.println("✅ Creating PostgreSQL RefreshTokenRepository (EXPLICIT)");
+            return new PostgreSQLRefreshTokenRepository(dataSource, authProperties);
+        }
+    }
+
+    /**
+     * The type Memory rate limiter config.
+     */
+    @Configuration
+    @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory")
+    static class MemoryRateLimiterConfig {
+        /**
+         * Memory rate limiter rate limiter.
+         *
+         * @param authProperties the auth properties
+         * @return the rate limiter
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public RateLimiter memoryRateLimiter(AuthProperties authProperties) {
+            return new InMemoryRateLimiter(authProperties);
+        }
+
+    }
+
+    /**
+     * The type Redis rate limiter config.
+     */
+    @Configuration
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
+    @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "redis")
+    static class RedisRateLimiterConfig {
+        /**
+         * Redis rate limiter rate limiter.
+         *
+         * @param redisTemplate  the redis template
+         * @param authProperties the auth properties
+         * @return the rate limiter
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public RateLimiter redisRateLimiter(
+                RedisTemplate<String, String> redisTemplate,
+                AuthProperties authProperties
+        ) {
+            return new RedisRateLimiter(redisTemplate, authProperties);
+        }
+    }
+
+    /**
+     * The type Redis blocklist config.
+     */
+    @Configuration
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
+    @ConditionalOnProperty(prefix = "ricardo.auth.token-blocklist", name = "type", havingValue = "redis")
+    static class RedisBlocklistConfig {
+        /**
+         * Redis token blocklist token blocklist.
+         *
+         * @param redisTemplate  the redis template
+         * @param authProperties the auth properties
+         * @return the token blocklist
+         */
+        @Bean
+        @ConditionalOnMissingBean
+        public TokenBlocklist redisTokenBlocklist(
+                RedisTemplate<String, String> redisTemplate,
+                AuthProperties authProperties
+        ) {
+            return new RedisTokenBlockList(redisTemplate, authProperties.getJwt().getAccessTokenExpiration());
+        }
+    }
+
+    /**
+     * The type Memory blocklist config.
+     */
+    @Configuration
+    @ConditionalOnMissingBean(TokenBlocklist.class)
+    static class MemoryBlocklistConfig {
+        /**
+         * In memory token blocklist token blocklist.
+         *
+         * @param authProperties the auth properties
+         * @return the token blocklist
+         */
+        @Bean
+        public TokenBlocklist inMemoryTokenBlocklist(AuthProperties authProperties) {
+            return new InMemoryTokenBlocklist(authProperties);
+        }
     }
 }

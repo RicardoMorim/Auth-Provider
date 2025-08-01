@@ -1,4 +1,11 @@
-# Password Policy Configuration
+nt # Password Policy Configuration
+
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+    development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
 
 Complete guide to configuring Ricardo Auth's password policy system (v1.1.0+).
 
@@ -31,16 +38,16 @@ ricardo:
       # Length requirements
       min-length: 8                     # Minimum characters (default: 8)
       max-length: 128                   # Maximum characters (default: 128)
-      
+
       # Character type requirements
       require-uppercase: true           # Must contain A-Z (default: true)
       require-lowercase: true           # Must contain a-z (default: true)
       require-digits: true              # Must contain 0-9 (default: true)
       require-special-chars: true       # Must contain symbols (default: true)
-      
+
       # Special character configuration
       special-characters: "!@#$%^&*()_+-=[]{}|;:,.<>?" # Allowed symbols
-      
+
       # Security features
       prevent-common-passwords: true    # Block common passwords (default: true)
       common-passwords-file: "/commonpasswords.txt"  # Custom weak password list
@@ -48,17 +55,17 @@ ricardo:
 
 ### Configuration Properties Table
 
-| Property | Type | Default | Description |
-|----------|------|---------|-------------|
-| `min-length` | Integer | `8` | Minimum password length |
-| `max-length` | Integer | `128` | Maximum password length |
-| `require-uppercase` | Boolean | `true` | Require A-Z characters |
-| `require-lowercase` | Boolean | `true` | Require a-z characters |
-| `require-digits` | Boolean | `true` | Require 0-9 characters |
-| `require-special-chars` | Boolean | `true` | Require special characters |
-| `special-characters` | String | `"!@#$%^&*"` | Allowed special characters |
-| `prevent-common-passwords` | Boolean | `true` | Block common weak passwords |
-| `common-passwords-file` | String | `null` | Path to custom password blacklist |
+| Property                   | Type    | Default      | Description                       |
+|----------------------------|---------|--------------|-----------------------------------|
+| `min-length`               | Integer | `8`          | Minimum password length           |
+| `max-length`               | Integer | `128`        | Maximum password length           |
+| `require-uppercase`        | Boolean | `true`       | Require A-Z characters            |
+| `require-lowercase`        | Boolean | `true`       | Require a-z characters            |
+| `require-digits`           | Boolean | `true`       | Require 0-9 characters            |
+| `require-special-chars`    | Boolean | `true`       | Require special characters        |
+| `special-characters`       | String  | `"!@#$%^&*"` | Allowed special characters        |
+| `prevent-common-passwords` | Boolean | `true`       | Block common weak passwords       |
+| `common-passwords-file`    | String  | `null`       | Path to custom password blacklist |
 
 ## 🔧 Environment-Specific Configurations
 
@@ -298,6 +305,7 @@ ricardo:
 ### Password Strength vs Usability
 
 **High Security (Financial, Healthcare):**
+
 ```yaml
 ricardo:
   auth:
@@ -308,6 +316,7 @@ ricardo:
 ```
 
 **Balanced Security (Most Applications):**
+
 ```yaml
 ricardo:
   auth:
@@ -318,6 +327,7 @@ ricardo:
 ```
 
 **User-Friendly (Consumer Apps):**
+
 ```yaml
 ricardo:
   auth:
@@ -330,6 +340,7 @@ ricardo:
 ### Special Characters Configuration
 
 #### Standard Set (Recommended)
+
 ```yaml
 ricardo:
   auth:
@@ -338,6 +349,7 @@ ricardo:
 ```
 
 #### Extended Set
+
 ```yaml
 ricardo:
   auth:
@@ -346,6 +358,7 @@ ricardo:
 ```
 
 #### Minimal Set (Mobile-Friendly)
+
 ```yaml
 ricardo:
   auth:
@@ -354,6 +367,7 @@ ricardo:
 ```
 
 #### Custom Set
+
 ```yaml
 ricardo:
   auth:
@@ -384,14 +398,15 @@ ricardo:
    ```
 
 3. **File format:**
-   - One password per line
-   - Case-insensitive matching
-   - Comments start with `#`
-   - Empty lines are ignored
+    - One password per line
+    - Case-insensitive matching
+    - Comments start with `#`
+    - Empty lines are ignored
 
 ### Built-in Common Passwords
 
 Ricardo Auth includes protection against common passwords like:
+
 - `password`, `password123`, `123456`
 - `qwerty`, `admin`, `login`
 - `welcome`, `letmein`, `monkey`
@@ -477,6 +492,7 @@ done
 If upgrading from Ricardo Auth v1.0.x:
 
 #### Phase 1: Soft Migration
+
 ```yaml
 # Relaxed policy for existing users
 ricardo:
@@ -488,6 +504,7 @@ ricardo:
 ```
 
 #### Phase 2: Gradual Strengthening
+
 ```yaml
 # Gradually increase requirements
 ricardo:
@@ -501,6 +518,7 @@ ricardo:
 ```
 
 #### Phase 3: Full Security
+
 ```yaml
 # Final secure configuration
 ricardo:
@@ -520,23 +538,23 @@ ricardo:
 // Example: Force password update for existing users
 @Service
 public class PasswordMigrationService {
-    
+
     public boolean needsPasswordUpdate(User user) {
         // Check if user's password meets current policy
         return !passwordPolicyService.isPasswordCompliant(user.getPassword());
     }
-    
+
     @PostMapping("/auth/login")
     public ResponseEntity<?> login(@RequestBody LoginRequest request) {
         User user = authenticateUser(request);
         String token = generateToken(user);
-        
+
         boolean requirePasswordUpdate = needsPasswordUpdate(user);
-        
+
         return ResponseEntity.ok(new LoginResponse(
-            token, 
-            user.getUsername(), 
-            requirePasswordUpdate
+                token,
+                user.getUsername(),
+                requirePasswordUpdate
         ));
     }
 }
@@ -549,6 +567,7 @@ public class PasswordMigrationService {
 The common password check is optimized but can be tuned:
 
 #### Disable for Development
+
 ```yaml
 # Faster development builds
 spring:
@@ -563,6 +582,7 @@ ricardo:
 ```
 
 #### Monitor Performance
+
 ```yaml
 # Enable performance logging
 logging:
@@ -571,13 +591,14 @@ logging:
 ```
 
 #### Custom Performance Optimization
+
 ```java
 // Cache common passwords for better performance
 @Component
 public class OptimizedPasswordValidator {
-    
+
     private final Set<String> commonPasswords = loadCommonPasswords();
-    
+
     public boolean isCommonPassword(String password) {
         return commonPasswords.contains(password.toLowerCase());
     }
@@ -598,9 +619,9 @@ function validatePasswordStrength(password) {
         digits: /\d/.test(password),
         special: /[!@#$%^&*()_+\-=\[\]{}|;:,.<>?]/.test(password)
     };
-    
+
     const strength = Object.values(requirements).filter(Boolean).length;
-    
+
     return {
         requirements,
         strength,
@@ -611,14 +632,14 @@ function validatePasswordStrength(password) {
 // Update UI indicators
 function updatePasswordStrength(password) {
     const validation = validatePasswordStrength(password);
-    
+
     // Update requirement indicators
     Object.entries(validation.requirements).forEach(([req, met]) => {
         const indicator = document.getElementById(`req-${req}`);
         indicator.className = met ? 'text-success' : 'text-muted';
         indicator.textContent = met ? '✓' : '○';
     });
-    
+
     // Update strength bar
     const strengthBar = document.getElementById('strength-bar');
     strengthBar.style.width = `${(validation.strength / 5) * 100}%`;
@@ -646,7 +667,7 @@ function getStrengthColor(strength) {
         <li id="req-digits" class="text-muted">○ One number (0-9)</li>
         <li id="req-special" class="text-muted">○ One special character (!@#$%^&*)</li>
     </ul>
-    
+
     <!-- Strength indicator -->
     <div class="progress mt-2" style="height: 6px;">
         <div id="strength-bar" class="progress-bar" style="width: 0%"></div>
@@ -659,6 +680,7 @@ function getStrengthColor(strength) {
 ### Common Configuration Issues
 
 #### 1. Policy Not Applied
+
 ```yaml
 # ❌ Wrong indentation
 ricardo:
@@ -674,6 +696,7 @@ ricardo:
 ```
 
 #### 2. Environment Variables Not Working
+
 ```bash
 # ❌ Wrong variable name
 export RICARDO_PASSWORD_MIN_LENGTH=8
@@ -683,6 +706,7 @@ export RICARDO_AUTH_PASSWORD_POLICY_MIN_LENGTH=8
 ```
 
 #### 3. Profile-Specific Configuration Not Loading
+
 ```yaml
 # ❌ Wrong profile syntax
 spring.profiles.active: dev
@@ -696,7 +720,8 @@ spring:
 
 ### Validation Issues
 
-See the [Password Policy Troubleshooting Guide](../troubleshooting/password-policy.md) for detailed solutions to validation errors.
+See the [Password Policy Troubleshooting Guide](../troubleshooting/password-policy.md) for detailed solutions to
+validation errors.
 
 ## 🔗 Related Documentation
 
@@ -707,4 +732,5 @@ See the [Password Policy Troubleshooting Guide](../troubleshooting/password-poli
 
 ---
 
-🔒 **Strong passwords are your first line of defense!** Choose the right policy configuration for your security needs and user experience requirements.
+🔒 **Strong passwords are your first line of defense!** Choose the right policy configuration for your security needs and
+user experience requirements.

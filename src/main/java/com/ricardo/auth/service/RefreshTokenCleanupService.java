@@ -1,4 +1,3 @@
-
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.autoconfig.AuthProperties;

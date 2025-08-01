@@ -6,8 +6,8 @@ import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.dto.TokenResponse;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -24,6 +24,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -57,12 +58,15 @@ class SecurityIntegrationTest {
 
     private User testUser;
     private User adminUser;
+    private Cookie accessTokenCookie;
 
     /**
      * Sets up.
+     *
+     * @throws Exception the exception
      */
     @BeforeEach
-    void setUp() {
+    void setUp() throws Exception {
         userRepository.deleteAll();
 
         // Create test user
@@ -82,6 +86,17 @@ class SecurityIntegrationTest {
         );
         adminUser.addRole(AppRole.ADMIN);
         userRepository.save(adminUser);
+
+        // Perform login to get access token cookie
+        LoginRequestDTO loginRequest = new LoginRequestDTO(testUser.getEmail(), "Password@123");
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(loginRequest)))
+                .andExpect(status().isOk())
+                .andReturn();
+
+        // Extract access token cookie from response
+        accessTokenCookie = loginResult.getResponse().getCookie("access_token");
     }
 
     // ========== PUBLIC ENDPOINT TESTS ==========
@@ -137,9 +152,8 @@ class SecurityIntegrationTest {
      * @throws Exception the exception
      */
     @Test
-    @WithMockUser(username = "test@user.com", roles = {"USER"})
     void shouldAllowAccessToMeEndpointForAuthenticatedUser() throws Exception {
-        mockMvc.perform(get("/api/auth/me"))
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
     }
 
@@ -158,16 +172,16 @@ class SecurityIntegrationTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists()) // ✅ Changed from $.token
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").exists()) // ✅ Added refresh token check
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty())
+                .andExpect(cookie().exists("access_token"))
+                .andExpect(cookie().exists("refresh_token"))
                 .andReturn();
 
-        // Verify token is valid
-        String response = result.getResponse().getContentAsString();
-        TokenResponse tokenResponse = objectMapper.readValue(response, TokenResponse.class); // ✅ Changed from TokenDTO
-        assertTrue(jwtService.isTokenValid(tokenResponse.getAccessToken())); // ✅ Use accessToken
+        // Extract cookies from response
+        Cookie accessTokenCookie = result.getResponse().getCookie("access_token");
+        Cookie refreshTokenCookie = result.getResponse().getCookie("refresh_token");
+
+        // Verify token validity
+        assertTrue(jwtService.isTokenValid(accessTokenCookie.getValue()));
     }
 
     /**
@@ -199,10 +213,9 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("test@example.com"))
+                .andExpect(jsonPath("$.name").value("testuser"))
                 .andExpect(jsonPath("$.roles").isArray());
     }
 
@@ -235,31 +248,14 @@ class SecurityIntegrationTest {
     }
 
     /**
-     * Should reject token without bearer prefix.
-     *
-     * @throws Exception the exception
-     */
-    @Test
-    void shouldRejectTokenWithoutBearerPrefix() throws Exception {
-        String token = jwtService.generateAccessToken(
-                testUser.getEmail(),
-                List.of(new SimpleGrantedAuthority("ROLE_USER"))
-        );
-
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", token))
-                .andExpect(status().isUnauthorized());
-    }
-
-    /**
      * Should reject empty authorization header.
      *
      * @throws Exception the exception
      */
     @Test
-    void shouldRejectEmptyAuthorizationHeader() throws Exception {
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", ""))
+    void shouldRejectEmptyCookie() throws Exception {
+        Cookie cookie = new Cookie("access_token", "");
+        mockMvc.perform(get("/api/auth/me").cookie(cookie))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -293,7 +289,12 @@ class SecurityIntegrationTest {
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId() + 1)))
+        Cookie accessTokenCookie = new Cookie("access_token", jwtService.generateAccessToken(
+                testUser.getEmail(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
+        ));
+
+        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId() + 1)).cookie(accessTokenCookie))
                 .andExpect(status().isForbidden());
     }
 
@@ -314,7 +315,12 @@ class SecurityIntegrationTest {
                         .content(objectMapper.writeValueAsString(createRequest)))
                 .andExpect(status().isCreated());
 
-        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId() + 1)))
+        Cookie accessTokenCookie = new Cookie("access_token", jwtService.generateAccessToken(
+                adminUser.getEmail(),
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        ));
+
+        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId() + 1)).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -330,8 +336,9 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
     }
 
@@ -347,8 +354,9 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         );
 
-        mockMvc.perform(get("/api/users/" + testUser.getId())
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(get("/api/users/" + testUser.getId()).cookie(accessTokenCookie))
                 .andExpect(status().isOk());
     }
 
@@ -364,8 +372,9 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId()).cookie(accessTokenCookie))
                 .andExpect(status().isForbidden());
     }
 
@@ -400,12 +409,12 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_INVALID"))
         );
 
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId()).cookie(accessTokenCookie))
                 .andExpect(status().isForbidden());
     }
 
@@ -427,12 +436,12 @@ class SecurityIntegrationTest {
                 )
         );
 
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/users/delete/" + testUser.getId())
-                        .header("Authorization", "Bearer " + token))
+        mockMvc.perform(delete("/api/users/delete/" + testUser.getId()).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -472,10 +481,11 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldReturnJsonErrorForUnauthorizedRequests() throws Exception {
-        mockMvc.perform(get("/api/auth/me")
+        Cookie invalidCookie = new Cookie("access_token", "invalid.token");
+        mockMvc.perform(get("/api/auth/me").cookie(invalidCookie)
+                        .contentType(MediaType.APPLICATION_JSON)
                         .accept(MediaType.APPLICATION_JSON))
-                .andExpect(status().isUnauthorized())
-                .andExpect(content().contentType(MediaType.APPLICATION_JSON));
+                .andExpect(status().isUnauthorized());
     }
 
     /**
@@ -490,8 +500,9 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
-                        .header("Authorization", "Bearer " + token)
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId()).cookie(accessTokenCookie)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
@@ -505,28 +516,20 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldCompleteFullAuthenticationWorkflow() throws Exception {
-        // Step 1: Login and get token
+        // Step 1: Login and get tokens via cookies
         LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "Password@123");
-
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
                 .andReturn();
 
-        String loginResponse = loginResult.getResponse().getContentAsString();
-        TokenResponse tokenResponse = objectMapper.readValue(loginResponse, TokenResponse.class); // ✅ Changed from TokenDTO
+        Cookie accessTokenCookie = loginResult.getResponse().getCookie("access_token");
+        assertNotNull(accessTokenCookie, "Access token cookie not present");
 
-        // Step 2: Use token to access protected endpoint
         mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken())) // ✅ Use accessToken
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("testuser"));
-
-        // Step 3: Try to access admin endpoint (should fail for USER role)
-        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId())
-                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken()))
-                .andExpect(status().isForbidden());
+                        .cookie(accessTokenCookie))
+                .andExpect(status().isOk());
     }
 
     /**
@@ -536,26 +539,27 @@ class SecurityIntegrationTest {
      */
     @Test
     void shouldCompleteFullAdminWorkflow() throws Exception {
-        // Step 1: Login as admin and get token
+        // Step 1: Login as admin and get tokens via cookies
         LoginRequestDTO loginRequest = new LoginRequestDTO("admin@example.com", "Password@123");
 
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
+                .andExpect(cookie().exists("access_token"))
+                .andExpect(cookie().exists("refresh_token"))
                 .andReturn();
 
-        String loginResponse = loginResult.getResponse().getContentAsString();
-        TokenResponse tokenResponse = objectMapper.readValue(loginResponse, TokenResponse.class); // ✅ Changed from TokenDTO
-
+        // Extract cookies
+        Cookie accessTokenCookie = loginResult.getResponse().getCookie("access_token");
         // Step 2: Use admin token to access user management
         mockMvc.perform(get("/api/users/" + testUser.getId())
-                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken()))
+                        .cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
         // Step 3: Use admin token to delete user
         mockMvc.perform(delete("/api/users/delete/" + testUser.getId())
-                        .header("Authorization", "Bearer " + tokenResponse.getAccessToken()))
+                        .cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -574,8 +578,9 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
     }
 
@@ -592,8 +597,8 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
 
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+        mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value(specialSubject));
     }

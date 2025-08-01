@@ -2,11 +2,12 @@
 
 **Perfect for:** REST APIs, mobile applications, single-page applications  
 **Complexity:** ⭐⭐ Medium  
-**Time:** 25 minutes  
+**Time:** 25 minutes
 
 ## What You'll Build
 
 A robust REST API backend for mobile applications with:
+
 - ✅ Mobile-optimized JWT authentication
 - ✅ User management endpoints
 - ✅ Extended token expiration for mobile use
@@ -111,6 +112,12 @@ mobile-api-backend/
             <artifactId>spring-boot-starter-test</artifactId>
             <scope>test</scope>
         </dependency>
+        
+        <!-- Redis for blocklist/rate limiting (optional) -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
     </dependencies>
     
     <build>
@@ -127,6 +134,7 @@ mobile-api-backend/
 ## Step 2: Mobile-Optimized Configuration
 
 ### application.yml
+
 ```yaml
 spring:
   application:
@@ -157,9 +165,8 @@ ricardo:
   auth:
     jwt:
       secret: ${JWT_SECRET:mobile-api-development-secret-key-256-bits-long-for-security}
-      expiration: 604800000  # 7 days for mobile apps (longer than web)
-    
-    # Relaxed password policy for mobile demo
+      access-token-expiration: 604800000  # 7 days for mobile apps
+      refresh-token-expiration: 2592000000 # 30 days for refresh tokens
     password-policy:
       min-length: 8
       require-uppercase: true
@@ -167,12 +174,31 @@ ricardo:
       require-digits: true
       require-special-chars: false  # More lenient for mobile keyboards
       prevent-common-passwords: true
-    
     controllers:
       auth:
         enabled: true
       user:
         enabled: true
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for production
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for production
+      max-requests: 100
+      time-window-ms: 60000
+    cookies:
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
 
 # Server configuration
 server:
@@ -236,7 +262,8 @@ ricardo:
   auth:
     jwt:
       secret: ${JWT_SECRET}
-      expiration: 2592000000  # 30 days for production mobile apps
+      access-token-expiration: 604800000  # 7 days for mobile apps
+      refresh-token-expiration: 2592000000 # 30 days for refresh tokens
     
     password-policy:
       min-length: 10
@@ -593,6 +620,34 @@ public class MobileUserController {
 }
 ```
 
+## Step 5.1: Token Revocation (Admin Only)
+
+A new admin-only endpoint allows you to revoke any access or refresh token:
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+
+- Works for both access and refresh tokens.
+- Revoked tokens are blocked in memory or Redis (depending on config).
+
+## Step 5.2: Cookie-based Authentication
+
+- All authentication now uses cookies for access and refresh tokens.
+- Cookies are set with `httpOnly`, `secure`, and `sameSite` flags for security.
+- Most endpoints do not accept Authorization headers anymore (except /revoke).
+- For mobile apps, ensure your HTTP client supports cookies.
+
+## Step 5.3: Rate Limiting and Blocklist
+
+- Rate limiting is enabled by default (in-memory for dev, Redis for prod).
+- Token blocklist is enabled by default (in-memory for dev, Redis for prod).
+- Configure with `ricardo.auth.rate-limiter` and `ricardo.auth.token-blocklist`.
+
 ## Step 6: Mobile-Specific DTOs
 
 ### Mobile Login Response
@@ -806,6 +861,7 @@ public class MobileUserService {
 ### Test Scripts
 
 #### 1. User Registration
+
 ```bash
 curl -X POST http://localhost:8080/api/users/create \
   -H "Content-Type: application/json" \
@@ -817,6 +873,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 #### 2. Mobile Login
+
 ```bash
 curl -X POST http://localhost:8080/api/mobile/auth/login \
   -H "Content-Type: application/json" \
@@ -827,20 +884,23 @@ curl -X POST http://localhost:8080/api/mobile/auth/login \
 ```
 
 #### 3. Get User Profile
+
 ```bash
 curl -X GET http://localhost:8080/api/mobile/users/profile \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+  --cookie "access_token=YOUR_ACCESS_TOKEN"
 ```
 
 #### 4. Validate Token
+
 ```bash
 curl -X POST http://localhost:8080/api/mobile/auth/validate \
-  -H "Authorization: Bearer YOUR_TOKEN_HERE"
+  --cookie "access_token=YOUR_ACCESS_TOKEN"
 ```
 
 ### Mobile App Integration Examples
 
 #### React Native Example
+
 ```javascript
 // MobileAuthService.js
 class MobileAuthService {
@@ -878,17 +938,10 @@ class MobileAuthService {
     }
 
     async getProfile() {
-        if (!this.token) {
-            this.token = await AsyncStorage.getItem('authToken');
-        }
-
         try {
             const response = await fetch(`${this.baseUrl}/api/mobile/users/profile`, {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                },
+                credentials: 'include'
             });
-
             if (response.ok) {
                 return await response.json();
             }
@@ -899,16 +952,11 @@ class MobileAuthService {
     }
 
     async validateToken() {
-        if (!this.token) return false;
-
         try {
             const response = await fetch(`${this.baseUrl}/api/mobile/auth/validate`, {
                 method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${this.token}`,
-                },
+                credentials: 'include'
             });
-
             return response.ok;
         } catch (error) {
             return false;
@@ -920,6 +968,7 @@ export default new MobileAuthService();
 ```
 
 #### Flutter Example
+
 ```dart
 // mobile_auth_service.dart
 import 'dart:convert';
@@ -968,7 +1017,8 @@ class MobileAuthService {
     try {
       final response = await http.get(
         Uri.parse('$baseUrl/api/mobile/users/profile'),
-        headers: {'Authorization': 'Bearer $_token'},
+        // For cookie-based auth, ensure your HTTP client sends cookies
+        headers: {},
       );
 
       if (response.statusCode == 200) {
@@ -986,7 +1036,8 @@ class MobileAuthService {
     try {
       final response = await http.post(
         Uri.parse('$baseUrl/api/mobile/auth/validate'),
-        headers: {'Authorization': 'Bearer $_token'},
+        // For cookie-based auth, ensure your HTTP client sends cookies
+        headers: {},
       );
 
       return response.statusCode == 200;
@@ -1010,12 +1061,14 @@ class MobileAuthService {
 ## 🚀 Next Steps
 
 ### Enhance Your Mobile API
+
 - Add push notification support
 - Implement offline data synchronization
 - Add file upload for profile pictures
 - Create admin management endpoints
 
 ### Production Deployment
+
 - Set up PostgreSQL database
 - Configure environment variables
 - Add rate limiting
@@ -1023,6 +1076,7 @@ class MobileAuthService {
 - Implement monitoring and logging
 
 ### Mobile App Development
+
 - **[React Native Integration](https://reactnative.dev/)** - Build cross-platform mobile apps
 - **[Flutter Integration](https://flutter.dev/)** - Build native mobile apps
 - **[Ionic Integration](https://ionicframework.com/)** - Build hybrid mobile apps
@@ -1030,15 +1084,181 @@ class MobileAuthService {
 ## 🆘 Troubleshooting
 
 ### Common Mobile-Specific Issues
+
 - **CORS errors** → Check your CORS configuration and allowed origins
 - **Token expiration too short** → Adjust JWT expiration time for mobile use
 - **Network timeouts** → Configure appropriate connection timeouts
 - **Token storage** → Use secure storage (Keychain, Android Keystore)
 
 ### Need Help?
+
 - 📖 [Troubleshooting Guide](../troubleshooting/index.md)
 - 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)
 
 ---
 
-🎉 **Congratulations!** You've built a production-ready mobile API backend with Ricardo Auth!
+🎉 **Congratulations!** You've built a production-ready mobile API backend with full authentication!
+
+# ⚠️ Breaking Changes in v2.0.0
+
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`,
+  and `sameSite` flags by default. You must update your frontend to use cookies instead of Authorization headers for
+  most endpoints.
+- **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
+- **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
+- **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
+- **/api/auth/revoke endpoint**: New admin-only endpoint to revoke any access or refresh token.
+
+## Updated Configuration Examples
+
+### application.yml (Development)
+
+```yaml
+spring:
+  application:
+    name: mobile-api-backend
+  
+  # Development profile (H2 database)
+  profiles:
+    active: dev
+  
+  # Database configuration (overridden by profiles)
+  datasource:
+    url: jdbc:h2:mem:mobileapi
+    driver-class-name: org.h2.Driver
+    username: sa
+    password: password
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop
+    show-sql: false
+  
+  h2:
+    console:
+      enabled: true
+
+# Mobile-optimized Ricardo Auth configuration
+ricardo:
+  auth:
+    jwt:
+      secret: ${JWT_SECRET:mobile-api-development-secret-key-256-bits-long-for-security}
+      access-token-expiration: 604800000  # 7 days for mobile apps
+      refresh-token-expiration: 2592000000 # 30 days for refresh tokens
+    password-policy:
+      min-length: 8
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: false
+      prevent-common-passwords: true
+    controllers:
+      auth:
+        enabled: true
+      user:
+        enabled: true
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for production
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for production
+      max-requests: 100
+      time-window-ms: 60000
+    cookies:
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
+
+# Server configuration
+server:
+  port: 8080
+  compression:
+    enabled: true
+    mime-types: application/json,text/plain
+
+# CORS configuration (development)
+cors:
+  allowed-origins: 
+    - http://localhost:3000
+    - http://localhost:8080
+    - capacitor://localhost
+    - ionic://localhost
+  allowed-methods: GET,POST,PUT,DELETE,OPTIONS
+  allowed-headers: "*"
+  allow-credentials: true
+
+# Actuator endpoints for health checks
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics
+  endpoint:
+    health:
+      show-details: always
+
+# Logging
+logging:
+  level:
+    com.ricardo.auth: INFO
+    com.mycompany.mobileapi: DEBUG
+    org.springframework.security: WARN
+```
+
+### application.yml (Production)
+
+```yaml
+spring:
+  config:
+    activate:
+      on-profile: prod
+  
+  # Production database (PostgreSQL)
+  datasource:
+    url: ${DATABASE_URL}
+    username: ${DATABASE_USERNAME}
+    password: ${DATABASE_PASSWORD}
+    hikari:
+      maximum-pool-size: 20
+      connection-timeout: 30000
+      idle-timeout: 600000
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    show-sql: false
+
+# Production security settings
+ricardo:
+  auth:
+    jwt:
+      secret: ${JWT_SECRET}
+      access-token-expiration: 604800000  # 7 days for mobile apps
+      refresh-token-expiration: 2592000000 # 30 days for refresh tokens
+    
+    password-policy:
+      min-length: 10
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+
+# Production CORS (more restrictive)
+cors:
+  allowed-origins: 
+    - https://yourmobileapp.com
+    - https://yourwebapp.com
+  allowed-methods: GET,POST,PUT,DELETE
+  allowed-headers: Authorization,Content-Type,Accept
+  allow-credentials: true
+```

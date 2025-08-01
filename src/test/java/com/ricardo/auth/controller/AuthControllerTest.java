@@ -6,8 +6,8 @@ import com.ricardo.auth.domain.user.Password;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.dto.TokenResponse;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -17,12 +17,12 @@ import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
 /**
  * The type Auth controller test.
@@ -76,10 +76,8 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.accessToken").exists())
-                .andExpect(jsonPath("$.accessToken").isNotEmpty())
-                .andExpect(jsonPath("$.refreshToken").exists())
-                .andExpect(jsonPath("$.refreshToken").isNotEmpty());
+                .andExpect(cookie().exists("access_token"))
+                .andExpect(cookie().exists("refresh_token"));
     }
 
     /**
@@ -123,24 +121,19 @@ class AuthControllerTest {
      */
     @Test
     void getAuthenticatedUser_shouldReturnUserDetails_whenTokenIsValid() throws Exception {
-        // First, login to get a token
+        // First, login to get cookies
         LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "password123");
-
-        String response = mockMvc.perform(post("/api/auth/login")
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))
                 .andExpect(status().isOk())
-                .andReturn()
-                .getResponse()
-                .getContentAsString();
+                .andReturn();
 
-        // Parse response using TokenResponse DTO
-        TokenResponse tokenResponse = objectMapper.readValue(response, TokenResponse.class);
-        String token = tokenResponse.getAccessToken();
+        Cookie accessTokenCookie = loginResult.getResponse().getCookie("access_token");
 
-        // Use token to access protected endpoint
+        // Use cookie to access protected endpoint
         mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer " + token))
+                        .cookie(accessTokenCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.name").value("testuser"));
     }

@@ -1,6 +1,14 @@
 # Basic Configuration
 
-Get **Ricardo Auth running quickly** with minimal configuration. Perfect for development, prototyping, and getting started.
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+    development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
+Get **Ricardo Auth running quickly** with minimal configuration. Perfect for development, prototyping, and getting
+started.
 
 ## 📋 Quick Navigation
 
@@ -16,36 +24,53 @@ Get **Ricardo Auth running quickly** with minimal configuration. Perfect for dev
 **The absolute minimum to get Ricardo Auth working:**
 
 ### Step 1: Add Dependency
+
 ```xml
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
 ### Step 2: Set JWT Secret
+
 ```yaml
 # application.yml
 ricardo:
   auth:
     jwt:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
+      access-token-expiration: 86400000   # 1 day (default)
+      refresh-token-expiration: 604800000 # 7 days (default)
+
 ```
 
 **That's it!** 🎉 Ricardo Auth is now configured with sensible defaults.
 
 ### What You Get By Default
+
 - ✅ JWT authentication with 7-day expiration
 - ✅ User registration and login endpoints
 - ✅ Password validation (8+ characters)
 - ✅ BCrypt password encryption
 - ✅ Basic role-based security (`USER` role)
 - ✅ In-memory H2 database for quick testing
+- ✅ Token blocklist and rate limiting (in-memory or Redis)
+- ✅ Secure cookies for tokens
+- ✅ `/api/auth/revoke` endpoint for admin token revocation
+
+### What Changed in v2.0.0
+
+- **JWT Configuration:** Added `access-token-expiration` and `refresh-token-expiration` properties.
+- **Blocklist/Rate Limiter:** New `token-blocklist` and `rate-limiter` sections.
+- **Cookie Security:** New `cookies` section for configuring token cookies.
+- **HTTPS Redirect:** New `redirect-https` property to enforce HTTPS.
 
 ## Development Setup
 
 ### Complete Development Configuration
+
 ```yaml
 # application-dev.yml
 spring:
@@ -92,6 +117,7 @@ server:
 ```
 
 ### Dependencies for Development
+
 ```xml
 <dependencies>
     <!-- Ricardo Auth Starter -->
@@ -131,6 +157,7 @@ server:
 ```
 
 ### Application Class
+
 ```java
 package com.mycompany.app;
 
@@ -150,11 +177,13 @@ public class MyApplication {
 ### Testing Your Setup
 
 **1. Start the application:**
+
 ```bash
 mvn spring-boot:run
 ```
 
 **2. Create a test user:**
+
 ```bash
 curl -X POST http://localhost:8080/api/users/create \
   -H "Content-Type: application/json" \
@@ -166,6 +195,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **3. Login to get a JWT token:**
+
 ```bash
 curl -X POST http://localhost:8080/api/auth/login \
   -H "Content-Type: application/json" \
@@ -176,6 +206,7 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 **4. Use the token to access protected endpoints:**
+
 ```bash
 curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
      http://localhost:8080/api/auth/me
@@ -183,17 +214,18 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
 
 ### Available Endpoints
 
-| Method | Endpoint | Description | Authentication |
-|--------|----------|-------------|----------------|
-| POST | `/api/users/create` | Create new user | None |
-| POST | `/api/auth/login` | Login user | None |
-| GET | `/api/auth/me` | Get current user | Required |
-| GET | `/api/users` | List all users | Required |
-| GET | `/api/users/{id}` | Get user by ID | Required |
+| Method | Endpoint            | Description      | Authentication |
+|--------|---------------------|------------------|----------------|
+| POST   | `/api/users/create` | Create new user  | None           |
+| POST   | `/api/auth/login`   | Login user       | None           |
+| GET    | `/api/auth/me`      | Get current user | Required       |
+| GET    | `/api/users`        | List all users   | Required       |
+| GET    | `/api/users/{id}`   | Get user by ID   | Required       |
 
 ## Common Settings
 
 ### JWT Configuration
+
 ```yaml
 ricardo:
   auth:
@@ -203,6 +235,7 @@ ricardo:
 ```
 
 ### Controller Configuration
+
 ```yaml
 ricardo:
   auth:
@@ -214,6 +247,7 @@ ricardo:
 ```
 
 ### Password Policy (Optional)
+
 ```yaml
 ricardo:
   auth:
@@ -227,6 +261,7 @@ ricardo:
 ```
 
 ### Database Configuration
+
 ```yaml
 spring:
   datasource:
@@ -247,12 +282,14 @@ spring:
 ## Environment Variables
 
 ### Required Environment Variables
+
 ```bash
 # JWT Secret (Required)
 export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
 ```
 
 ### Optional Environment Variables
+
 ```bash
 # JWT Token Expiration (Optional, default: 7 days)
 export RICARDO_AUTH_JWT_EXPIRATION="86400000"  # 1 day
@@ -271,18 +308,21 @@ export SPRING_DATASOURCE_PASSWORD="password"
 ### Setting Environment Variables
 
 **Linux/macOS:**
+
 ```bash
 export RICARDO_AUTH_JWT_SECRET="your-secret-key"
 export RICARDO_AUTH_JWT_EXPIRATION="86400000"
 ```
 
 **Windows:**
+
 ```cmd
 set RICARDO_AUTH_JWT_SECRET=your-secret-key
 set RICARDO_AUTH_JWT_EXPIRATION=86400000
 ```
 
 **IDE (IntelliJ IDEA):**
+
 ```
 Run Configuration → Environment Variables:
 RICARDO_AUTH_JWT_SECRET=your-secret-key
@@ -292,13 +332,15 @@ RICARDO_AUTH_JWT_EXPIRATION=86400000
 ## Configuration Properties Reference
 
 ### Complete Basic Configuration
+
 ```yaml
 ricardo:
   auth:
     enabled: true                         # Enable/disable auth module
     jwt:
       secret: "your-secret-key"           # JWT signing secret (REQUIRED)
-      expiration: 604800000               # Token expiration in milliseconds
+      access-token-expiration: 604800000   # Access token expiration (ms)
+      refresh-token-expiration: 604800000  # Refresh token expiration (ms)
     controllers:
       auth:
         enabled: true                     # Enable /api/auth endpoints
@@ -310,12 +352,35 @@ ricardo:
       require-uppercase: true             # Require uppercase letters
       require-lowercase: true             # Require lowercase letters
       require-digits: true                # Require digits
-      require-special-chars: false       # Require special characters
+      require-special-chars: false        # Require special characters
       special-characters: "!@#$%^&*()"   # Allowed special characters
       prevent-common-passwords: true      # Prevent common passwords
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true      # Set to false for local dev only
+        http-only: true
+        same-site: Strict # Strict/Lax/None
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true   # Enforce HTTPS (recommended for production)
 ```
 
 ### Spring Boot Integration
+
 ```yaml
 spring:
   application:
@@ -357,6 +422,7 @@ logging:
 Ricardo Auth validates your configuration on startup:
 
 ### ✅ Valid Configuration
+
 ```yaml
 ricardo:
   auth:
@@ -365,6 +431,7 @@ ricardo:
 ```
 
 ### ❌ Invalid Configuration
+
 ```yaml
 ricardo:
   auth:
@@ -373,6 +440,7 @@ ricardo:
 ```
 
 **Error Message:**
+
 ```
 ***************************
 APPLICATION FAILED TO START
@@ -390,24 +458,31 @@ Configure a longer JWT secret in application.yml
 ### Common Issues
 
 **1. Application Won't Start**
+
 ```
 Error: Property 'ricardo.auth.jwt.secret' is required
 ```
+
 **Solution:** Add JWT secret to your configuration.
 
 **2. Database Connection Issues**
+
 ```
 Error: Failed to configure a DataSource
 ```
+
 **Solution:** Add JPA and database dependencies to your `pom.xml`.
 
 **3. Login Returns 401**
+
 ```
 Error: Bad credentials
 ```
+
 **Solution:** Verify user exists and password is correct.
 
 ### Debug Configuration
+
 ```yaml
 logging:
   level:
@@ -418,6 +493,7 @@ logging:
 ```
 
 ### Health Check
+
 ```bash
 # Check if application is running
 curl http://localhost:8080/actuator/health
@@ -427,6 +503,7 @@ curl http://localhost:8080/actuator/health
 ```
 
 ### Quick Verification
+
 ```bash
 # 1. Create user
 curl -X POST http://localhost:8080/api/users/create \
@@ -439,9 +516,23 @@ curl -X POST http://localhost:8080/api/auth/login \
   -d '{"email":"test@example.com","password":"password123"}'
 
 # 3. Test protected endpoint (use token from step 2)
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:8080/api/auth/me
+curl http://localhost:8080/api/auth/me --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
+
+## New Admin Endpoint: Token Revocation
+
+Ricardo Auth provides an admin-only endpoint to revoke any token (access or refresh):
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+
+- Only users with `ADMIN` role can call this endpoint.
+- Works for both access and refresh tokens.
 
 ## Next Steps
 

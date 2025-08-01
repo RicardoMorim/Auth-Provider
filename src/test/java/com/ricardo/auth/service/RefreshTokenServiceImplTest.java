@@ -30,28 +30,22 @@ import static org.junit.jupiter.api.Assertions.*;
 @Transactional
 class RefreshTokenServiceImplTest {
 
-    @Autowired
-    private RefreshTokenService<User, Long> refreshTokenService;
-
-    @Autowired
-    private UserService<User, Long> userService;
-
-    @Autowired
-    private RefreshTokenRepository refreshTokenRepository;
-
-    @Autowired
-    private DefaultUserJpaRepository userRepository;
-
-    @Autowired
-    private PasswordEncoder passwordEncoder;
-
-    private User testUser;
-
     /**
      * The Auth properties.
      */
     @Autowired
     AuthProperties authProperties;
+    @Autowired
+    private RefreshTokenService<User, Long> refreshTokenService;
+    @Autowired
+    private UserService<User, Long> userService;
+    @Autowired
+    private RefreshTokenRepository refreshTokenRepository;
+    @Autowired
+    private DefaultUserJpaRepository userRepository;
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+    private User testUser;
 
     /**
      * Sets up.

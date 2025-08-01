@@ -13,9 +13,8 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 
 ## Common Error Messages
 
-### 1. "Password must be at least X characters long"
-
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -48,6 +47,7 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 ### 2. "Password must contain at least one uppercase letter"
 
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -80,6 +80,7 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 ### 3. "Password must contain at least one lowercase letter"
 
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -112,6 +113,7 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 ### 4. "Password must contain at least one digit"
 
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -144,6 +146,7 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 ### 5. "Password must contain at least one special character"
 
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -183,7 +186,11 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 
 ### 6. "Password is too common and easily guessable"
 
+- The system ships with a default block-list of common passwords. Disable it with `prevent-common-passwords: false`.
+- You can point to a custom list through `common-passwords-file`.
+
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -221,6 +228,7 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 ### 7. "Password exceeds maximum length"
 
 **❌ Error:**
+
 ```json
 {
   "error": "Bad Request",
@@ -269,6 +277,7 @@ ricardo:
 ```
 
 **Test with relaxed policy:**
+
 ```bash
 # Start with dev profile
 java -jar app.jar --spring.profiles.active=dev
@@ -302,7 +311,9 @@ ricardo:
 
 ### Production Environment Setup
 
-For production security:
+> **Dica:**
+> - Use blocklist de senhas e ajuste os requisitos para apps sensíveis.
+> - Combine com rate limiting para máxima proteção contra brute force.
 
 ```yaml
 # application-prod.yml
@@ -346,6 +357,7 @@ ricardo:
 Implement stricter policies over time:
 
 #### Phase 1: Basic Requirements
+
 ```yaml
 ricardo:
   auth:
@@ -357,6 +369,7 @@ ricardo:
 ```
 
 #### Phase 2: Add Character Types
+
 ```yaml
 ricardo:
   auth:
@@ -369,6 +382,7 @@ ricardo:
 ```
 
 #### Phase 3: Full Security
+
 ```yaml
 ricardo:
   auth:
@@ -628,8 +642,6 @@ public class PasswordPolicyValidator {
 
 ## Migration Guide
 
-### Migrating from v1.0.x to v1.1.0
-
 If you're upgrading from a previous version:
 
 1. **Existing users may have weak passwords:**
@@ -642,10 +654,10 @@ If you're upgrading from a previous version:
    ```
 
 2. **Gradually strengthen policy:**
-   - Start with relaxed requirements
-   - Notify users of upcoming changes
-   - Gradually increase requirements
-   - Force password updates at next login
+    - Start with relaxed requirements
+    - Notify users of upcoming changes
+    - Gradually increase requirements
+    - Force password updates at next login
 
 3. **Handle existing user authentication:**
    ```java
@@ -670,19 +682,19 @@ If you're upgrading from a previous version:
 ### Check These Common Causes
 
 1. **Configuration not loaded:**
-   - Verify `application.yml` syntax
-   - Check active Spring profiles
-   - Ensure configuration is in correct file
+    - Verify `application.yml` syntax
+    - Check active Spring profiles
+    - Ensure configuration is in correct file
 
 2. **Caching issues:**
-   - Restart application
-   - Clear configuration cache
-   - Check for multiple configuration files
+    - Restart application
+    - Clear configuration cache
+    - Check for multiple configuration files
 
 3. **Version compatibility:**
-   - Ensure using Ricardo Auth v1.1.0+
-   - Check Spring Boot compatibility
-   - Verify all dependencies are compatible
+    - Ensure using Ricardo Auth v1.1.0+
+    - Check Spring Boot compatibility
+    - Verify all dependencies are compatible
 
 ### Get Help
 
@@ -700,9 +712,10 @@ If you're still having issues:
 3. **Include error messages** and stack traces
 
 4. **Ask for help:**
-   - 🐛 [GitHub Issues](https://github.com/RicardoMorim/Auth-Provider/issues)
-   - 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)
+    - 🐛 [GitHub Issues](https://github.com/RicardoMorim/Auth-Provider/issues)
+    - 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)
 
 ---
 
-🔒 **Remember:** Password policies are crucial for security. Balance security requirements with user experience for the best results!
+🔒 **Remember:** Password policies are crucial for security. Balance security requirements with user experience for the
+best results!

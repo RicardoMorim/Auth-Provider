@@ -5,6 +5,7 @@ import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -57,23 +58,23 @@ class JwtAuthFilterTest {
     void setUp() {
         // Clear security context
         SecurityContextHolder.clearContext();
-        
+
         // Clear repository
         userRepository.deleteAll();
-        
+
         // Create test user
         testUser = new User(
-            Username.valueOf("testuser"),
-            Email.valueOf("test@example.com"),
-            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
+                Username.valueOf("testuser"),
+                Email.valueOf("test@example.com"),
+                Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
         testUser = userRepository.save(testUser);
 
         // Generate valid token
         validToken = jwtService.generateAccessToken(
-            testUser.getEmail(),
-            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                testUser.getEmail(),
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
     }
 
@@ -91,8 +92,9 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
-        request.addHeader("Authorization", "Bearer " + validToken);
+
+        Cookie cookie = new Cookie("access_token", validToken);
+        request.setCookies(cookie);
 
         // Act
         jwtAuthFilter.doFilterInternal(request, response, filterChain);
@@ -115,8 +117,9 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
-        request.addHeader("Authorization", "Bearer " + validToken);
+
+        Cookie cookie = new Cookie("access_token", validToken);
+        request.setCookies(cookie);
 
         // Act
         jwtAuthFilter.doFilterInternal(request, response, filterChain);
@@ -126,7 +129,7 @@ class JwtAuthFilterTest {
         assertNotNull(authentication);
         assertEquals(1, authentication.getAuthorities().size());
         assertTrue(authentication.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
     }
 
     // ========== INVALID TOKEN TESTS ==========
@@ -143,7 +146,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "Bearer invalid.token.here");
 
         // Act
@@ -165,7 +168,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "Bearer malformed");
 
         // Act
@@ -187,7 +190,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         // Tamper with valid token
         String tamperedToken = validToken + "tampered";
         request.addHeader("Authorization", "Bearer " + tamperedToken);
@@ -213,7 +216,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         // No Authorization header
 
         // Act
@@ -235,7 +238,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", validToken); // Missing "Bearer " prefix
 
         // Act
@@ -257,7 +260,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "Basic " + validToken); // Wrong prefix
 
         // Act
@@ -279,7 +282,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "");
 
         // Act
@@ -303,7 +306,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "bearer " + validToken); // lowercase
 
         // Act
@@ -325,7 +328,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "BEARER " + validToken); // uppercase
 
         // Act
@@ -349,14 +352,14 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         // Set existing authentication
         SecurityContextHolder.getContext().setAuthentication(
-            new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
-                "existing@user.com", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
-            )
+                new org.springframework.security.authentication.UsernamePasswordAuthenticationToken(
+                        "existing@user.com", null, List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+                )
         );
-        
+
         request.addHeader("Authorization", "Bearer " + validToken);
 
         // Act
@@ -366,7 +369,7 @@ class JwtAuthFilterTest {
         var authentication = SecurityContextHolder.getContext().getAuthentication();
         assertEquals("existing@user.com", authentication.getName());
         assertTrue(authentication.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
     }
 
     // ========== MULTIPLE ROLES TESTS ==========
@@ -382,20 +385,21 @@ class JwtAuthFilterTest {
         // Arrange
         testUser.addRole(AppRole.ADMIN);
         userRepository.save(testUser);
-        
+
         String multiRoleToken = jwtService.generateAccessToken(
-            testUser.getEmail(),
-            List.of(
-                new SimpleGrantedAuthority("ROLE_USER"),
-                new SimpleGrantedAuthority("ROLE_ADMIN")
-            )
+                testUser.getEmail(),
+                List.of(
+                        new SimpleGrantedAuthority("ROLE_USER"),
+                        new SimpleGrantedAuthority("ROLE_ADMIN")
+                )
         );
-        
+
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
-        request.addHeader("Authorization", "Bearer " + multiRoleToken);
+
+        Cookie cookie = new Cookie("access_token", multiRoleToken);
+        request.setCookies(cookie);
 
         // Act
         jwtAuthFilter.doFilterInternal(request, response, filterChain);
@@ -405,9 +409,9 @@ class JwtAuthFilterTest {
         assertNotNull(authentication);
         assertEquals(2, authentication.getAuthorities().size());
         assertTrue(authentication.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_USER")));
         assertTrue(authentication.getAuthorities().stream()
-            .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
+                .anyMatch(auth -> auth.getAuthority().equals("ROLE_ADMIN")));
     }
 
     // ========== SPECIAL CHARACTERS TESTS ==========
@@ -422,23 +426,24 @@ class JwtAuthFilterTest {
     void doFilterInternal_shouldHandleSpecialCharactersInSubject() throws ServletException, IOException {
         // Arrange
         User specialUser = new User(
-            Username.valueOf("specialuser"),
-            Email.valueOf("test+tag@example.com"),
-            Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
+                Username.valueOf("specialuser"),
+                Email.valueOf("test+tag@example.com"),
+                Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         specialUser.addRole(AppRole.USER);
         userRepository.save(specialUser);
-        
+
         String specialToken = jwtService.generateAccessToken(
-            "test+tag@example.com",
-            List.of(new SimpleGrantedAuthority("ROLE_USER"))
+                "test+tag@example.com",
+                List.of(new SimpleGrantedAuthority("ROLE_USER"))
         );
-        
+
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
-        request.addHeader("Authorization", "Bearer " + specialToken);
+
+        Cookie cookie = new Cookie("access_token", specialToken);
+        request.setCookies(cookie);
 
         // Act
         jwtAuthFilter.doFilterInternal(request, response, filterChain);
@@ -463,8 +468,9 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
-        request.addHeader("Authorization", "Bearer " + validToken);
+
+        Cookie cookie = new Cookie("access_token", validToken);
+        request.setCookies(cookie);
 
         // Act
         jwtAuthFilter.doFilterInternal(request, response, filterChain);
@@ -486,7 +492,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "Bearer invalid.token");
 
         // Act
@@ -532,7 +538,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         // Token that will cause parsing errors
         request.addHeader("Authorization", "Bearer ...");
 
@@ -540,7 +546,7 @@ class JwtAuthFilterTest {
         assertDoesNotThrow(() -> {
             jwtAuthFilter.doFilterInternal(request, response, filterChain);
         });
-        
+
         assertNull(SecurityContextHolder.getContext().getAuthentication());
     }
 
@@ -558,7 +564,7 @@ class JwtAuthFilterTest {
         MockHttpServletRequest request = new MockHttpServletRequest();
         MockHttpServletResponse response = new MockHttpServletResponse();
         MockFilterChain filterChain = new MockFilterChain();
-        
+
         request.addHeader("Authorization", "  Bearer " + validToken + "  "); // Extra whitespace
 
         // Act
@@ -579,7 +585,7 @@ class JwtAuthFilterTest {
     @Test
     void doFilterInternal_shouldBeConcurrentlySafe() throws ServletException, IOException {
         // This test ensures filter doesn't have shared state issues
-        
+
         // Create multiple requests
         MockHttpServletRequest request1 = new MockHttpServletRequest();
         MockHttpServletRequest request2 = new MockHttpServletRequest();
@@ -587,16 +593,19 @@ class JwtAuthFilterTest {
         MockHttpServletResponse response2 = new MockHttpServletResponse();
         MockFilterChain filterChain1 = new MockFilterChain();
         MockFilterChain filterChain2 = new MockFilterChain();
-        
-        request1.addHeader("Authorization", "Bearer " + validToken);
-        request2.addHeader("Authorization", "Bearer invalid.token");
+
+        Cookie cookie1 = new Cookie("access_token", validToken);
+        Cookie cookie2 = new Cookie("access_token", "invalid.token");
+
+        request1.setCookies(cookie1);
+        request2.setCookies(cookie2);
 
         // Act - Process both requests
         jwtAuthFilter.doFilterInternal(request1, response1, filterChain1);
         var auth1 = SecurityContextHolder.getContext().getAuthentication();
-        
+
         SecurityContextHolder.clearContext(); // Simulate different thread
-        
+
         jwtAuthFilter.doFilterInternal(request2, response2, filterChain2);
         var auth2 = SecurityContextHolder.getContext().getAuthentication();
 

@@ -12,6 +12,8 @@ import org.springframework.boot.context.properties.ConfigurationProperties;
  * Also enables users to create their own custom configuration class that extends this one, allowing them to
  * override the default values.
  */
+@Getter
+@Setter
 @ConfigurationProperties(prefix = "ricardo.auth")
 public class AuthProperties {
 
@@ -19,6 +21,11 @@ public class AuthProperties {
      * Whether auth is enabled
      */
     private boolean enabled = true;
+
+    /**
+     * Whether to redirect HTTP to HTTPS
+     */
+    private boolean redirectHttps = true;
 
     /**
      * JWT configuration
@@ -41,72 +48,31 @@ public class AuthProperties {
     private RefreshTokens refreshTokens = new RefreshTokens();
 
     /**
-     * The type Refresh tokens.
+     * Rate limiter configuration
      */
-    @Getter
-    @Setter
-    public static class RefreshTokens {
-        private boolean enabled = true;
-        /**
-         * Maximum number of refresh tokens per user (0 = unlimited)
-         */
-        @Min(0)
-        private int maxTokensPerUser = 5;
-
-        private boolean rotateOnRefresh = true;
-
-        @Min(60000) // 1 minute
-        private long cleanupInterval = 3600000L; // default 1 hour
-
-        private boolean autoCleanup = true;
-
-        /**
-         * Repository configuration specifically for refresh tokens
-         */
-        private RefreshTokenRepository repository = new RefreshTokenRepository();
-    }
+    private RateLimiter rateLimiter = new RateLimiter();
 
     /**
-     * The type Refresh token repository.
+     * Token blocklist configuration
      */
-    @Getter
-    @Setter
-    public static class RefreshTokenRepository {
-        /**
-         * Repository type for refresh tokens: jpa, postgresql
-         */
-        private String type = RefreshTokenRepositoryType.JPA.toString().toLowerCase();
-
-        /**
-         * Database-specific settings for refresh tokens
-         */
-        private Database database = new Database();
-    }
+    private TokenBlocklist tokenBlocklist = new TokenBlocklist();
 
     /**
-     * The type Database.
+     * Redis configuration
      */
-    @Getter
-    @Setter
-    public static class Database {
-        private String refreshTokensTable = "refresh_tokens";
-        private String schema;
-        private String url;
-        private String driverClassName;
-    }
+    private Redis redis = new Redis();
 
     /**
-     * The enum Refresh token repository type.
+     * Cookie configuration
+     */
+    private Cookies cookies = new Cookies();
+
+    /**
+     * Repository types for refresh tokens
      */
     public enum RefreshTokenRepositoryType {
-        /**
-         * Jpa refresh token repository type.
-         */
-        JPA ("jpa"),
-        /**
-         * Postgresql refresh token repository type.
-         */
-        POSTGRESQL ("postgresql");
+        JPA("jpa"),
+        POSTGRESQL("postgresql");
 
         @Getter
         private final String value;
@@ -116,13 +82,54 @@ public class AuthProperties {
         }
 
         @Override
-        public final String toString() {
+        public String toString() {
             return value;
         }
     }
 
     /**
-     * The type Jwt.
+     * Storage types for rate limiter and token blocklist
+     */
+    public enum StorageType {
+        MEMORY("memory"),
+        REDIS("redis");
+
+        @Getter
+        private final String value;
+
+        StorageType(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+    /**
+     * Cookie SameSite attribute values
+     */
+    public enum SameSitePolicy {
+        STRICT("Strict"),
+        LAX("Lax"),
+        NONE("None");
+
+        @Getter
+        private final String value;
+
+        SameSitePolicy(String value) {
+            this.value = value;
+        }
+
+        @Override
+        public String toString() {
+            return value;
+        }
+    }
+
+    /**
+     * JWT configuration properties
      */
     @Getter
     @Setter
@@ -135,17 +142,16 @@ public class AuthProperties {
         /**
          * JWT access token expiration time in milliseconds (default: 15 minutes)
          */
-        private long accessTokenExpiration = 900000L; // 15 minutes
+        private long accessTokenExpiration = 900000L;
 
         /**
          * JWT refresh token expiration time in milliseconds (default: 7 days)
          */
-        private long refreshTokenExpiration = 604800000L; // 7 days
+        private long refreshTokenExpiration = 604800000L;
     }
 
-
     /**
-     * The type Controllers.
+     * Controller configuration properties
      */
     @Getter
     @Setter
@@ -153,9 +159,6 @@ public class AuthProperties {
         private Controller auth = new Controller();
         private Controller user = new Controller();
 
-        /**
-         * The type Controller.
-         */
         @Getter
         @Setter
         public static class Controller {
@@ -164,10 +167,10 @@ public class AuthProperties {
     }
 
     /**
-     * Password policy configuration
+     * Password policy configuration properties
      */
-    @Setter
     @Getter
+    @Setter
     public static class PasswordPolicy {
         /**
          * Minimum password length
@@ -217,73 +220,126 @@ public class AuthProperties {
     }
 
     /**
-     * Is enabled boolean.
-     *
-     * @return the boolean
+     * Refresh token configuration properties
      */
-// Root level getters and setters
-    public boolean isEnabled() { return enabled; }
+    @Getter
+    @Setter
+    public static class RefreshTokens {
+        private boolean enabled = true;
+
+        /**
+         * Maximum number of refresh tokens per user (0 = unlimited)
+         */
+        @Min(0)
+        private int maxTokensPerUser = 5;
+
+        private boolean rotateOnRefresh = true;
+
+        @Min(60000) // 1 minute
+        private long cleanupInterval = 3600000L; // default 1 hour
+
+        private boolean autoCleanup = true;
+
+        /**
+         * Repository configuration specifically for refresh tokens
+         */
+        private RefreshTokenRepository repository = new RefreshTokenRepository();
+    }
 
     /**
-     * Sets enabled.
-     *
-     * @param enabled the enabled
+     * Refresh token repository configuration properties
      */
-    public void setEnabled(boolean enabled) { this.enabled = enabled; }
+    @Getter
+    @Setter
+    public static class RefreshTokenRepository {
+        /**
+         * Repository type for refresh tokens
+         */
+        private RefreshTokenRepositoryType type = RefreshTokenRepositoryType.JPA;
+
+        /**
+         * Database-specific settings for refresh tokens
+         */
+        private Database database = new Database();
+    }
 
     /**
-     * Gets jwt.
-     *
-     * @return the jwt
+     * Database configuration properties
      */
-    public Jwt getJwt() { return jwt; }
+    @Getter
+    @Setter
+    public static class Database {
+        private String refreshTokensTable = "refresh_tokens";
+        private String schema;
+        private String url;
+        private String driverClassName;
+    }
 
     /**
-     * Sets jwt.
-     *
-     * @param jwt the jwt
+     * Rate limiter configuration properties
      */
-    public void setJwt(Jwt jwt) { this.jwt = jwt; }
+    @Getter
+    @Setter
+    public static class RateLimiter {
+        private boolean enabled = true;
+        private StorageType type = StorageType.MEMORY;
+        private int maxRequests = 150;
+        private long timeWindowMs = 60000L;
+    }
 
     /**
-     * Gets controllers.
-     *
-     * @return the controllers
+     * Token blocklist configuration properties
      */
-    public Controllers getControllers() { return controllers; }
+    @Getter
+    @Setter
+    public static class TokenBlocklist {
+        private boolean enabled = true;
+        private StorageType type = StorageType.MEMORY;
+    }
 
     /**
-     * Sets controllers.
-     *
-     * @param controllers the controllers
+     * Redis configuration properties
      */
-    public void setControllers(Controllers controllers) { this.controllers = controllers; }
+    @Getter
+    @Setter
+    public static class Redis {
+        private String host = "localhost";
+        private int port = 6379;
+        private String password;
+        private int database = 0;
+    }
 
     /**
-     * Gets password policy.
-     *
-     * @return the password policy
+     * Cookie configuration properties
      */
-    public PasswordPolicy getPasswordPolicy() { return passwordPolicy; }
+    @Getter
+    @Setter
+    public static class Cookies {
+        private AccessCookie access = new AccessCookie();
+        private RefreshCookie refresh = new RefreshCookie();
 
-    /**
-     * Sets password policy.
-     *
-     * @param passwordPolicy the password policy
-     */
-    public void setPasswordPolicy(PasswordPolicy passwordPolicy) { this.passwordPolicy = passwordPolicy; }
+        /**
+         * Access token cookie configuration
+         */
+        @Getter
+        @Setter
+        public static class AccessCookie {
+            private boolean secure = true;
+            private boolean httpOnly = true;
+            private SameSitePolicy sameSite = SameSitePolicy.STRICT;
+            private String path = "/";
+        }
 
-    /**
-     * Gets refresh tokens.
-     *
-     * @return the refresh tokens
-     */
-    public RefreshTokens getRefreshTokens() { return refreshTokens; }
-
-    /**
-     * Sets refresh tokens.
-     *
-     * @param refreshTokens the refresh tokens
-     */
-    public void setRefreshTokens(RefreshTokens refreshTokens) { this.refreshTokens = refreshTokens; }
+        /**
+         * Refresh token cookie configuration
+         */
+        @Getter
+        @Setter
+        public static class RefreshCookie {
+            private boolean secure = true;
+            private boolean httpOnly = true;
+            private SameSitePolicy sameSite = SameSitePolicy.STRICT;
+            private String path = "/api/auth/refresh";
+        }
+    }
 }

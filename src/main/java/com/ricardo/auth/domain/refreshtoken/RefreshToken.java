@@ -24,33 +24,28 @@ import java.time.Instant;
 public class RefreshToken {
 
 
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+    @Column(unique = true, nullable = false, length = 1000)
+    private String token;
+    // store the email. works with ANY AuthUser implementation. no need for generic class as this handles it much simpler
+    @Column(name = "user_email", nullable = false)
+    private String userEmail;
+    @Column(nullable = false)
+    private Instant expiryDate;
+    @Setter
+    @Column(nullable = false)
+    private boolean revoked;
+    @Column(name = "created_at", nullable = false)
+    @Setter
+    private Instant createdAt;
+
     /**
      * Instantiates a new Refresh token.
      */
     protected RefreshToken() {
     }
-
-    @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
-
-    @Column(unique = true, nullable = false, length = 1000)
-    private String token;
-
-    // store the email. works with ANY AuthUser implementation. no need for generic class as this handles it much simpler
-    @Column(name = "user_email", nullable = false)
-    private String userEmail;
-
-    @Column(nullable = false)
-    private Instant expiryDate;
-
-    @Setter
-    @Column(nullable = false)
-    private boolean revoked;
-
-    @Column(name = "created_at", nullable = false)
-    @Setter
-    private Instant createdAt;
 
     /**
      * Instantiates a new Refresh token.

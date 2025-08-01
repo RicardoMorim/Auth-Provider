@@ -31,7 +31,7 @@ public class UserController implements UserApiEndpoint {
      * @param passwordEncoder       the password encoder
      * @param passwordPolicyService the password policy service
      */
-    public UserController(UserService<User, Long> userService, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService)  {
+    public UserController(UserService<User, Long> userService, PasswordEncoder passwordEncoder, PasswordPolicyService passwordPolicyService) {
         this.userService = userService;
         this.passwordEncoder = passwordEncoder;
         this.passwordPolicyService = passwordPolicyService;

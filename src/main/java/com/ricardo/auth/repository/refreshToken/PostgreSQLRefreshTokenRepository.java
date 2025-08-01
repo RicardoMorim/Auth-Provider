@@ -52,9 +52,9 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     @Override
     public Optional<RefreshToken> findValidToken(String token, Instant now) {
         String sql = String.format("""
-            SELECT * FROM %s 
-            WHERE token = ? AND revoked = false AND expiry_date > ?
-            """, tableName);
+                SELECT * FROM %s 
+                WHERE token = ? AND revoked = false AND expiry_date > ?
+                """, tableName);
 
         try {
             RefreshToken refreshToken = jdbcTemplate.queryForObject(sql,
@@ -75,10 +75,10 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 
     private RefreshToken insert(RefreshToken refreshToken) {
         String sql = String.format("""
-        INSERT INTO %s (token, user_email, expiry_date, revoked, created_at) 
-        VALUES (?, ?, ?, ?, ?) 
-        RETURNING id
-        """, tableName);
+                INSERT INTO %s (token, user_email, expiry_date, revoked, created_at) 
+                VALUES (?, ?, ?, ?, ?) 
+                RETURNING id
+                """, tableName);
 
         KeyHolder keyHolder = new GeneratedKeyHolder();
         jdbcTemplate.update(connection -> {
@@ -98,10 +98,10 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 
     private RefreshToken update(RefreshToken refreshToken) {
         String sql = String.format("""
-            UPDATE %s 
-            SET token = ?, user_email = ?, expiry_date = ?, revoked = ?
-            WHERE id = ?
-            """, tableName);
+                UPDATE %s 
+                SET token = ?, user_email = ?, expiry_date = ?, revoked = ?
+                WHERE id = ?
+                """, tableName);
 
         int rowsAffected = jdbcTemplate.update(sql,
                 refreshToken.getToken(),
@@ -127,9 +127,9 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     @Override
     public boolean existsByToken(String token) {
         String sql = String.format("""
-            SELECT COUNT(*) FROM %s 
-            WHERE token = ? AND revoked = false AND expiry_date > NOW()
-            """, tableName);
+                SELECT COUNT(*) FROM %s 
+                WHERE token = ? AND revoked = false AND expiry_date > NOW()
+                """, tableName);
         Integer count = jdbcTemplate.queryForObject(sql, Integer.class, token);
         return count != null && count > 0;
     }
@@ -155,26 +155,11 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     @Override
     public long countByUserEmailAndRevokedFalseAndExpiryDateAfter(String userEmail, Instant now) {
         String sql = String.format("""
-            SELECT COUNT(*) FROM %s 
-            WHERE user_email = ? AND revoked = false AND expiry_date > ?
-            """, tableName);
+                SELECT COUNT(*) FROM %s 
+                WHERE user_email = ? AND revoked = false AND expiry_date > ?
+                """, tableName);
         Long count = jdbcTemplate.queryForObject(sql, Long.class, userEmail, Timestamp.from(now));
         return count != null ? count : 0;
-    }
-
-    private static class RefreshTokenRowMapper implements RowMapper<RefreshToken> {
-        @Override
-        public RefreshToken mapRow(ResultSet rs, int rowNum) throws SQLException {
-            RefreshToken token = new RefreshToken(
-                    rs.getString("token"),
-                    rs.getString("user_email"),
-                    rs.getTimestamp("expiry_date").toInstant()
-            );
-            token.setId(rs.getLong("id"));
-            token.setRevoked(rs.getBoolean("revoked"));
-            token.setCreatedAt(rs.getTimestamp("created_at").toInstant());
-            return token;
-        }
     }
 
     @Override
@@ -229,10 +214,32 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
         return count != null ? count : 0;
     }
 
-
     @Override
     public void deleteAll() {
         String sql = String.format("DELETE FROM %s", tableName);
         jdbcTemplate.update(sql);
+    }
+
+    private static class RefreshTokenRowMapper implements RowMapper<RefreshToken> {
+        /**
+         * Map row refresh token.
+         *
+         * @param rs     the rs
+         * @param rowNum the row num
+         * @return the refresh token
+         * @throws SQLException the sql exception
+         */
+        @Override
+        public RefreshToken mapRow(ResultSet rs, int rowNum) throws SQLException {
+            RefreshToken token = new RefreshToken(
+                    rs.getString("token"),
+                    rs.getString("user_email"),
+                    rs.getTimestamp("expiry_date").toInstant()
+            );
+            token.setId(rs.getLong("id"));
+            token.setRevoked(rs.getBoolean("revoked"));
+            token.setCreatedAt(rs.getTimestamp("created_at").toInstant());
+            return token;
+        }
     }
 }
