@@ -1,3 +1,9 @@
+
+---
+Last Updated: 2025-08-02
+Version: 2.0.0
+---
+
 # Documentation Index
 
 Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps you find exactly what you need.
@@ -20,7 +26,7 @@ Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps 
 | **[Basic Configuration](configuration/basic.md)** | Quick setup and common settings | 10 min |
 | **[Database Configuration](configuration/database.md)** | H2, PostgreSQL, MySQL setup | 15 min |
 | **[Password Policy Configuration](configuration/password-policy.md)** | Password rules and validation | 10 min |
-| **[Security Guide](security-guide.md)** | Production security and JWT best practices | 15 min |
+| **[Security Guide](security-guide.md)** | Production security, HTTPS, cookies, blocklist, rate limiting | 15 min |
 
 ### 🔗 **Using the API & Examples**
 | Guide | What You'll Learn | Time Needed |
@@ -38,7 +44,7 @@ Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps 
 |-------|-------------------|-------------|
 | **[Troubleshooting Overview](troubleshooting/index.md)** | Quick problem resolution guide | 5 min |
 | **[Startup Issues](troubleshooting/startup-issues.md)** | Fix application startup problems | 10 min |
-| **[Authentication Issues](troubleshooting/authentication.md)** | Resolve login and token problems | 15 min |
+| **[Authentication Issues](troubleshooting/authentication.md)** | Resolve login and token problems (cookie-based, blocklist, rate limiting) | 15 min |
 | **[Password Policy Issues](troubleshooting/password-policy.md)** | Password validation problems | 5 min |
 
 ## 🎯 Documentation by Your Role
@@ -115,7 +121,7 @@ Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps 
 - **[Database Configuration](configuration-guide.md#database-configuration)** - Database setup options
 
 ### API Documentation
-- **[Authentication Endpoints](api-reference.md#authentication-endpoints)** - Login and token management
+- **[Authentication Endpoints](api-reference.md#authentication-endpoints)** - Login and token management (cookies, blocklist, rate limiting)
 - **[User Management Endpoints](api-reference.md#user-management-endpoints)** - User CRUD operations
 - **[Error Responses](api-reference.md#error-responses)** - Error handling and status codes
 
@@ -123,6 +129,7 @@ Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps 
 - **[JWT Security](security-guide.md#jwt-security)** - Token management and security
 - **[Password Security](security-guide.md#password-security)** - Password hashing and policies
 - **[Role-Based Access Control](security-guide.md#role-based-access-control-rbac)** - Authorization patterns
+- **[HTTPS, Cookies, Blocklist, Rate Limiting](security-guide.md#https-and-transport-security)** - Transport, cookies, blocklist, rate limiting
 
 ## Troubleshooting
 
@@ -202,5 +209,4 @@ Found an issue with the documentation? Have suggestions for improvement?
 
 ---
 
-**Last Updated**: 2024-01-15  
-**Version**: 1.0.0
+

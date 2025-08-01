@@ -2,6 +2,13 @@
 
 Learn how to implement Ricardo Auth in a **distributed microservices architecture** with API Gateway, service discovery, and cross-service authentication.
 
+---
+
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
 ## 📋 Quick Navigation
 
 - [Overview](#overview)
@@ -20,6 +27,7 @@ Learn how to implement Ricardo Auth in a **distributed microservices architectur
 - User Service for user management
 - JWT token sharing across services
 - Eureka service discovery
+- **Token blocklist and rate limiting (optional)**
 
 **Technologies:**
 - Spring Cloud Gateway
@@ -126,6 +134,28 @@ ricardo:
         enabled: false  # Auth handled by dedicated service
       user:
         enabled: false  # User management handled by dedicated service
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: redis   # Use 'redis' for distributed blocklist in production
+    rate-limiter:
+      enabled: true
+      type: redis   # Use 'redis' for distributed rate limiting in production
+      max-requests: 200
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true      # Set to false for local dev only
+        http-only: true
+        same-site: Strict # Strict/Lax/None
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true   # Enforce HTTPS (recommended for production)
 
 # Eureka Configuration
 eureka:
@@ -137,139 +167,36 @@ server:
   port: 8080
 ```
 
-### Custom Authentication Filter
-```java
-package com.mycompany.gateway.filter;
+---
 
-import com.ricardo.auth.core.JwtService;
-import org.springframework.cloud.gateway.filter.GatewayFilter;
-import org.springframework.cloud.gateway.filter.GatewayFilterChain;
-import org.springframework.cloud.gateway.filter.factory.AbstractGatewayFilterFactory;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Component;
-import org.springframework.web.server.ServerWebExchange;
-import reactor.core.publisher.Mono;
+### Token Blocklist and Rate Limiting (NEW)
 
-@Component
-public class AuthFilter extends AbstractGatewayFilterFactory<AuthFilter.Config> {
-    
-    private final JwtService jwtService;
-    
-    public AuthFilter(JwtService jwtService) {
-        super(Config.class);
-        this.jwtService = jwtService;
-    }
-    
-    @Override
-    public GatewayFilter apply(Config config) {
-        return (exchange, chain) -> {
-            String authHeader = exchange.getRequest().getHeaders().getFirst("Authorization");
-            
-            if (authHeader == null || !authHeader.startsWith("Bearer ")) {
-                return onError(exchange, "Missing or invalid Authorization header", HttpStatus.UNAUTHORIZED);
-            }
-            
-            String token = authHeader.substring(7);
-            
-            try {
-                if (!jwtService.validateToken(token)) {
-                    return onError(exchange, "Invalid JWT token", HttpStatus.UNAUTHORIZED);
-                }
-                
-                String username = jwtService.extractUsername(token);
-                
-                // Add user info to headers for downstream services
-                ServerWebExchange modifiedExchange = exchange.mutate()
-                    .request(exchange.getRequest().mutate()
-                        .header("X-User-Email", username)
-                        .build())
-                    .build();
-                
-                return chain.filter(modifiedExchange);
-                
-            } catch (Exception e) {
-                return onError(exchange, "Token validation failed", HttpStatus.UNAUTHORIZED);
-            }
-        };
-    }
-    
-    private Mono<Void> onError(ServerWebExchange exchange, String err, HttpStatus httpStatus) {
-        exchange.getResponse().setStatusCode(httpStatus);
-        return exchange.getResponse().setComplete();
-    }
-    
-    public static class Config {
-        // Configuration properties if needed
-    }
+- **Token Blocklist:**
+  - Prevents usage of revoked tokens (access or refresh). Supports in-memory or Redis for distributed setups.
+  - Configure with `ricardo.auth.token-blocklist.type: memory|redis`.
+- **Rate Limiting:**
+  - Protects endpoints from brute-force and abuse. Supports in-memory or Redis for distributed setups.
+  - Configure with `ricardo.auth.rate-limiter.type: memory|redis` and set `max-requests` and `time-window-ms`.
+
+---
+
+### Token Revocation Endpoint (NEW)
+
+Ricardo Auth now provides an admin-only endpoint to revoke any token (access or refresh):
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+{
+  "token": "<token-to-revoke>"
 }
 ```
+- Only users with `ADMIN` role can call this endpoint.
+- Works for both access and refresh tokens.
 
-## Auth Service
-
-### Main Application
-```java
-package com.mycompany.authservice;
-
-import org.springframework.boot.SpringApplication;
-import org.springframework.boot.autoconfigure.SpringBootApplication;
-import org.springframework.cloud.netflix.eureka.EnableEurekaClient;
-
-@SpringBootApplication
-@EnableEurekaClient
-public class AuthServiceApplication {
-    public static void main(String[] args) {
-        SpringApplication.run(AuthServiceApplication.class, args);
-    }
-}
-```
-
-### Configuration
-```yaml
-# application-auth.yml
-spring:
-  application:
-    name: auth-service
-  datasource:
-    url: jdbc:postgresql://localhost:5432/authdb
-    username: ${DB_USERNAME}
-    password: ${DB_PASSWORD}
-  jpa:
-    hibernate:
-      ddl-auto: validate
-    show-sql: false
-
-# Ricardo Auth Configuration
-ricardo:
-  auth:
-    jwt:
-      secret: ${JWT_SECRET}
-      expiration: 604800000  # 7 days
-    controllers:
-      auth:
-        enabled: true   # Enable auth endpoints
-      user:
-        enabled: false  # User management in separate service
-    password-policy:
-      min-length: 10
-      require-uppercase: true
-      require-lowercase: true
-      require-digits: true
-      require-special-chars: true
-
-eureka:
-  client:
-    service-url:
-      defaultZone: http://localhost:8761/eureka/
-
-server:
-  port: 8081
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info
-```
+---
 
 ## User Service
 

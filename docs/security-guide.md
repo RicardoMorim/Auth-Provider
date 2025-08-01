@@ -12,6 +12,8 @@ The Ricardo Auth Starter implements several security mechanisms:
 - **Input Validation**: Protection against malicious input
 - **CORS Protection**: Cross-Origin Resource Sharing controls
 - **SQL Injection Prevention**: JPA/Hibernate protection
+- **Cookie-based Authentication**: All tokens are sent via secure cookies (HttpOnly, Secure, SameSite)
+- **Blocklist and Rate Limiting**: Prevent token reuse and abuse (in-memory or Redis)
 
 ## JWT Security
 
@@ -92,24 +94,14 @@ ricardo:
 
 ### Token Storage (Client-Side)
 
-**Recommended approaches:**
+**Recommended approach:**
 
-1. **HttpOnly Cookies** (Most Secure)
+- **HttpOnly Cookies** (Most Secure, now default)
    ```javascript
    // Automatically handled by browser, immune to XSS
-   // Configure your server to use HttpOnly cookies
-   ```
-
-2. **Memory Storage** (Secure but loses on refresh)
-   ```javascript
-   // Store in component state or Redux store
-   // Token lost on page refresh
-   ```
-
-3. **SessionStorage** (Acceptable)
-   ```javascript
-   sessionStorage.setItem('token', token);
-   // Lost when tab closes
+   // Tokens are set as HttpOnly cookies by the backend
+   // Frontend must send credentials (cookies) with each request
+   fetch('/api/auth/me', { credentials: 'include' });
    ```
 
 **Avoid:**
@@ -361,6 +353,11 @@ public class UserSecurityService {
 
 **Never run authentication in production without HTTPS.**
 
+- The starter now supports a `redirect-https` property to force HTTPS in production.
+- Secure cookies (`Secure`, `SameSite`, `HttpOnly`) are used for all tokens by default.
+- If using cookies, HTTPS is required for them to be sent by browsers.
+- **The Authorization header is deprecated for authentication. Use secure cookies for all authentication flows.**
+
 #### Spring Boot HTTPS Configuration
 
 ```yaml
@@ -429,7 +426,6 @@ spring:
         - "DELETE"
         - "OPTIONS"
       allowed-headers: 
-        - "Authorization"
         - "Content-Type"
         - "X-Requested-With"
       allow-credentials: true
@@ -573,66 +569,56 @@ public class SecurityAuditEventListener {
 }
 ```
 
+### Rate Limiting & Blocklist
+
 ### Rate Limiting
 
-Implement rate limiting to prevent brute force attacks:
-
-```java
-@Component
-public class RateLimitingFilter implements Filter {
-    
-    private final Map<String, AtomicInteger> requestCounts = new ConcurrentHashMap<>();
-    private final Map<String, Long> requestTimes = new ConcurrentHashMap<>();
-    
-    @Override
-    public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException {
-        
-        HttpServletRequest httpRequest = (HttpServletRequest) request;
-        String clientIP = getClientIP(httpRequest);
-        
-        if (isRateLimited(clientIP)) {
-            HttpServletResponse httpResponse = (HttpServletResponse) response;
-            httpResponse.setStatus(HttpStatus.TOO_MANY_REQUESTS.value());
-            httpResponse.getWriter().write("Rate limit exceeded");
-            return;
-        }
-        
-        chain.doFilter(request, response);
-    }
-    
-    private boolean isRateLimited(String clientIP) {
-        long currentTime = System.currentTimeMillis();
-        long windowStart = currentTime - TimeUnit.MINUTES.toMillis(1); // 1-minute window
-        
-        // Reset counter if window has expired
-        Long lastRequestTime = requestTimes.get(clientIP);
-        if (lastRequestTime == null || lastRequestTime < windowStart) {
-            requestCounts.put(clientIP, new AtomicInteger(1));
-            requestTimes.put(clientIP, currentTime);
-            return false;
-        }
-        
-        // Check if rate limit exceeded (e.g., 100 requests per minute)
-        AtomicInteger count = requestCounts.get(clientIP);
-        if (count.incrementAndGet() > 100) {
-            return true;
-        }
-        
-        return false;
-    }
-}
+- The API implements rate limiting (memory or Redis) to prevent abuse and brute-force.
+- Configure via `ricardo.auth.rate-limiter`.
+- Implementations: `memory` (default) and `redis`.
+- Example:
+```yaml
+ricardo:
+  auth:
+    rate-limiter:
+      enabled: true
+      type: redis  # or memory
+      max-requests: 100
+      time-window-ms: 60000
 ```
+- If the limit is exceeded, HTTP 429 is returned.
+
+### Token Blocklist (Revocation)
+
+- Tokens can be revoked instantly (logout, admin, etc).
+- Blocklist implemented in memory or Redis.
+- Revocation endpoint: `/api/auth/revoke` (ADMIN, accepts access or refresh token).
+- Example usage:
+```bash
+curl -X POST http://localhost:8080/api/auth/revoke \
+  -H "Content-Type: application/json" \
+  --cookie "access_token=<ADMIN_TOKEN>" \
+  -d '{"token": "TOKEN_TO_REVOKE"}'
+```
+- Revoked tokens are rejected immediately.
+
+> **Breaking change v2.0.0:**
+> - Authentication cookies now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required for production.
+> - Blocklist and rate limiting are enabled by default.
+> - Revocation endpoint `/api/auth/revoke` was added and requires ADMIN permission.
+> - The Authorization header is deprecated for authentication (except for legacy user endpoints). Use secure cookies for all authentication flows.
 
 ## Security Checklist
 
 ### Development
-- [ ] Use strong JWT secret keys
-- [ ] Set appropriate token expiration times
-- [ ] Implement input validation
-- [ ] Use HTTPS in development
-- [ ] Enable security logging
-- [ ] Test authentication flows
+- [x] Use strong JWT secret keys
+- [x] Set appropriate token expiration times
+- [x] Implement input validation
+- [x] Use HTTPS in development
+- [x] Enable security logging
+- [x] Test authentication flows
+- [x] Enable blocklist and rate limiting
+- [x] Use cookies for all tokens
 
 ### Staging/Testing
 - [ ] Test with realistic data volumes

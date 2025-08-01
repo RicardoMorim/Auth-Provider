@@ -1,5 +1,10 @@
 # Basic Configuration
 
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
 Get **Ricardo Auth running quickly** with minimal configuration. Perfect for development, prototyping, and getting started.
 
 ## 📋 Quick Navigation
@@ -20,7 +25,7 @@ Get **Ricardo Auth running quickly** with minimal configuration. Perfect for dev
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>2.0.0</version>
 </dependency>
 ```
 
@@ -31,6 +36,9 @@ ricardo:
   auth:
     jwt:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
+      access-token-expiration: 86400000   # 1 day (default)
+      refresh-token-expiration: 604800000 # 7 days (default)
+
 ```
 
 **That's it!** 🎉 Ricardo Auth is now configured with sensible defaults.
@@ -42,6 +50,15 @@ ricardo:
 - ✅ BCrypt password encryption
 - ✅ Basic role-based security (`USER` role)
 - ✅ In-memory H2 database for quick testing
+- ✅ Token blocklist and rate limiting (in-memory or Redis)
+- ✅ Secure cookies for tokens
+- ✅ `/api/auth/revoke` endpoint for admin token revocation
+
+### What Changed in v2.0.0
+- **JWT Configuration:** Added `access-token-expiration` and `refresh-token-expiration` properties.
+- **Blocklist/Rate Limiter:** New `token-blocklist` and `rate-limiter` sections.
+- **Cookie Security:** New `cookies` section for configuring token cookies.
+- **HTTPS Redirect:** New `redirect-https` property to enforce HTTPS.
 
 ## Development Setup
 
@@ -298,7 +315,8 @@ ricardo:
     enabled: true                         # Enable/disable auth module
     jwt:
       secret: "your-secret-key"           # JWT signing secret (REQUIRED)
-      expiration: 604800000               # Token expiration in milliseconds
+      access-token-expiration: 604800000   # Access token expiration (ms)
+      refresh-token-expiration: 604800000  # Refresh token expiration (ms)
     controllers:
       auth:
         enabled: true                     # Enable /api/auth endpoints
@@ -310,9 +328,31 @@ ricardo:
       require-uppercase: true             # Require uppercase letters
       require-lowercase: true             # Require lowercase letters
       require-digits: true                # Require digits
-      require-special-chars: false       # Require special characters
+      require-special-chars: false        # Require special characters
       special-characters: "!@#$%^&*()"   # Allowed special characters
       prevent-common-passwords: true      # Prevent common passwords
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true      # Set to false for local dev only
+        http-only: true
+        same-site: Strict # Strict/Lax/None
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true   # Enforce HTTPS (recommended for production)
 ```
 
 ### Spring Boot Integration
@@ -439,9 +479,22 @@ curl -X POST http://localhost:8080/api/auth/login \
   -d '{"email":"test@example.com","password":"password123"}'
 
 # 3. Test protected endpoint (use token from step 2)
-curl -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:8080/api/auth/me
+curl http://localhost:8080/api/auth/me --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
+
+## New Admin Endpoint: Token Revocation
+
+Ricardo Auth provides an admin-only endpoint to revoke any token (access or refresh):
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+- Only users with `ADMIN` role can call this endpoint.
+- Works for both access and refresh tokens.
 
 ## Next Steps
 

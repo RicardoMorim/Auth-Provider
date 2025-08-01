@@ -4,14 +4,22 @@
 **Complexity:** ⭐ Easy  
 **Time:** 15 minutes  
 
+---
+
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
 ## What You'll Build
 
 A simple Spring Boot web application with:
 - ✅ User registration and login
-- ✅ JWT token authentication
+- ✅ JWT token authentication (via secure cookies)
 - ✅ Protected pages with role-based access
 - ✅ Password policy validation
 - ✅ Frontend integration examples
+- ✅ Token blocklist and rate limiting (optional)
 
 ## Project Structure
 
@@ -61,7 +69,7 @@ my-web-app/
         <dependency>
             <groupId>io.github.ricardomorim</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>1.1.0</version>
+            <version>2.0.0</version> <!-- Use 2.x for cookie-based authentication -->
         </dependency>
         
         <!-- Spring Boot Web -->
@@ -114,19 +122,15 @@ my-web-app/
 spring:
   application:
     name: my-web-app
-  
-  # Database configuration
   datasource:
     url: jdbc:h2:mem:webapp
     driver-class-name: org.h2.Driver
     username: sa
     password: password
-  
   jpa:
     hibernate:
       ddl-auto: create-drop
     show-sql: false
-  
   h2:
     console:
       enabled: true
@@ -137,9 +141,8 @@ ricardo:
   auth:
     jwt:
       secret: "my-super-secure-development-secret-key-for-webapp-should-be-256-bits"
-      expiration: 86400000  # 24 hours for development
-    
-    # Password policy configuration
+      access-token-expiration: 86400000  # 24 hours for development
+      refresh-token-expiration: 604800000 # 7 days
     password-policy:
       min-length: 8
       require-uppercase: true
@@ -147,12 +150,33 @@ ricardo:
       require-digits: true
       require-special-chars: true
       prevent-common-passwords: true
-    
     controllers:
       auth:
         enabled: true
       user:
         enabled: true
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true      # Set to false for local dev only
+        http-only: true
+        same-site: Strict # Strict/Lax/None
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true   # Enforce HTTPS (recommended for production)
 
 server:
   port: 8080
@@ -161,6 +185,35 @@ logging:
   level:
     com.ricardo.auth: INFO
 ```
+
+---
+
+## Step 2.1: Token Blocklist and Rate Limiting (NEW)
+
+- **Token Blocklist:**
+  - Prevents usage of revoked tokens (access or refresh). Supports in-memory (default) or Redis for distributed setups.
+  - Configure with `ricardo.auth.token-blocklist.type: memory|redis`.
+- **Rate Limiting:**
+  - Protects endpoints from brute-force and abuse. Supports in-memory (default) or Redis for distributed setups.
+  - Configure with `ricardo.auth.rate-limiter.type: memory|redis` and set `max-requests` and `time-window-ms`.
+
+---
+
+## Step 2.2: Token Revocation Endpoint (NEW)
+
+Ricardo Auth now provides an admin-only endpoint to revoke any token (access or refresh):
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+- Only users with `ADMIN` role can call this endpoint.
+- Works for both access and refresh tokens.
+
+---
 
 ## Step 3: Main Application Class
 
@@ -393,142 +446,36 @@ public class HomeController {
 ## Step 6: JavaScript Authentication Service
 
 ### Authentication Service (static/js/auth.js)
+
+> **Ricardo Auth 2.x Example:**
+> This JavaScript example demonstrates cookie-based authentication. The login and refresh endpoints do not return tokens in the response body. All authenticated requests must use `credentials: 'include'` to send cookies. Do not attempt to read or write the `access_token` or `refresh_token` cookies from JavaScript—they are `HttpOnly` for security.
+
 ```javascript
-/**
- * Authentication service for handling JWT tokens and API calls
- */
-class AuthService {
-    constructor() {
-        this.token = sessionStorage.getItem('authToken');
-        this.baseUrl = window.location.origin;
-    }
-
-    /**
-     * Login with email and password
-     */
-    async login(email, password) {
-        try {
-            const response = await fetch(`${this.baseUrl}/api/auth/login`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ email, password })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                this.token = data.token;
-                sessionStorage.setItem('authToken', this.token);
-                return { success: true, token: this.token };
-            } else {
-                const error = await response.json();
-                return { success: false, error: error.message };
-            }
-        } catch (error) {
-            return { success: false, error: 'Network error: ' + error.message };
-        }
-    }
-
-    /**
-     * Register a new user
-     */
-    async register(username, email, password) {
-        try {
-            const response = await fetch(`${this.baseUrl}/api/users/create`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ username, email, password })
-            });
-
-            if (response.ok) {
-                const data = await response.json();
-                return { success: true, user: data };
-            } else {
-                const error = await response.json();
-                return { success: false, error: error.message };
-            }
-        } catch (error) {
-            return { success: false, error: 'Network error: ' + error.message };
-        }
-    }
-
-    /**
-     * Get current authenticated user
-     */
-    async getCurrentUser() {
-        if (!this.token) return null;
-
-        try {
-            const response = await fetch(`${this.baseUrl}/api/auth/me`, {
-                headers: {
-                    'Authorization': `Bearer ${this.token}`
-                }
-            });
-
-            if (response.ok) {
-                return await response.json();
-            }
-        } catch (error) {
-            console.error('Failed to get current user:', error);
-        }
-        return null;
-    }
-
-    /**
-     * Logout user
-     */
-    logout() {
-        this.token = null;
-        sessionStorage.removeItem('authToken');
-        window.location.href = '/login';
-    }
-
-    /**
-     * Check if user is authenticated
-     */
-    isAuthenticated() {
-        return !!this.token;
-    }
-
-    /**
-     * Get headers for authenticated requests
-     */
-    getAuthHeaders() {
-        return {
-            'Authorization': `Bearer ${this.token}`,
-            'Content-Type': 'application/json'
-        };
-    }
-}
-
-// Global auth service instance
-const authService = new AuthService();
-
-// Global logout function
-function logout() {
-    authService.logout();
-}
-
 // Login form handler
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
     if (loginForm) {
         loginForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('error');
-            
-            const result = await authService.login(email, password);
-            
-            if (result.success) {
-                window.location.href = '/dashboard';
-            } else {
-                errorDiv.textContent = result.error;
+            try {
+                const response = await fetch('/api/auth/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email, password }),
+                    credentials: 'include' // Important: send cookies
+                });
+                if (response.ok) {
+                    window.location.href = '/dashboard';
+                } else {
+                    const error = await response.json();
+                    errorDiv.textContent = error.message || 'Login failed';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error: ' + err.message;
                 errorDiv.classList.remove('d-none');
             }
         });
@@ -539,31 +486,63 @@ document.addEventListener('DOMContentLoaded', function() {
     if (registerForm) {
         registerForm.addEventListener('submit', async function(e) {
             e.preventDefault();
-            
             const username = document.getElementById('username').value;
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const errorDiv = document.getElementById('error');
-            
             if (password !== confirmPassword) {
                 errorDiv.textContent = 'Passwords do not match';
                 errorDiv.classList.remove('d-none');
                 return;
             }
-            
-            const result = await authService.register(username, email, password);
-            
-            if (result.success) {
-                alert('Registration successful! Please login.');
-                window.location.href = '/login';
-            } else {
-                errorDiv.textContent = result.error;
+            try {
+                const response = await fetch('/api/users/create', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, email, password }),
+                    credentials: 'include'
+                });
+                if (response.ok) {
+                    alert('Registration successful! Please login.');
+                    window.location.href = '/login';
+                } else {
+                    const error = await response.json();
+                    errorDiv.textContent = error.message || 'Registration failed';
+                    errorDiv.classList.remove('d-none');
+                }
+            } catch (err) {
+                errorDiv.textContent = 'Network error: ' + err.message;
                 errorDiv.classList.remove('d-none');
             }
         });
     }
 });
+
+// Example: Fetch current user info (requires authentication)
+async function getCurrentUser() {
+    try {
+        const response = await fetch('/api/auth/me', {
+            method: 'GET',
+            credentials: 'include'
+        });
+        if (response.ok) {
+            return await response.json();
+        }
+    } catch (err) {
+        // Handle error
+    }
+    return null;
+}
+
+// Logout function
+async function logout() {
+    await fetch('/api/auth/logout', {
+        method: 'POST',
+        credentials: 'include'
+    });
+    window.location.href = '/login';
+}
 ```
 
 ## Step 7: Test the Application
@@ -635,6 +614,8 @@ curl -X POST http://localhost:8080/api/auth/login \
 - **"Failed to configure DataSource"** → Ensure H2 dependency is included
 - **"Password doesn't meet requirements"** → Use passwords with uppercase, lowercase, digits, and special characters
 - **Login fails** → Check the browser developer tools for error messages
+- **"Token revoked" or 401 after logout** → The token was revoked (blocklist is working as intended)
+- **"Rate limit exceeded"** → Too many requests from your IP or user, wait and try again
 
 ### Need Help?
 - 📖 [Troubleshooting Guide](../troubleshooting/index.md)

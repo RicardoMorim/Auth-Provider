@@ -325,11 +325,31 @@ ricardo:
 
 ## [Unreleased]
 
+### Added
+- **Token Blocklist**: Support for token blocklist (in-memory and Redis) for instant revocation of access/refresh tokens.
+- **Rate Limiting**: Request limiting per IP/user, with in-memory and Redis implementations.
+- **Endpoint `/api/auth/revoke`**: New protected (ADMIN) route to revoke access or refresh tokens.
+- **Secure Cookies for Tokens**: Tokens are now sent via HTTP-only cookies, with configurable security flags (Secure, SameSite, Path).
+- **Option to Enforce HTTPS**: New `redirect-https` property to require HTTPS in production.
+
+### Changed
+- Documentation updated to reflect new properties and configuration examples for blocklist, rate limiting, cookies, and HTTPS.
+
+### Breaking Changes
+- **Tokens via Cookies**: Access and refresh tokens are now sent exclusively via secure cookies. The frontend must read and send cookies automatically. This may impact existing integrations that expected tokens in the response body or header.
+- **HTTPS Required by Default**: The starter now enforces HTTPS by default. For development environments, disable with `redirect-https: false`.
+- **Authorization Header Deprecated**: The Authorization header is no longer used for authentication (except for legacy user endpoints). All authentication is now cookie-based.
+
+### Migration Notes
+- Update frontend to work with HTTP-only cookies.
+- Review environment settings to ensure HTTPS in production.
+- See configuration examples in the README.md.
+
 ### Future Considerations
 > **Note**: The following features are planned for future development as the project evolves and based on community feedback. They are not actively being developed at this time.
 
 > Anyone who liked this project and wants to contribute is more than welcome to implement any of these features. 
-> Simply code them, test them and sumbit a PR to the `dev` branch. For more information check out [contributing] (CONTRIBUTING.md).  
+> Simply code them, test them, and sumbit a PR to the `dev` branch. For more information check out [contributing] (CONTRIBUTING.md).  
 
 
 

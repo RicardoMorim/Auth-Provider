@@ -64,9 +64,13 @@ Users table: tenant_id column for isolation
     <dependency>
         <groupId>io.github.ricardomorim</groupId>
         <artifactId>auth-spring-boot-starter</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.0</version>
     </dependency>
-    
+    <!-- Redis for blocklist/rate limiting (optional) -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
     <!-- Spring Boot Web -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -133,7 +137,8 @@ ricardo:
   auth:
     jwt:
       secret: ${JWT_SECRET}
-      expiration: 3600000  # 1 hour for multi-tenant security
+      access-token-expiration: 3600000  # 1 hour for multi-tenant security
+      refresh-token-expiration: 2592000000 # 30 days for refresh tokens
     controllers:
       auth:
         enabled: true
@@ -146,6 +151,26 @@ ricardo:
       require-digits: true
       require-special-chars: true
       prevent-common-passwords: true
+    token-blocklist:
+      enabled: true
+      type: redis   # or 'memory' for dev
+    rate-limiter:
+      enabled: true
+      type: redis   # or 'memory' for dev
+      max-requests: 200
+      time-window-ms: 60000
+    cookies:
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
 
 # Multi-tenant configuration
 app:
@@ -162,6 +187,14 @@ logging:
     com.mycompany.multitenant: INFO
     org.hibernate.SQL: DEBUG
 ```
+
+# ⚠️ Breaking Changes in v1.2.0
+
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`, and `sameSite` flags by default. Update your frontend to use cookies for authentication.
+- **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
+- **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
+- **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
+- **/api/auth/revoke endpoint**: New admin-only endpoint to revoke any access or refresh token.
 
 ## Tenant Resolution
 
@@ -929,6 +962,33 @@ public class TenantUserController {
     }
 }
 ```
+
+## Token Revocation (Admin Only)
+
+A new admin-only endpoint allows you to revoke any access or refresh token:
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+- Works for both access and refresh tokens.
+- Revoked tokens are blocked in memory or Redis (depending on config).
+
+## Cookie-based Authentication
+
+- All authentication now uses cookies for access and refresh tokens.
+- Cookies are set with `httpOnly`, `secure`, and `sameSite` flags for security.
+- Most endpoints do not accept Authorization headers anymore (except /revoke).
+- For SaaS frontends, ensure your HTTP client supports cookies.
+
+## Rate Limiting and Blocklist
+
+- Rate limiting is enabled by default (in-memory for dev, Redis for prod).
+- Token blocklist is enabled by default (in-memory for dev, Redis for prod).
+- Configure with `ricardo.auth.rate-limiter` and `ricardo.auth.token-blocklist`.
 
 ## Testing
 

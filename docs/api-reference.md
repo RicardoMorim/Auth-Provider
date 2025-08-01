@@ -13,17 +13,17 @@ https://yourdomain.com # Production
 
 ## Authentication
 
-Most endpoints require authentication via JWT token in the Authorization header:
+Most endpoints require authentication via secure cookies (`access_token`, `refresh_token`). **The Authorization header is no longer used for authentication (BREAKING CHANGE).**
 
-```
-Authorization: Bearer <your-jwt-token>
-```
+- Tokens are now set and read via HTTP-only, Secure cookies for improved security.
+- The frontend must send cookies with each request (see CORS and credentials).
+- All authentication flows require HTTPS in production for cookies to work.
 
 ## Authentication Endpoints
 
 ### POST /api/auth/login
 
-Authenticate a user and receive JWT access and refresh tokens.
+Authenticate a user and receive JWT access and refresh tokens via secure cookies.
 
 #### Request
 
@@ -38,9 +38,7 @@ Content-Type: application/json
 ```json
 {
   "email": "string",
-  // Required: User's email address
   "password": "string"
-  // Required: User's password
 }
 ```
 
@@ -48,12 +46,8 @@ Content-Type: application/json
 
 **Success (200 OK):**
 
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
-}
-```
+- Sets `access_token` and `refresh_token` cookies (HTTP-only, Secure, SameSite, etc).
+- No body is returned by default.
 
 **Error (401 Unauthorized):**
 
@@ -90,35 +84,23 @@ curl -X POST http://localhost:8080/api/auth/login \
 
 ### POST /api/auth/refresh
 
-Refresh an access token using a valid refresh token.
+Refresh an access token using a valid refresh token cookie.
 
 #### Request
+
+- The `refresh_token` must be present as a cookie (not in the body or header).
 
 **Headers:**
 
 ```
-Content-Type: application/json
-```
-
-**Body:**
-
-```json
-{
-  "refreshToken": "string"
-  // Required: Valid refresh token
-}
+Cookie: refresh_token=...;
 ```
 
 #### Response
 
 **Success (200 OK):**
-
-```json
-{
-  "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature",
-  "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiJ1c2VyQGV4YW1wbGUuY29tIiwiaWF0IjoxNTE2MjM5MDIyLCJleHAiOjE1MTYyNDI2MjJ9.signature"
-}
-```
+- Sets new `access_token` and (optionally) new `refresh_token` cookies.
+- No body is returned by default.
 
 **Error (401 Unauthorized):**
 
@@ -146,10 +128,35 @@ Content-Type: application/json
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-  }'
+  --cookie "refresh_token=YOUR_REFRESH_TOKEN_HERE"
+```
+
+### POST /api/auth/revoke (ADMIN only)
+
+
+Revokes a token (either access or refresh). Requires ADMIN role. The request body must be a JSON object with a `token` field specifying the token to revoke.
+
+#### Request
+
+**Headers:**
+```
+Content-Type: application/json
+Cookie: access_token=...;
+```
+
+**Body:**
+
+```json
+{
+  "token": "TOKEN_TO_REVOKE"
+}
+```
+
+#### Response
+
+**Success (200 OK):**
+```json
+{"message": "Token revoked successfully"}
 ```
 
 ### GET /api/auth/me
@@ -161,7 +168,7 @@ Get information about the currently authenticated user.
 **Headers:**
 
 ```
-Authorization: Bearer <accessToken>
+Cookie: access_token=...;
 ```
 
 #### Response
@@ -192,7 +199,7 @@ Authorization: Bearer <accessToken>
 
 ```bash
 curl -X GET http://localhost:8080/api/auth/me \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
 
 ## User Management Endpoints
@@ -304,11 +311,14 @@ Get user information by ID.
 
 #### Request
 
+
 **Headers:**
 
 ```
-Authorization: Bearer <token>
+Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 ```
+
+> **Note:** The `Authorization` header is not supported for this endpoint. Use the `access_token` cookie.
 
 **Path Parameters:**
 
@@ -341,7 +351,7 @@ Authorization: Bearer <token>
 
 ```bash
 curl -X GET http://localhost:8080/api/users/1 \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
 
 ### GET /api/users/email/{email}
@@ -350,11 +360,14 @@ Get user information by email address.
 
 #### Request
 
+
 **Headers:**
 
 ```
-Authorization: Bearer <token>
+Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 ```
+
+> **Note:** The `Authorization` header is not supported for this endpoint. Use the `access_token` cookie.
 
 **Path Parameters:**
 
@@ -387,7 +400,7 @@ Authorization: Bearer <token>
 
 ```bash
 curl -X GET http://localhost:8080/api/users/email/john@example.com \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
 
 ### GET /api/users/exists/{email}
@@ -428,12 +441,15 @@ Update user information.
 
 #### Request
 
+
 **Headers:**
 
 ```
-Authorization: Bearer <token>
+Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 Content-Type: application/json
 ```
+
+> **Note:** The `Authorization` header is not supported for this endpoint. Use the `access_token` cookie.
 
 **Path Parameters:**
 
@@ -479,7 +495,7 @@ Content-Type: application/json
 
 ```bash
 curl -X PUT http://localhost:8080/api/users/update/1 \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  --cookie "access_token=YOUR_ACCESS_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
     "username": "johnsmith",
@@ -495,11 +511,14 @@ Delete a user account.
 
 #### Request
 
+
 **Headers:**
 
 ```
-Authorization: Bearer <token>
+Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 ```
+
+> **Note:** The `Authorization` header is not supported for this endpoint. Use the `access_token` cookie.
 
 **Path Parameters:**
 
@@ -539,7 +558,7 @@ Authorization: Bearer <token>
 
 ```bash
 curl -X DELETE http://localhost:8080/api/users/delete/1 \
-  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+  --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
 
 ## Error Responses
@@ -600,7 +619,7 @@ When request validation fails, you'll receive detailed error information:
 
 ## Rate Limiting
 
-The API may implement rate limiting. When rate limited, you'll receive:
+The API implements rate limiting (in-memory or Redis). When rate limited, you'll receive:
 
 **Response (429 Too Many Requests):**
 
@@ -613,24 +632,23 @@ The API may implement rate limiting. When rate limited, you'll receive:
 }
 ```
 
-## JWT Token Format
+## Token Blocklist (Revocation)
 
-JWT tokens contain the following claims:
+- Tokens can be revoked instantly (logout, admin revoke, etc).
+- Blocklist is implemented in-memory or with Redis.
+- Revoked tokens are rejected for all endpoints.
+- Use `/api/auth/revoke` to revoke any token (access or refresh).
 
-```json
-{
-  "sub": "user@example.com",
-  // Subject (username/email)
-  "iat": 1516239022,
-  // Issued at (timestamp)
-  "exp": 1516843822,
-  // Expiration (timestamp)
-  "authorities": [
-    "ROLE_USER"
-  ]
-  // User roles/authorities
-}
-```
+
+## Cookie Security (BREAKING CHANGE)
+
+- All tokens are now sent via HTTP-only, Secure cookies.
+- SameSite and Path are configurable.
+- HTTPS is required in production for Secure cookies.
+- The Authorization header is no longer used for authentication.
+
+> **Note:**
+> If you are integrating with a third-party frontend, mobile app, or any cross-domain/embedded context where cookies are the only authentication method, you **must** set `SameSite=None` and `Secure=true` for the relevant cookies. This is required for browsers to send cookies in cross-site requests and is essential for proper login and session functionality in embedded or cross-site scenarios.
 
 ## Postman Collection
 
@@ -674,12 +692,7 @@ You can import the following Postman collection to test the API:
       "name": "Get Current User",
       "request": {
         "method": "GET",
-        "header": [
-          {
-            "key": "Authorization",
-            "value": "Bearer {{token}}"
-          }
-        ],
+        "header": [],
         "url": {
           "raw": "{{baseUrl}}/api/auth/me",
           "host": [
@@ -691,7 +704,13 @@ You can import the following Postman collection to test the API:
             "me"
           ]
         }
-      }
+      },
+      "cookie": [
+        {
+          "key": "access_token",
+          "value": "{{token}}"
+        }
+      ]
     },
     {
       "name": "Create User",
@@ -736,72 +755,22 @@ You can import the following Postman collection to test the API:
 
 ## SDK Examples
 
-### JavaScript/Node.js
+### JavaScript/Node.js (with cookies)
 
 ```javascript
-class AuthClient {
-    constructor(baseUrl) {
-        this.baseUrl = baseUrl;
-        this.token = null;
-    }
-
-    async login(email, password) {
-        const response = await fetch(`${this.baseUrl}/api/auth/login`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({email, password})
-        });
-
-        if (response.ok) {
-            const data = await response.json();
-            this.token = data.token;
-            return data;
-        }
-        throw new Error('Login failed');
-    }
-
-    async getCurrentUser() {
-        const response = await fetch(`${this.baseUrl}/api/auth/me`, {
-            headers: {
-                'Authorization': `Bearer ${this.token}`
-            }
-        });
-
-        if (response.ok) {
-            return await response.json();
-        }
-        throw new Error('Failed to get current user');
-    }
-}
+// Use fetch with credentials to send cookies
+fetch('/api/auth/me', {
+  credentials: 'include'
+});
 ```
 
-### Python
+### Python (with cookies)
 
 ```python
 import requests
 
-class AuthClient:
-    def __init__(self, base_url):
-        self.base_url = base_url
-        self.token = None
-
-    def login(self, email, password):
-        response = requests.post(
-            f"{self.base_url}/api/auth/login",
-            json={"email": email, "password": password}
-        )
-        response.raise_for_status()
-        data = response.json()
-        self.token = data["token"]
-        return data
-
-    def get_current_user(self):
-        response = requests.get(
-            f"{self.base_url}/api/auth/me",
-            headers={"Authorization": f"Bearer {self.token}"}
-        )
-        response.raise_for_status()
-        return response.json()
+s = requests.Session()
+s.post('http://localhost:8080/api/auth/login', json={...})
+# Cookies are now stored in the session
+r = s.get('http://localhost:8080/api/auth/me')
 ```

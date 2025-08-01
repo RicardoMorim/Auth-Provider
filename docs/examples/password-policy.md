@@ -544,38 +544,69 @@ ricardo:
       prevent-common-passwords: true
 ```
 
-## 🎉 What You've Learned
+## ⚠️ Breaking Changes in v1.2.0
 
-✅ **Password Policy Configuration** - Set up policies for any security requirement  
-✅ **Environment-Specific Policies** - Different rules for dev/test/prod  
-✅ **Error Handling** - Properly handle and display validation errors  
-✅ **Testing Strategies** - Test password policies effectively  
-✅ **Best Practices** - Security vs usability balance  
-✅ **Common Use Cases** - Real-world policy configurations
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`, and `sameSite` flags by default. Update your frontend to use cookies for authentication.
+- **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
+- **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
+- **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
+- **/api/auth/revoke endpoint**: New admin-only endpoint to revoke any access or refresh token.
 
-## 🚀 Next Steps
+---
 
-### Enhance Your Password Security
-- Implement password strength meters
-- Add password history checking
-- Create password generation tools
-- Set up password expiration policies
+## Example: Full Security with Blocklist and Rate Limiting
 
-### Learn More
-- **[Security Guide](../security-guide.md)** - Complete security best practices
-- **[Configuration Guide](../configuration/index.md)** - All configuration options
-- **[Troubleshooting](../troubleshooting/password-policy.md)** - Password policy problems
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 10
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+    token-blocklist:
+      enabled: true
+      type: redis   # or 'memory' for dev
+    rate-limiter:
+      enabled: true
+      type: redis   # or 'memory' for dev
+      max-requests: 100
+      time-window-ms: 60000
+    cookies:
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
+```
 
-## 🆘 Need Help?
+## Token Revocation (Admin Only)
 
-### Quick Fixes
-- **Password rejected?** → Check the error message for specific requirements
-- **Too strict for testing?** → Use development profile with relaxed rules
-- **Users complaining?** → Consider mobile-friendly configuration
+A new admin-only endpoint allows you to revoke any access or refresh token:
 
-### Get Support
-- 📖 [Password Policy Troubleshooting](../troubleshooting/password-policy.md)
-- 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+- Works for both access and refresh tokens.
+- Revoked tokens are blocked in memory or Redis (depending on config).
+
+## Cookie-based Authentication
+
+- All authentication now uses cookies for access and refresh tokens.
+- Cookies are set with `httpOnly`, `secure`, and `sameSite` flags for security.
+- Most endpoints do not accept Authorization headers anymore (except /revoke).
 
 ---
 

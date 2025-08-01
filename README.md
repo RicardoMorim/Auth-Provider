@@ -22,11 +22,15 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 - 👥 Role-based access control (RBAC)
 - 🚫 Protection against common weak passwords
 - 🗄️ Flexible token storage (JPA/PostgreSQL)
+- ⛔ Token blocklist (in-memory or Redis) for revogação instantânea de tokens
+- 🚦 Rate limiting (in-memory ou Redis) para proteção contra brute-force e abuso
+- 🍪 Secure cookies para tokens, com flags de segurança e opção de forçar HTTPS
 
 **Ready-to-Use API Endpoints**
 - `/api/auth/login` - User authentication with refresh token
 - `/api/auth/refresh` - Refresh access token using refresh token
 - `/api/auth/register` - User registration
+- `/api/auth/revoke` - Revoga tokens (ADMIN only)
 - `/api/users/*` - Complete user management CRUD
 
 **Developer Experience**
@@ -184,9 +188,9 @@ curl -X POST http://localhost:8080/api/auth/refresh \
   }'
 ```
 
-**Use the access token to access protected endpoints:**
+**Use the access token to access protected endpoints (cookie-based authentication):**
 ```bash
-curl -H "Authorization: Bearer YOUR_ACCESS_TOKEN_HERE" \
+curl --cookie "access_token=YOUR_ACCESS_TOKEN_HERE" \
      http://localhost:8080/api/auth/me
 ```
 
@@ -214,29 +218,74 @@ Configure the starter using `application.yml` or `application.properties`:
 ```yaml
 ricardo:
   auth:
-    enabled: true  # Enable/disable the entire auth module
+    enabled: true
     jwt:
-      secret: "your-secret-key"           # Required: JWT signing secret
-      access-token-expiration: 900000     # Access token expiration (15 minutes)
-      refresh-token-expiration: 604800000 # Refresh token expiration (7 days)
+      secret: "your-secret-key"
+      access-token-expiration: 900000
+      refresh-token-expiration: 604800000
     refresh-tokens:
-      enabled: true                       # Enable/disable refresh token functionality
-      max-tokens-per-user: 5              # Maximum tokens per user
-      rotate-on-refresh: true             # Rotate tokens on each refresh
-      cleanup-interval: 3600000           # Cleanup interval (1 hour)
-      auto-cleanup: true                  # Enable automatic cleanup
+      enabled: true
+      max-tokens-per-user: 5
+      rotate-on-refresh: true
+      cleanup-interval: 3600000
+      auto-cleanup: true
       repository:
-        type: "jpa"                       # Repository type: "jpa" or "postgresql"
+        type: "jpa" # or "postgresql"
         database:
-          refresh-tokens-table: "refresh_tokens"  # Table name
-          schema: ""                      # Database schema (optional)
-          url: ""                         # Database URL (optional)
-          driver-class-name: ""           # Driver class (optional)
+          refresh-tokens-table: "refresh_tokens"
     controllers:
       auth:
-        enabled: true   # Enable/disable auth endpoints
+        enabled: true
       user:
-        enabled: true   # Enable/disable user management endpoints
+        enabled: true
+    # Token blocklist (revogação de tokens)
+    token-blocklist:
+      enabled: true
+      type: memory # memory|redis
+    # Rate limiting
+    rate-limiter:
+      enabled: true
+      type: memory # memory|redis
+      max-requests: 100
+      time-window-ms: 60000
+    # Cookies para tokens
+    cookies:
+      access:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+    # Forçar HTTPS (recomendado em produção)
+    redirect-https: true
+    # Configuração Redis (se usar Redis para blocklist/rate-limiter)
+    redis:
+      host: localhost
+      port: 6379
+      password: ""
+      database: 0
+```
+
+#### Exemplos de configuração para blocklist e rate limiting com Redis
+
+```yaml
+ricardo:
+  auth:
+    token-blocklist:
+      enabled: true
+      type: redis
+    rate-limiter:
+      enabled: true
+      type: redis
+    redis:
+      host: redis-server
+      port: 6379
+      password: "senha"
+      database: 0
 ```
 
 ### Password Policy Configuration
@@ -292,49 +341,27 @@ The starter requires a JPA implementation. Add to your `pom.xml`:
 ### Authentication Endpoints
 
 #### POST `/api/auth/login`
-Authenticate a user and receive JWT access and refresh tokens.
-
-**Request:**
-```json
-{
-    "email": "user@example.com",
-    "password": "password123"
-}
-```
-
-**Response:**
-```json
-{
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
+Authenticates the user and returns tokens in secure cookies.
 
 #### POST `/api/auth/refresh`
-Refresh an access token using a valid refresh token.
+Generates a new access token using the refresh token from the cookie.
 
-**Request:**
-```json
-{
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
-```
+#### POST `/api/auth/revoke` (ADMIN only)
+Revokes an access or refresh token. Example usage:
 
-**Response:**
-```json
-{
-    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
-    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
-}
+```bash
+curl -X POST http://localhost:8080/api/auth/revoke \
+  -H "Content-Type: application/json" \
+  -H "Authorization: Bearer {accessToken}" \
+  -d '"TOKEN_TO_REVOKE"'
 ```
 
 #### GET `/api/auth/me`
-Get the currently authenticated user's information.
+Returns information about the authenticated user.
 
-**Headers:**
-```
-Authorization: Bearer {accessToken}
-```
+**Authentication:**
+- All endpoints (except user endpoints) require authentication via secure cookies (`access_token`, `refresh_token`).
+- The Authorization header is no longer used for authentication (except for legacy user endpoints).
 
 **Response:**
 ```json
@@ -415,64 +442,40 @@ Delete a user (requires ADMIN role or ownership).
 
 ## 🔐 Security
 
-### Using JWT Tokens
+### Cookie-Based Tokens (BREAKING CHANGE)
 
-Include the JWT access token in the `Authorization` header:
+Tokens are now sent via HTTP-only, Secure cookies with configurable flags (Secure, SameSite, Path). This increases protection against XSS and CSRF.
 
-```bash
-curl -H "Authorization: Bearer your-access-token" \
-     http://localhost:8080/api/auth/me
-```
+- By default, cookies are `Secure` and `SameSite=Strict`.
+- Cookies require HTTPS in production (`redirect-https: true`).
+- The frontend must send cookies automatically with each request.
+- The Authorization header is no longer used for authentication (except for legacy user endpoints).
 
-### Refresh Token Flow
+### HTTPS Enforcement
 
-For long-running applications, use refresh tokens to maintain user sessions:
+By default, the starter enforces HTTPS in production. For development, you can disable it:
 
-```bash
-# 1. Login to get tokens
-curl -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email": "user@example.com", "password": "password"}'
-
-# 2. When access token expires, use refresh token
-curl -X POST http://localhost:8080/api/auth/refresh \
-  -H "Content-Type: application/json" \
-  -d '{"refreshToken": "your-refresh-token"}'
-```
-
-### Refresh Token Storage
-
-The starter supports two storage options:
-
-**JPA (Default):**
 ```yaml
 ricardo:
   auth:
-    refresh-tokens:
-      repository:
-        type: "jpa"
+    redirect-https: false
 ```
 
-**PostgreSQL (High Performance):**
-```yaml
-ricardo:
-  auth:
-    refresh-tokens:
-      repository:
-        type: "postgresql"
-```
+### Token Blocklist
 
-### Role-Based Access Control
+Tokens can be revoked instantly (global logout, admin revocation, etc). Supports in-memory or Redis blocklist.
 
-The starter includes built-in roles:
-- `USER`: Standard user role
-- `ADMIN`: Administrative privileges
+### Rate Limiting
 
-Users are automatically assigned the `USER` role upon creation.
+Protects sensitive endpoints from brute-force and abuse. Supports in-memory or Redis for distributed environments.
 
-### Password Security
+## 🚨 Breaking Changes & Migration Notes
 
-Passwords are automatically encrypted using BCrypt with a secure salt.
+- **All authentication now uses secure cookies (`HttpOnly`, `Secure`, `SameSite`).**
+- **The Authorization header is no longer used for authentication (except for legacy user endpoints).**
+- **HTTPS is required in production for cookies to work.**
+- **Blocklist and rate limiting are enabled by default.**
+- **Token revocation endpoint `/api/auth/revoke` (ADMIN) can revoke any token.**
 
 ## 🎯 Usage Examples
 

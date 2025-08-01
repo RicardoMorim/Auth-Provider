@@ -13,7 +13,6 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 
 ## Common Error Messages
 
-### 1. "Password must be at least X characters long"
 
 **❌ Error:**
 ```json
@@ -183,6 +182,9 @@ Quick solutions for password policy validation issues in Ricardo Auth v1.1.0+.
 
 ### 6. "Password is too common and easily guessable"
 
+- The system ships with a default block-list of common passwords. Disable it with `prevent-common-passwords: false`.
+- You can point to a custom list through `common-passwords-file`.
+
 **❌ Error:**
 ```json
 {
@@ -302,7 +304,9 @@ ricardo:
 
 ### Production Environment Setup
 
-For production security:
+> **Dica:**
+> - Use blocklist de senhas e ajuste os requisitos para apps sensíveis.
+> - Combine com rate limiting para máxima proteção contra brute force.
 
 ```yaml
 # application-prod.yml
@@ -628,7 +632,6 @@ public class PasswordPolicyValidator {
 
 ## Migration Guide
 
-### Migrating from v1.0.x to v1.1.0
 
 If you're upgrading from a previous version:
 

@@ -2,6 +2,13 @@
 
 This section provides practical, real-world examples for implementing Ricardo Auth in different types of applications.
 
+---
+
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
 ## 🚀 Quick Navigation
 
 ### By Application Type
@@ -89,7 +96,31 @@ ricardo:
   auth:
     jwt:
       secret: "your-256-bit-secret-key-here"
-      
+      access-token-expiration: 86400000
+      refresh-token-expiration: 604800000
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true      # Set to false for local dev only
+        http-only: true
+        same-site: Strict # Strict/Lax/None
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true   # Enforce HTTPS (recommended for production)
+
 spring:
   datasource:
     url: jdbc:h2:mem:testdb
@@ -100,6 +131,8 @@ spring:
     hibernate:
       ddl-auto: create-drop
 ```
+
+---
 
 ## 💡 Tips for Success
 

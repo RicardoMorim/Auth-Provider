@@ -1,6 +1,14 @@
 # Authentication Issues
 
-Resolve **login, token, and authentication problems** with Ricardo Auth quickly and effectively.
+Resolve **login, token, and authentication problems** with Ricardo Auth quickly and securely.
+
+## 🚨 Breaking Changes in v2.0.0
+
+- **Authentication cookies** now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required in production.
+- **Blocklist:** Both access and refresh tokens can be revoked instantly (logout, admin, or via endpoint).
+- **Rate limiting:** Protection against abuse, with in-memory or Redis implementation.
+- **Token revocation endpoint:** `/api/auth/revoke` (ADMIN) to revoke any token (access or refresh).
+- **New configuration properties:** for cookies, blocklist, rate limiting, HTTPS enforcement, etc.
 
 ## 📋 Quick Navigation
 
@@ -13,6 +21,12 @@ Resolve **login, token, and authentication problems** with Ricardo Auth quickly 
 - [Testing and Debugging](#testing-and-debugging)
 
 ## Login Problems
+
+> **v2.0.0 Highlights:**
+> - Authentication cookies now use secure flags (`HttpOnly`, `Secure`, `SameSite`).
+> - HTTPS is required for production.
+> - Blocklist and rate limiting are enabled by default.
+> - Token revocation endpoint `/api/auth/revoke` (ADMIN).
 
 ### Login Always Returns 401 Unauthorized
 
@@ -166,6 +180,11 @@ public class DebugUserController {
 
 ## Token Issues
 
+> **Important:**
+> - Tokens are now checked against a blocklist (instant revocation via logout/admin/endpoint).
+> - Rate limiting may cause HTTP 429 if limits are exceeded.
+> - **Default authentication is via secure cookies (HttpOnly, Secure, SameSite).** Do not send tokens via header unless explicitly configured.
+
 ### JWT Token Not Working
 
 **❌ Symptoms:**
@@ -175,18 +194,23 @@ public class DebugUserController {
 
 **🔍 Diagnostic Steps:**
 
-**1. Verify Token Format:**
+**1. Verifique o uso de cookies:**
 ```bash
-# Token should start with "Bearer "
-curl -H "Authorization: Bearer your-token-here" \
-     http://localhost:8080/api/auth/me
-
-# ❌ Wrong format
-curl -H "Authorization: your-token-here" \  # Missing "Bearer "
-     http://localhost:8080/api/auth/me
+# O acesso autenticado deve ser feito com cookies enviados automaticamente pelo navegador.
+# Exemplo usando curl (simulando browser):
+curl -v --cookie "access_token=SEU_TOKEN_AQUI" http://localhost:8080/api/auth/me
 ```
 
-**2. Check Token Expiration:**
+**2. Não envie Authorization header manualmente:**
+```bash
+# ❌ NÃO recomendado (a menos que tenha configurado para aceitar header):
+curl -H "Authorization: Bearer seu-token" http://localhost:8080/api/auth/me
+
+# ✅ Recomendado: use cookies HttpOnly (frontend envia automaticamente)
+fetch('/api/auth/me', { credentials: 'include' });
+```
+
+**3. Check Token Expiration:**
 ```javascript
 // Decode JWT token (client-side debugging)
 function decodeJWT(token) {
@@ -205,7 +229,7 @@ console.log('Token expires at:', new Date(payload.exp * 1000));
 console.log('Is expired:', Date.now() > payload.exp * 1000);
 ```
 
-**3. Verify JWT Secret Consistency:**
+**4. Verify JWT Secret Consistency:**
 ```yaml
 # Ensure same secret across all services/restarts
 ricardo:
@@ -243,6 +267,10 @@ curl -X POST http://localhost:8080/api/auth/login \
 ```
 
 ### Token Validation Errors
+
+> **Tip:**
+> - If the token was revoked, the error will be 401 with message "Token revoked".
+> - Use the `/api/auth/revoke` endpoint to revoke tokens manually (ADMIN).
 
 **❌ Error Messages:**
 ```json
@@ -549,6 +577,9 @@ public ResponseEntity<?> handleOptions() {
 
 ## Session Problems
 
+> **New:**
+> - Session now depends on secure cookies and HTTPS. If the user is logged out immediately, check cookie flags and HTTPS.
+
 ### Session Not Persisting
 
 **❌ Problem:** User gets logged out immediately
@@ -563,136 +594,69 @@ ricardo:
       expiration: 86400000  # 24 hours (not too short)
 ```
 
-**2. Client-Side Token Storage:**
-```javascript
-// Store token properly
-localStorage.setItem('authToken', response.token);
-
-// Include in requests
-const token = localStorage.getItem('authToken');
-fetch('/api/protected', {
-    headers: {
-        'Authorization': `Bearer ${token}`
-    }
-});
+**2. Check Cookie Settings:**
+```yaml
+ricardo:
+  auth:
+    cookies:
+      access:
+        http-only: true
+        secure: true  # Required in production
+        same-site: Strict
+      refresh:
+        http-only: true
+        secure: true
+        same-site: Strict
 ```
 
-**3. Check Cookie Settings (if using cookies):**
+**3. HTTPS enforcement:**
 ```yaml
-server:
-  servlet:
-    session:
-      cookie:
-        http-only: true
-        secure: false  # Set to true in production with HTTPS
-        max-age: 86400
+ricardo:
+  auth:
+    redirect-https: true
 ```
 
 ## Testing and Debugging
 
-### Integration Testing Authentication
+### Token Revocation (Blocklist)
 
-```java
-@SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
-public class AuthenticationIntegrationTest {
-    
-    @Autowired
-    private TestRestTemplate restTemplate;
-    
-    @Test
-    public void testFullAuthenticationFlow() {
-        // 1. Create user
-        CreateUserRequestDTO createRequest = new CreateUserRequestDTO();
-        createRequest.setUsername("testuser");
-        createRequest.setEmail("test@example.com");
-        createRequest.setPassword("TestPassword123!");
-        
-        ResponseEntity<UserDTO> createResponse = restTemplate.postForEntity(
-            "/api/users/create", createRequest, UserDTO.class);
-        
-        assertThat(createResponse.getStatusCode()).isEqualTo(HttpStatus.CREATED);
-        
-        // 2. Login
-        LoginRequestDTO loginRequest = new LoginRequestDTO();
-        loginRequest.setEmail("test@example.com");
-        loginRequest.setPassword("TestPassword123!");
-        
-        ResponseEntity<TokenDTO> loginResponse = restTemplate.postForEntity(
-            "/api/auth/login", loginRequest, TokenDTO.class);
-        
-        assertThat(loginResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        String token = loginResponse.getBody().getToken();
-        assertThat(token).isNotNull();
-        
-        // 3. Access protected endpoint
-        HttpHeaders headers = new HttpHeaders();
-        headers.setBearerAuth(token);
-        HttpEntity<Void> entity = new HttpEntity<>(headers);
-        
-        ResponseEntity<AuthenticatedUserDTO> meResponse = restTemplate.exchange(
-            "/api/auth/me", HttpMethod.GET, entity, AuthenticatedUserDTO.class);
-        
-        assertThat(meResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-        assertThat(meResponse.getBody().getUsername()).isEqualTo("test@example.com");
-    }
-}
-```
-
-### Debug Helper Methods
-
-```java
-@Component
-public class AuthDebugHelper {
-    
-    public void logTokenDetails(String token) {
-        try {
-            String[] parts = token.split("\\.");
-            if (parts.length == 3) {
-                String header = new String(Base64.getDecoder().decode(parts[0]));
-                String payload = new String(Base64.getDecoder().decode(parts[1]));
-                
-                System.out.println("Token Header: " + header);
-                System.out.println("Token Payload: " + payload);
-            }
-        } catch (Exception e) {
-            System.out.println("Invalid token format: " + e.getMessage());
-        }
-    }
-    
-    public void logUserDetails(Authentication auth) {
-        if (auth != null) {
-            System.out.println("Username: " + auth.getName());
-            System.out.println("Authorities: " + auth.getAuthorities());
-            System.out.println("Authenticated: " + auth.isAuthenticated());
-        } else {
-            System.out.println("No authentication found");
-        }
-    }
-}
-```
-
-### Common Debugging Commands
+- To revoke a token (access or refresh), use the endpoint:
 
 ```bash
-# 1. Test user creation
-curl -v -X POST http://localhost:8080/api/users/create \
+curl -X POST http://localhost:8080/api/auth/revoke \
+  -H "Authorization: Bearer <ADMIN_TOKEN>" \
   -H "Content-Type: application/json" \
-  -d '{"username":"debug","email":"debug@test.com","password":"DebugPass123!"}'
+  -d '"TOKEN_TO_REVOKE"'
+```
+- Revoked tokens are rejected immediately on all protected routes.
 
-# 2. Test login
-curl -v -X POST http://localhost:8080/api/auth/login \
-  -H "Content-Type: application/json" \
-  -d '{"email":"debug@test.com","password":"DebugPass123!"}'
+### Rate Limiting
 
-# 3. Test protected endpoint
-curl -v -H "Authorization: Bearer YOUR_TOKEN" \
-     http://localhost:8080/api/auth/me
-
-# 4. Check application health
-curl http://localhost:8080/actuator/health
-
-# 5. Decode JWT token online
-# Visit: https://jwt.io and paste your token
+- If you receive HTTP 429, check the configuration:
+```yaml
+ricardo:
+  auth:
+    rate-limiter:
+      enabled: true
+      type: memory # or redis
+      max-requests: 100
+      time-window-ms: 60000
 ```
 
-This comprehensive authentication troubleshooting guide covers the most common issues and their solutions. Use the diagnostic steps to identify problems quickly and apply the appropriate solutions.
+### Cookie Debugging
+
+- Use browser DevTools to inspect `access_token` and `refresh_token` cookies.
+- Ensure they have `HttpOnly`, `Secure`, `SameSite` flags and are only sent via HTTPS.
+
+### Logging
+
+```yaml
+logging:
+  level:
+    com.ricardo.auth: DEBUG
+    org.springframework.security: DEBUG
+```
+
+---
+
+This guide covers the main changes and common issues after upgrading to v2.0.0. See also the troubleshooting files for refresh token, CORS, and password policy.

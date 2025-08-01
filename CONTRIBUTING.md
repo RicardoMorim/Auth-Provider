@@ -271,10 +271,14 @@ void shouldCreateUserSuccessfully() {
     
     // Assert
     assertThat(result).isNotNull();
-    assertThat(result.getUsername()).isEqualTo("testuser");
+assertThat(result.getUsername()).isEqualTo("testuser");
     assertThat(result.getEmail()).isEqualTo("test@example.com");
 }
 ```
+
+- Ensure tests reflect the new authentication flow: use secure cookies for authentication, not Authorization headers (except for legacy user endpoints).
+- When writing integration tests for authentication, simulate cookie-based login and token refresh.
+- For rate limiting and blocklist, add tests that verify correct enforcement and revocation using the new endpoints and cookie-based tokens.
 
 ### Test Categories
 
@@ -375,6 +379,8 @@ mvn test -Dtest=*IntegrationTest
 - **Examples**: Include practical examples
 - **Completeness**: Cover all public APIs
 - **Maintenance**: Keep documentation up-to-date
+- Update documentation and code examples to use cookie-based authentication and highlight the removal of Authorization header for most endpoints.
+- Clearly document any breaking changes, especially around authentication, blocklist, rate limiting, and HTTPS enforcement.
 
 ### Updating Documentation
 

@@ -1,17 +1,48 @@
 # Configuration Overview
 
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
 Complete guide to configuring Ricardo Auth for your specific needs.
 
 ## 🚀 Quick Setup (2 minutes)
 
+
 **Minimum required configuration to get started:**
+
+> **Note:** The legacy `expiration` property is deprecated. Use `access-token-expiration` and `refresh-token-expiration` for all new configurations.
 
 ```yaml
 ricardo:
   auth:
     jwt:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
-```
+      access-token-expiration: 86400000
+      refresh-token-expiration: 604800000
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true      # Set to false for local dev only
+        http-only: true
+        same-site: Strict # Strict/Lax/None
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+    redirect-https: true   # Enforce HTTPS (recommended for production)```
 
 That's it! Ricardo Auth will use sensible defaults for everything else.
 
@@ -65,10 +96,33 @@ ricardo:
   auth:
     jwt:
       secret: "dev-secret-key-256-bits-long-for-development-use-only"
-      expiration: 86400000  # 1 day
+      access-token-expiration: 86400000  # 1 day
+      refresh-token-expiration: 604800000 # 7 days
     password-policy:
       min-length: 6         # Relaxed for testing
       require-special-chars: false
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: false      # Set to true in production
+        http-only: true
+        same-site: Lax
+        path: /
+      refresh:
+        secure: false
+        http-only: true
+        same-site: Lax
+        path: /api/auth/refresh
+  redirect-https: false   # Disable HTTPS redirect for development
 ```
 👉 **See:** [Basic Configuration](basic.md#development-setup)
 
@@ -88,6 +142,28 @@ ricardo:
     password-policy:
       min-length: 12            # Stronger for production
       require-special-chars: true
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: redis   # Use 'redis' for distributed blocklist in production
+    rate-limiter:
+      enabled: true
+      type: redis   # Use 'redis' for distributed rate limiting in production
+      max-requests: 200
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true
 ```
 👉 **See:** [Environment Variables](environment.md), [Security Configuration](security.md), [Refresh Token Configuration](refresh-token.md)
 
@@ -104,6 +180,28 @@ ricardo:
       max-tokens-per-user: 10   # More tokens for multiple devices
     password-policy:
       require-special-chars: false  # Mobile-friendly
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true
 ```
 👉 **See:** [Mobile API Example](../examples/mobile-api.md), [Refresh Token Configuration](refresh-token.md)
 
@@ -113,7 +211,8 @@ Maximum security settings:
 ricardo:
   auth:
     jwt:
-      expiration: 3600000       # 1 hour
+      access-token-expiration: 3600000       # 1 hour
+      refresh-token-expiration: 604800000    # 7 days
     password-policy:
       min-length: 15
       require-uppercase: true
@@ -121,6 +220,28 @@ ricardo:
       require-digits: true
       require-special-chars: true
       prevent-common-passwords: true
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: redis   # Use 'redis' for distributed blocklist in high-security apps
+    rate-limiter:
+      enabled: true
+      type: redis   # Use 'redis' for distributed rate limiting in high-security apps
+      max-requests: 50
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true
 ```
 👉 **See:** [Security Configuration](security.md), [Password Policy](password-policy.md)
 
@@ -176,7 +297,8 @@ ricardo:
   auth:
     jwt:
       secret: "dev-secret"
-      expiration: 86400000
+      access-token-expiration: 86400000
+      refresh-token-expiration: 604800000
 
 ---
 # Production profile  
@@ -188,18 +310,21 @@ ricardo:
   auth:
     jwt:
       secret: ${JWT_SECRET}
-      expiration: 604800000
+      access-token-expiration: 900000
+      refresh-token-expiration: 604800000
 ```
 
 #### **Using Environment Variables**
 ```bash
 # Development
 export RICARDO_AUTH_JWT_SECRET="dev-secret"
-export RICARDO_AUTH_JWT_EXPIRATION="86400000"
+export RICARDO_AUTH_JWT_ACCESS_TOKEN_EXPIRATION="86400000"
+export RICARDO_AUTH_JWT_REFRESH_TOKEN_EXPIRATION="604800000"
 
 # Production
 export RICARDO_AUTH_JWT_SECRET="prod-secret-from-vault"
-export RICARDO_AUTH_JWT_EXPIRATION="604800000"
+export RICARDO_AUTH_JWT_ACCESS_TOKEN_EXPIRATION="900000"
+export RICARDO_AUTH_JWT_REFRESH_TOKEN_EXPIRATION="604800000"
 ```
 
 ## 🛠 Configuration Validation
@@ -276,12 +401,19 @@ ricardo:
     
     jwt:
       secret: ${JWT_SECRET}
-      expiration: ${JWT_EXPIRATION:604800000}
-    
-    refresh-token:
+      access-token-expiration: ${JWT_ACCESS_TOKEN_EXPIRATION:900000}
+      refresh-token-expiration: ${JWT_REFRESH_TOKEN_EXPIRATION:604800000}
+    refresh-tokens:
       enabled: ${REFRESH_TOKEN_ENABLED:true}
-      expiration: ${REFRESH_TOKEN_EXPIRATION:2592000000}
-    
+      max-tokens-per-user: ${REFRESH_TOKEN_MAX_TOKENS_PER_USER:5}
+      rotate-on-refresh: ${REFRESH_TOKEN_ROTATE_ON_REFRESH:true}
+      cleanup-interval: ${REFRESH_TOKEN_CLEANUP_INTERVAL:3600000}
+      auto-cleanup: ${REFRESH_TOKEN_AUTO_CLEANUP:true}
+      repository:
+        type: ${REFRESH_TOKEN_REPOSITORY_TYPE:jpa}
+        database:
+          refresh-tokens-table: ${REFRESH_TOKEN_TABLE:refresh_tokens}
+          schema: ${REFRESH_TOKEN_SCHEMA:}
     password-policy:
       min-length: ${PASSWORD_MIN_LENGTH:8}
       max-length: ${PASSWORD_MAX_LENGTH:128}
@@ -290,27 +422,43 @@ ricardo:
       require-digits: ${PASSWORD_REQUIRE_DIGITS:true}
       require-special-chars: ${PASSWORD_REQUIRE_SPECIAL_CHARS:true}
       prevent-common-passwords: ${PASSWORD_PREVENT_COMMON:true}
-    
-    controllers:
-      auth:
-        enabled: ${AUTH_CONTROLLER_ENABLED:true}
-      user:
-        enabled: ${USER_CONTROLLER_ENABLED:true}
-
-server:
-  port: ${SERVER_PORT:8080}
-
-management:
-  endpoints:
-    web:
-      exposure:
-        include: health,info,metrics
-
-logging:
-  level:
-    com.ricardo.auth: ${RICARDO_AUTH_LOG_LEVEL:INFO}
-    org.springframework.security: ${SECURITY_LOG_LEVEL:WARN}
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: ${TOKEN_BLOCKLIST_ENABLED:true}
+      type: ${TOKEN_BLOCKLIST_TYPE:memory}
+    rate-limiter:
+      enabled: ${RATE_LIMITER_ENABLED:true}
+      type: ${RATE_LIMITER_TYPE:memory}
+      max-requests: ${RATE_LIMITER_MAX_REQUESTS:100}
+      time-window-ms: ${RATE_LIMITER_TIME_WINDOW_MS:60000}
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: ${COOKIE_ACCESS_SECURE:true}
+        http-only: ${COOKIE_ACCESS_HTTP_ONLY:true}
+        same-site: ${COOKIE_ACCESS_SAME_SITE:Strict}
+        path: ${COOKIE_ACCESS_PATH:/}
+      refresh:
+        secure: ${COOKIE_REFRESH_SECURE:true}
+        http-only: ${COOKIE_REFRESH_HTTP_ONLY:true}
+        same-site: ${COOKIE_REFRESH_SAME_SITE:Strict}
+        path: ${COOKIE_REFRESH_PATH:/api/auth/refresh}
+  redirect-https: ${REDIRECT_HTTPS:true}
 ```
+
+## New Admin Endpoint: Token Revocation
+
+Ricardo Auth provides an admin-only endpoint to revoke any token (access or refresh):
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+- Only users with `ADMIN` role can call this endpoint.
+- Works for both access and refresh tokens.
 
 ## 🔗 Quick Links
 

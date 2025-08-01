@@ -14,6 +14,11 @@ Fix **application startup problems** with Ricardo Auth quickly and efficiently.
 
 ## Common Startup Errors
 
+> **Novidade v2.0.0:**
+> - Cookies de autenticação agora usam flags de segurança (`HttpOnly`, `Secure`, `SameSite`) por padrão. HTTPS é obrigatório para produção.
+> - Blocklist e rate limiting (memória/Redis) são ativados por padrão para maior proteção.
+> - Endpoint de revogação de token disponível em `/api/auth/revoke` (ADMIN).
+
 ### JWT Secret Not Configured
 
 **❌ Error:**
@@ -42,6 +47,8 @@ ricardo:
 ```bash
 export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
 ```
+
+**❗ Importante:** O segredo JWT deve ser longo, aleatório e nunca exposto publicamente. Use variáveis de ambiente em produção.
 
 ### Missing JPA Dependencies
 
@@ -103,6 +110,8 @@ spring:
     username: ${DB_USERNAME}
     password: ${DB_PASSWORD}
 ```
+
+**Nota:** Para usar blocklist ou rate limiting com Redis, adicione as dependências do Spring Data Redis.
 
 ### Bean Creation Errors
 
@@ -167,6 +176,8 @@ kill -9 <PID>
 server:
   port: 0  # Spring will choose random available port
 ```
+
+**Dica:** Se usar HTTPS, certifique-se de que a porta 443 ou 8443 está livre.
 
 ## Configuration Issues
 
@@ -590,7 +601,9 @@ env | grep SPRING
 
 ### Debug Mode Startup
 
-Enable debug logging to get more information:
+**Dica extra:**
+- Para depurar problemas de cookies, use ferramentas como DevTools do navegador e verifique as flags `Secure`, `HttpOnly` e `SameSite`.
+- Se o login não funcionar em produção, verifique se HTTPS está ativo e se o navegador não está bloqueando cookies inseguros.
 
 ```yaml
 logging:
@@ -610,6 +623,9 @@ mvn spring-boot:run -Dspring-boot.run.arguments="--debug"
 ```
 
 ### Get Help
+
+> **Mudança importante:**
+> - Se você atualizou da v1.x.x, revise as configurações de cookies, HTTPS e blocklist. Veja o [Guia de Segurança](../security-guide.md) para detalhes.
 
 If these solutions don't work:
 

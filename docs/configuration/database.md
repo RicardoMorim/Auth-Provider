@@ -1,5 +1,10 @@
 # Database Configuration
 
+> **Breaking Change (v2.0.0):**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
 Configure **Ricardo Auth with various databases** for development, testing, and production environments.
 
 ## 📋 Quick Navigation
@@ -39,17 +44,36 @@ spring:
     driver-class-name: org.h2.Driver
     username: sa
     password: password
-  
-  jpa:
-    hibernate:
-      ddl-auto: create-drop  # Recreate schema on restart
-    show-sql: true
-    database-platform: org.hibernate.dialect.H2Dialect
-  
-  h2:
-    console:
-      enabled: true          # Enable web console
-      path: /h2-console      # Access at http://localhost:8080/h2-console
+
+# Ricardo Auth Configuration
+ricardo:
+  auth:
+    jwt:
+      secret: "dev-secret-key"
+      access-token-expiration: 86400000
+      refresh-token-expiration: 604800000
+    # --- NEW: Blocklist and Rate Limiter ---
+    token-blocklist:
+      enabled: true
+      type: memory   # or 'redis' for distributed blocklist
+    rate-limiter:
+      enabled: true
+      type: memory   # or 'redis' for distributed rate limiting
+      max-requests: 100
+      time-window-ms: 60000
+    # --- NEW: Cookie Security ---
+    cookies:
+      access:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh
+  redirect-https: true
 ```
 
 ### File-Based Database (Persistent)
