@@ -199,7 +199,7 @@ public class AuthProperties {
     public static class RateLimiter {
         private boolean enabled = true;
         private String type = "memory"; // memory|redis
-        private int maxRequests = 100;
+        private int maxRequests = 150;
         private long timeWindowMs = 60000L;
     }
 
