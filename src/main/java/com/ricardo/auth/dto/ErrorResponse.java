@@ -11,12 +11,16 @@ public class ErrorResponse {
      *
      * @param message the message
      */
-    public ErrorResponse(String message) { this.message = message; }
+    public ErrorResponse(String message) {
+        this.message = message;
+    }
 
     /**
      * Gets message.
      *
      * @return the message
      */
-    public String getMessage() { return message; }
+    public String getMessage() {
+        return message;
+    }
 }

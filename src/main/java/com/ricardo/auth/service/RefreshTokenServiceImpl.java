@@ -12,8 +12,9 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.security.SecureRandom;
 import java.time.Instant;
-import java.util.UUID;
+import java.util.Base64;
 
 /**
  * Implementation of RefreshTokenService for managing refresh tokens.
@@ -25,11 +26,10 @@ import java.util.UUID;
 public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
         implements RefreshTokenService<U, ID> {
 
+    private static final Logger log = LoggerFactory.getLogger(RefreshTokenServiceImpl.class);
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserService<U, ID> userService;
     private final AuthProperties authProperties;
-
-    private static final Logger log = LoggerFactory.getLogger(RefreshTokenServiceImpl.class);
 
     /**
      * Instantiates a new Refresh token service.
@@ -98,8 +98,16 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
         refreshTokenRepository.deleteExpiredTokens(now);
     }
 
+    /**
+     * Generates a secure random token for use as a refresh token.
+     *
+     * @return a securely generated random token string
+     */
     private String generateSecureToken() {
-        return UUID.randomUUID().toString() + "-" + System.currentTimeMillis();
+        SecureRandom random = new SecureRandom();
+        byte[] bytes = new byte[64];
+        random.nextBytes(bytes);
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 
     private Instant calculateExpiry() {

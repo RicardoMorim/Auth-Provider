@@ -1,6 +1,7 @@
 # Multi-Tenant Application Example
 
-Build a **multi-tenant SaaS application** with Ricardo Auth, featuring tenant isolation, custom user roles, and tenant-specific configurations.
+Build a **multi-tenant SaaS application** with Ricardo Auth, featuring tenant isolation, custom user roles, and
+tenant-specific configurations.
 
 ## 📋 Quick Navigation
 
@@ -16,6 +17,7 @@ Build a **multi-tenant SaaS application** with Ricardo Auth, featuring tenant is
 ## Overview
 
 **What You'll Build:**
+
 - Multi-tenant SaaS platform
 - Tenant-based data isolation
 - Custom roles per tenant
@@ -24,6 +26,7 @@ Build a **multi-tenant SaaS application** with Ricardo Auth, featuring tenant is
 - Tenant-specific branding and settings
 
 **Features:**
+
 - Database-per-tenant or schema-per-tenant
 - Tenant resolution from domain/header/path
 - Tenant-specific user roles and permissions
@@ -35,6 +38,7 @@ Build a **multi-tenant SaaS application** with Ricardo Auth, featuring tenant is
 ### Architecture Options
 
 **1. Database Per Tenant (Recommended for high isolation)**
+
 ```
 Tenant A ──► Database A (tenant_a_db)
 Tenant B ──► Database B (tenant_b_db)  
@@ -42,6 +46,7 @@ Tenant C ──► Database C (tenant_c_db)
 ```
 
 **2. Schema Per Tenant (Balanced approach)**
+
 ```
 Shared Database
 ├── tenant_a_schema
@@ -50,6 +55,7 @@ Shared Database
 ```
 
 **3. Row-Level Security (Cost-effective)**
+
 ```
 Shared Database + Shared Schema
 Users table: tenant_id column for isolation
@@ -58,15 +64,20 @@ Users table: tenant_id column for isolation
 ## Project Setup
 
 ### Dependencies (pom.xml)
+
 ```xml
 <dependencies>
     <!-- Ricardo Auth Starter -->
     <dependency>
         <groupId>io.github.ricardomorim</groupId>
         <artifactId>auth-spring-boot-starter</artifactId>
-        <version>1.1.0</version>
+        <version>1.2.0</version>
     </dependency>
-    
+    <!-- Redis for blocklist/rate limiting (optional) -->
+    <dependency>
+        <groupId>org.springframework.boot</groupId>
+        <artifactId>spring-boot-starter-data-redis</artifactId>
+    </dependency>
     <!-- Spring Boot Web -->
     <dependency>
         <groupId>org.springframework.boot</groupId>
@@ -101,6 +112,7 @@ Users table: tenant_id column for isolation
 ```
 
 ### Configuration
+
 ```yaml
 # application.yml
 spring:
@@ -133,7 +145,8 @@ ricardo:
   auth:
     jwt:
       secret: ${JWT_SECRET}
-      expiration: 3600000  # 1 hour for multi-tenant security
+      access-token-expiration: 3600000  # 1 hour for multi-tenant security
+      refresh-token-expiration: 2592000000 # 30 days for refresh tokens
     controllers:
       auth:
         enabled: true
@@ -146,6 +159,26 @@ ricardo:
       require-digits: true
       require-special-chars: true
       prevent-common-passwords: true
+    token-blocklist:
+      enabled: true
+      type: redis   # or 'memory' for dev
+    rate-limiter:
+      enabled: true
+      type: redis   # or 'memory' for dev
+      max-requests: 200
+      time-window-ms: 60000
+    cookies:
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
 
 # Multi-tenant configuration
 app:
@@ -163,9 +196,19 @@ logging:
     org.hibernate.SQL: DEBUG
 ```
 
+# ⚠️ Breaking Changes in v1.2.0
+
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`,
+  and `sameSite` flags by default. Update your frontend to use cookies for authentication.
+- **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
+- **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
+- **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
+- **/api/auth/revoke endpoint**: New admin-only endpoint to revoke any access or refresh token.
+
 ## Tenant Resolution
 
 ### Tenant Resolver Interface
+
 ```java
 package com.mycompany.multitenant.tenant;
 
@@ -177,6 +220,7 @@ public interface TenantResolver {
 ```
 
 ### Multiple Resolution Strategies
+
 ```java
 // 1. Domain-based resolution (e.g., tenant1.myapp.com)
 @Component
@@ -266,6 +310,7 @@ public class CompositeTenantResolver implements TenantResolver {
 ```
 
 ### Tenant Context
+
 ```java
 package com.mycompany.multitenant.context;
 
@@ -288,6 +333,7 @@ public class TenantContext {
 ```
 
 ### Tenant Interceptor
+
 ```java
 @Component
 public class TenantInterceptor implements HandlerInterceptor {
@@ -326,6 +372,7 @@ public class TenantInterceptor implements HandlerInterceptor {
 ## Tenant-Aware User Management
 
 ### Tenant Entity
+
 ```java
 @Entity
 @Table(name = "tenants")
@@ -372,6 +419,7 @@ public enum TenantStatus {
 ```
 
 ### Tenant-Aware User Entity
+
 ```java
 @Entity
 @Table(name = "tenant_users")
@@ -412,6 +460,7 @@ public class TenantUser extends User {
 ```
 
 ### Tenant-Aware User Service
+
 ```java
 @Service
 @Transactional
@@ -492,6 +541,7 @@ public class TenantAwareUserService extends UserServiceImpl {
 ## Data Isolation
 
 ### Database Per Tenant Configuration
+
 ```java
 @Configuration
 public class MultiTenantDataSourceConfig {
@@ -570,6 +620,7 @@ public class TenantAwareDataSource implements DataSource {
 ```
 
 ### Schema Per Tenant Configuration
+
 ```java
 @Component
 public class SchemaTenantIdentifierResolver implements CurrentTenantIdentifierResolver {
@@ -612,6 +663,7 @@ public class SchemaMultiTenantConnectionProvider implements MultiTenantConnectio
 ```
 
 ### Repository Layer
+
 ```java
 @Repository
 public interface TenantUserRepository extends JpaRepository<TenantUser, Long> {
@@ -638,6 +690,7 @@ public interface TenantUserRepository extends JpaRepository<TenantUser, Long> {
 ## Tenant Configuration
 
 ### Tenant Service
+
 ```java
 @Service
 @Transactional
@@ -760,6 +813,7 @@ public class TenantService {
 ```
 
 ### Tenant Configuration Entity
+
 ```java
 @Entity
 @Table(name = "tenant_configs")
@@ -800,6 +854,7 @@ public class TenantConfig {
 ## Admin Panel
 
 ### Tenant Admin Controller
+
 ```java
 @RestController
 @RequestMapping("/api/admin/tenants")
@@ -884,6 +939,7 @@ public class TenantAdminController {
 ```
 
 ### Tenant User Management Controller
+
 ```java
 @RestController
 @RequestMapping("/api/tenant/users")
@@ -930,9 +986,38 @@ public class TenantUserController {
 }
 ```
 
+## Token Revocation (Admin Only)
+
+A new admin-only endpoint allows you to revoke any access or refresh token:
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+
+- Works for both access and refresh tokens.
+- Revoked tokens are blocked in memory or Redis (depending on config).
+
+## Cookie-based Authentication
+
+- All authentication now uses cookies for access and refresh tokens.
+- Cookies are set with `httpOnly`, `secure`, and `sameSite` flags for security.
+- Most endpoints do not accept Authorization headers anymore (except /revoke).
+- For SaaS frontends, ensure your HTTP client supports cookies.
+
+## Rate Limiting and Blocklist
+
+- Rate limiting is enabled by default (in-memory for dev, Redis for prod).
+- Token blocklist is enabled by default (in-memory for dev, Redis for prod).
+- Configure with `ricardo.auth.rate-limiter` and `ricardo.auth.token-blocklist`.
+
 ## Testing
 
 ### Multi-Tenant Integration Test
+
 ```java
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 @Testcontainers
@@ -1050,4 +1135,6 @@ public class MultiTenantIntegrationTest {
 }
 ```
 
-This multi-tenant example demonstrates how to build a comprehensive SaaS platform with Ricardo Auth, featuring complete tenant isolation, flexible tenant resolution strategies, and robust admin functionality for managing multiple tenants and their users.
+This multi-tenant example demonstrates how to build a comprehensive SaaS platform with Ricardo Auth, featuring complete
+tenant isolation, flexible tenant resolution strategies, and robust admin functionality for managing multiple tenants
+and their users.

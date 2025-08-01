@@ -8,14 +8,14 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Security Architecture & Flow (v1.2.0)
+title Ricardo Auth Starter - Security Architecture & Flow (v2.0.0)
 
 package "Security Components" {
     class JwtAuthFilter {
         -jwtService: JwtService
+        -tokenBlocklist: TokenBlocklist
         +doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain): void
-        -extractTokenFromRequest(request: HttpServletRequest): String
-        -isAuthenticationRequired(email: String): boolean
+        ' Extracts JWT from access_token cookie
     }
     
     class SecurityConfig {
@@ -36,6 +36,7 @@ package "Security Components" {
         +extractSubject(token: String): String
         +isTokenValid(token: String): boolean
         +isTokenValid(token: String, email: String): boolean
+        +extractRoles(token: String): List<String>
         -extractClaim(token: String, claimsResolver: Function<Claims, T>): T
         -extractAllClaims(token: String): Claims
         -isTokenExpired(token: String): boolean
@@ -72,6 +73,40 @@ package "Security Components" {
         -userService: UserService
         +isOwner(email: String, userId: Long): boolean
     }
+
+    ' NEW: Blocklist & Rate Limiter
+    interface TokenBlocklist {
+        +revoke(token: String): void
+        +isRevoked(token: String): boolean
+    }
+    class InMemoryTokenBlocklist {
+        +revoke(token: String): void
+        +isRevoked(token: String): boolean
+    }
+    class RedisTokenBlockList {
+        +revoke(token: String): void
+        +isRevoked(token: String): boolean
+    }
+    interface RateLimiter {
+        +isEnabled(): boolean
+        +allowRequest(key: String): boolean
+    }
+    class InMemoryRateLimiter {
+        +isEnabled(): boolean
+        +allowRequest(key: String): boolean
+    }
+    class RedisRateLimiter {
+        +isEnabled(): boolean
+        +allowRequest(key: String): boolean
+    }
+    class RateLimiterFilter {
+        -rateLimiter: RateLimiter
+        +doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain): void
+    }
+    TokenBlocklist <|.. InMemoryTokenBlocklist
+    TokenBlocklist <|.. RedisTokenBlockList
+    RateLimiter <|.. InMemoryRateLimiter
+    RateLimiter <|.. RedisRateLimiter
 }
 
 package "Controllers" {
@@ -80,9 +115,11 @@ package "Controllers" {
         -authenticationManager: AuthenticationManager
         -refreshTokenService: RefreshTokenService
         -authProperties: AuthProperties
+        -blocklist: TokenBlocklist
         +login(request: LoginRequestDTO): ResponseEntity<TokenResponse>
-        +refreshToken(request: RefreshTokenRequest): ResponseEntity<TokenResponse>
+        +refreshToken(request: RefreshTokenRequest): ResponseEntity<TokenResponse>   
         +getAuthenticatedUser(authentication: Authentication): ResponseEntity<AuthenticatedUserDTO>
+        +revokeToken(token: String): ResponseEntity
     }
     
     class UserController {
@@ -196,6 +233,11 @@ JwtAuthFilter .up.|> OncePerRequestFilter
 UserDetailsServiceImpl .up.|> UserDetailsService
 PasswordPolicy .up.|> PasswordPolicyService
 RefreshTokenServiceImpl .up.|> RefreshTokenService
+InMemoryTokenBlocklist .up.|> TokenBlocklist
+RedisTokenBlocklist .up.|> TokenBlocklist
+InMemoryRateLimiter .up.|> RateLimiter
+RedisRateLimiter .up.|> RateLimiter
+RateLimiterFilter .up.|> OncePerRequestFilter
 
 ' Security configuration relationships
 SecurityConfig --> JwtAuthFilter : configures
@@ -203,16 +245,21 @@ SecurityConfig --> UserDetailsServiceImpl : uses
 SecurityConfig --> BCryptPasswordEncoder : creates
 SecurityConfig --> DaoAuthenticationProvider : creates
 SecurityConfig --> AuthenticationManager : creates
+SecurityConfig --> RateLimiterFilter : adds
 
 ' Controller relationships
 AuthController --> JwtServiceImpl : uses
 AuthController --> AuthenticationManager : uses
 AuthController --> RefreshTokenService : uses
+AuthController --> TokenBlocklist : uses
 UserController --> PasswordPolicyService : uses for validation
 UserController --> UserService : uses
 
 ' Security filter relationships
 JwtAuthFilter --> JwtServiceImpl : validates tokens
+JwtAuthFilter --> TokenBlocklist : checks revocation
+JwtAuthFilter --> SecurityConfig : checks public endpoints
+RateLimiterFilter --> RateLimiter : enforces rate limit
 UserDetailsServiceImpl --> UserService : loads user data
 
 ' Domain relationships
@@ -233,66 +280,51 @@ GlobalExceptionHandler --> AccessDeniedException : handles
 note right of JwtAuthFilter #E8F4FD
   **Filter Chain Integration**
   Intercepts requests and validates
-  JWT tokens before reaching
-  controllers
+  JWT tokens from cookies before
+  reaching controllers. Checks blocklist.
 end note
 
 note top of SecurityConfig #E8F4FD
   **Spring Security Configuration**
-  Configures authentication and
-  authorization rules with JWT
-  filter chain integration
+  Configures authentication, authorization,
+  JWT & rate limiting filter chain integration
+end note
+
+note right of RateLimiterFilter #E8F4FD
+  **Rate Limiting (v2.0.0)**
+  In-memory or Redis, per-user/IP
+  request limiting for all endpoints
+end note
+
+note right of TokenBlocklist #E8F4FD
+  **Blocklist (v2.0.0)**
+  In-memory or Redis for token revocation
+  (access & refresh tokens)
+end note
+
+note right of AuthController #E8F4FD
+  **Cookie-based Auth (v2.0.0)**
+  All tokens are set/read via
+  secure, HttpOnly cookies only.
+  Includes /api/auth/revoke endpoint
+  for admin token revocation.
 end note
 
 note right of RefreshTokenServiceImpl #E8F4FD
-  **🆕 Refresh Token Service (v1.2.0)**
+  **Refresh Token Service (v1.2.0)**
   Manages secure token lifecycle
   with automatic rotation, cleanup,
   and user token limits
 end note
 
-note bottom of AuthController #E8F4FD
-  **🆕 Enhanced Auth Controller (v1.2.0)**
-  Supports both access and refresh
-  tokens with automatic token
-  rotation on refresh
-end note
-
-note left of PasswordPolicy #E8F4FD
-  **Enhanced Password Policy (v1.2.0)**
-  Configurable validation with
-  common password detection
-  and secure generation
-end note
-
-note right of RefreshTokenCleanupService #E8F4FD
-  **🆕 Cleanup Service (v1.2.0)**
-  Scheduled cleanup of expired
-  tokens with configurable
-  intervals and user limits
-end note
-
-note bottom of UserSecurityService #E8F4FD
-  **Authorization Service**
-  Provides ownership validation
-  for user-specific operations
-end note
-
-
-note bottom of AuthController #E8F4FD
-  **Authentication Endpoints**
-  Handles login and user
-  authentication flow
-end note
-
 note right of UserController #E8F4FD
-  **🆕 Password Policy Integration (v1.1.0)**
+  **Password Policy Integration**
   Validates passwords during
   user creation and updates
 end note
 
 note left of Password #E8F4FD
-  **🆕 Policy-Aware Value Object (v1.1.0)**
+  **Policy-Aware Value Object**
   Password validation happens
   at domain object creation
 end note

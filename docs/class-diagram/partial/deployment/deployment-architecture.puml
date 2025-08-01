@@ -8,7 +8,7 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Deployment Architecture (v1.2.0)
+title Ricardo Auth Starter - Deployment Architecture (v2.0.0)
 
 package "Client Applications" {
     node "Web Frontend" {
@@ -28,6 +28,8 @@ package "Client Applications" {
         MobileApp --> SecureStorage
         SecureStorage --> APIClient
     }
+
+
 }
 
 package "Spring Boot Application" {
@@ -39,134 +41,71 @@ package "Spring Boot Application" {
 
         JwtFilter --> AuthCtrl
         JwtFilter --> UserCtrl
+
+        ' NEW: Rate Limiter and Blocklist
+        component "RateLimiterFilter" as RateLimiterF
+        component "TokenBlocklist (InMemory/Redis)" as Blocklist
+        component "RateLimiter (InMemory/Redis)" as RateLimiter
+
         SecConfig --> JwtFilter
+        SecConfig --> RateLimiterF
+        AuthCtrl --> Blocklist
+        JwtFilter --> Blocklist
+        RateLimiterF --> RateLimiter
     }
 
     node "Service Layer" {
-        component "JwtService" as JwtSvc
-        component "RefreshTokenService" as RefreshSvc
-        component "UserService" as UserSvc
-        component "PasswordPolicyService" as PasswordSvc
-        component "RefreshTokenCleanupService" as CleanupSvc
+        component "JwtServiceImpl" as JwtSvc
+        component "RefreshTokenServiceImpl" as RefreshSvc
+        component "UserServiceImpl" as UserSvc
+        component "PasswordPolicy" as PassPol
+        component "RefreshTokenCleanupService" as RefreshCleanup
 
         AuthCtrl --> JwtSvc
         AuthCtrl --> RefreshSvc
+        AuthCtrl --> UserSvc
         UserCtrl --> UserSvc
-        UserCtrl --> PasswordSvc
-        CleanupSvc --> RefreshSvc
+        UserCtrl --> PassPol
+        RefreshSvc --> RefreshCleanup
     }
 
     node "Repository Layer" {
         component "UserRepository" as UserRepo
-        component "RefreshTokenRepository" as RefreshRepo
-
+        component "RefreshTokenRepository (JPA/PostgreSQL)" as RefreshRepo
         UserSvc --> UserRepo
         RefreshSvc --> RefreshRepo
-    }
-
-    node "Configuration" {
-        component "AuthAutoConfiguration" as AutoConfig
-        component "AuthProperties" as Properties
-
-        AutoConfig --> Properties
-        AutoConfig --> JwtSvc
-        AutoConfig --> RefreshSvc
-        AutoConfig --> UserSvc
+        RefreshCleanup --> RefreshRepo
     }
 }
-
-package "Database Layer" {
-    node "PostgreSQL" <<database>> {
-        component "users" as Users
-        component "refresh_tokens" as RefreshTokens
-
-        Users --> RefreshTokens : user_email
-    }
+  ' NEW: Client-to-API connections
+    HttpClient --> AuthCtrl : HTTPS (REST API)
+    HttpClient --> UserCtrl : HTTPS (REST API)
+    APIClient --> AuthCtrl : HTTPS (REST API)
+    APIClient --> UserCtrl : HTTPS (REST API)
+' NEW: Redis and Database nodes
+node "Redis" {
+    database "Redis DB" as RedisDB
+    Blocklist --> RedisDB : if Redis
+    RateLimiter --> RedisDB : if Redis
 }
 
-package "Repository Implementations" {
-    component "PostgreSQLRefreshTokenRepository" as PostgresRepo
-    component "DefaultUserJpaRepository" as DefaultUserRepo
-
-    PostgresRepo --> Users
-    PostgresRepo --> RefreshTokens
-    DefaultUserRepo --> Users
+node "Database" {
+    database "PostgreSQL/MySQL/Other" as SQLDB
+    UserRepo --> SQLDB
+    RefreshRepo --> SQLDB
 }
 
-package "External Services" {
-    cloud "Maven Central" {
-        component "ricardo-auth-starter" as Starter
-    }
-
-    file "Common Passwords" {
-        component "commonpasswords.txt" as PasswordsFile
-    }
-}
-
-' Client connections
-HttpClient --> AuthCtrl : HTTPS
-APIClient --> AuthCtrl : HTTPS
-HttpClient --> UserCtrl : HTTPS
-APIClient --> UserCtrl : HTTPS
-
-' Repository to implementation mapping
-RefreshRepo --> PostgresRepo
-UserRepo --> DefaultUserRepo
-
-' External dependencies
-PasswordSvc --> PasswordsFile : loads common passwords
-AutoConfig --> Starter : dependency
-
-' Scheduled tasks
-CleanupSvc --> RefreshTokens : cleanup expired tokens
-
-note right of TokenMgmt #E8F4FD
-  **🆕 Token Management (v1.2.0)**
-  - Automatic token refresh
-  - Secure token storage
-  - Token rotation handling
-  - Error recovery
+' NEW: Notes for cookies, blocklist, rate limiting
+note right of AuthCtrl #E8F4FD
+  **Cookie-based Auth (v2.0.0)**\nTokens are set/read via\nsecure, HttpOnly cookies.\nBlocklist and rate limiting\nare enforced for all endpoints.
 end note
 
-note bottom of RefreshRepo #E8F4FD
-  **🆕 Repository Implementation (v1.2.0)**
-  PostgreSQL optimized repository:
-  - Native JDBC queries
-  - Proper timestamp handling
-  - Connection pooling support
-  - Batch operations
+note right of Blocklist #E8F4FD
+  **Blocklist**\nIn-memory or Redis\nfor token revocation.
 end note
 
-note left of CleanupSvc #E8F4FD
-  **🆕 Automatic Cleanup (v1.2.0)**
-  Scheduled service removes expired tokens:
-  - Configurable intervals
-  - Per-user token limits
-  - Background processing
-end note
-
-note top of Properties #E8F4FD
-  **Configuration Properties (v1.2.0)**
-  ricardo.auth:
-    jwt:
-      secret: "your-secret"
-      access-token-expiration: 900000
-      refresh-token-expiration: 604800000
-    refresh-tokens:
-      enabled: true
-      max-tokens-per-user: 5
-      rotate-on-refresh: true
-      cleanup-interval: 3600000
-      auto-cleanup: true
-end note
-
-note bottom of Users #E8F4FD
-  **Production Database**
-  PostgreSQL recommended for:
-  - High performance
-  - ACID compliance
-  - Concurrent access
-  - Advanced features
+note right of RateLimiter #E8F4FD
+  **Rate Limiting**\nIn-memory or Redis\nper-user/IP request limiting.
 end note
 
 @enduml

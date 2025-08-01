@@ -49,7 +49,7 @@ class UserServiceImplTest {
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
-        
+
         // Create a test user
         Username username = Username.valueOf("existinguser");
         Email email = Email.valueOf("existing@example.com");

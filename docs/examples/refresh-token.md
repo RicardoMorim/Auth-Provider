@@ -1,13 +1,26 @@
-# Refresh Token Examples
+in# Refresh Token Examples
 
 Comprehensive examples for implementing refresh tokens in different scenarios.
 
+## ⚠️ Breaking Changes in v1.2.0
+
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`, and `sameSite` flags by default. **Tokens are not accessible via JavaScript.** The browser will automatically send cookies with requests; your frontend should not attempt to read or write token cookies directly.
+- **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
+- **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
+- **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
+- **/api/auth/revoke endpoint**: New admin-only endpoint to revoke any access or refresh token.
+
+---
+
 ## 📱 Frontend Integration
 
-### React/Next.js Example
+
+### React/Next.js Example (Legacy, pre-v1.2.0)
+
+> **Deprecated:** This pattern is for legacy (pre-v1.2.0) usage and is no longer recommended. Token cookies are now managed by the backend as `httpOnly` and should not be accessed or set by frontend code. Use the minimal example below for current best practices.
 
 ```javascript
-// hooks/useAuth.js
+// hooks/useAuth.js (Legacy, pre-v1.2.0)
 import { useState, useEffect, useCallback } from 'react';
 
 export const useAuth = () => {
@@ -17,10 +30,10 @@ export const useAuth = () => {
   });
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  // Load tokens from localStorage on mount
+  // Load tokens from cookies on mount
   useEffect(() => {
-    const accessToken = localStorage.getItem('accessToken');
-    const refreshToken = localStorage.getItem('refreshToken');
+    const accessToken = getCookie('access_token');
+    const refreshToken = getCookie('refresh_token');
     
     if (accessToken && refreshToken) {
       setTokens({ accessToken, refreshToken });
@@ -39,14 +52,8 @@ export const useAuth = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Store tokens
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        
-        setTokens(data);
-        setIsAuthenticated(true);
-        
+        // Server already set httpOnly cookies. No client-side persistence required.
+        setIsAuthenticated(true);        
         return { success: true };
       } else {
         return { success: false, error: 'Invalid credentials' };
@@ -67,11 +74,9 @@ export const useAuth = () => {
 
       if (response.ok) {
         const data = await response.json();
-        
-        // Update tokens
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        
+        // Store tokens in cookies
+        setCookie('access_token', data.accessToken, 15 * 60, { secure: true, sameSite: 'Strict' });
+        setCookie('refresh_token', data.refreshToken, 30 * 24 * 60 * 60, { secure: true, sameSite: 'Strict' });        
         setTokens(data);
         return data.accessToken;
       } else {
@@ -86,9 +91,12 @@ export const useAuth = () => {
   }, [tokens.refreshToken]);
 
   // Logout function
-  const logout = () => {
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // Ignore network errors
+    }
     setTokens({ accessToken: null, refreshToken: null });
     setIsAuthenticated(false);
   };
@@ -96,31 +104,83 @@ export const useAuth = () => {
   // API call with automatic token refresh
   const apiCall = useCallback(async (url, options = {}) => {
     const makeRequest = async (token) => {
-      return fetch(url, {
-        ...options,
-        headers: {
-          ...options.headers,
-          'Authorization': `Bearer ${token}`,
-        },
-      });
-    };
+```
+### React/Next.js Example
+New best practice for v2.0.0 and later:
+```javascript
+// hooks/useAuth.js
+import { useState, useCallback } from 'react';
 
-    // Try with current token
-    let response = await makeRequest(tokens.accessToken);
-    
-    // If unauthorized, try refreshing token
-    if (response.status === 401) {
-      const newToken = await refreshAccessToken();
-      if (newToken) {
-        response = await makeRequest(newToken);
+export const useAuth = () => {
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+
+  // Login function
+  const login = async (email, password) => {
+    try {
+      const response = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password }),
+        credentials: 'include', // Important: send cookies
+      });
+      if (response.ok) {
+        setIsAuthenticated(true);
+        return { success: true };
+      } else {
+        return { success: false, error: 'Invalid credentials' };
       }
+    } catch (error) {
+      return { success: false, error: error.message };
     }
-    
+  };
+
+  // Refresh token function
+  const refreshAccessToken = useCallback(async () => {
+    try {
+      const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include',
+      });
+      if (response.ok) {
+        setIsAuthenticated(true);
+        return true;
+      } else {
+        logout();
+        return false;
+      }
+    } catch (error) {
+      logout();
+      return false;
+    }
+  }, []);
+
+  // Logout function
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // Ignore network errors
+    }
+    setIsAuthenticated(false);
+  };
+
+  // API call with automatic token refresh
+  const apiCall = useCallback(async (url, options = {}) => {
+    let response = await fetch(url, {
+      ...options,
+      credentials: 'include',
+    });
+    if (response.status === 401) {
+      await refreshAccessToken();
+      response = await fetch(url, {
+        ...options,
+        credentials: 'include',
+      });
+    }
     return response;
-  }, [tokens.accessToken, refreshAccessToken]);
+  }, [refreshAccessToken]);
 
   return {
-    tokens,
     isAuthenticated,
     login,
     logout,
@@ -128,6 +188,7 @@ export const useAuth = () => {
   };
 };
 ```
+        
 
 ### Vue.js Example
 
@@ -135,32 +196,21 @@ export const useAuth = () => {
 // composables/useAuth.js
 import { ref, computed } from 'vue';
 
-const accessToken = ref(localStorage.getItem('accessToken'));
-const refreshToken = ref(localStorage.getItem('refreshToken'));
+const isAuthenticated = ref(false);
 
 export const useAuth = () => {
-  const isAuthenticated = computed(() => !!accessToken.value);
-
   const login = async (email, password) => {
     try {
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
+        credentials: 'include',
       });
-
       if (response.ok) {
-        const data = await response.json();
-        
-        accessToken.value = data.accessToken;
-        refreshToken.value = data.refreshToken;
-        
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        
+        isAuthenticated.value = true;
         return { success: true };
       }
-      
       return { success: false, error: 'Invalid credentials' };
     } catch (error) {
       return { success: false, error: error.message };
@@ -171,35 +221,27 @@ export const useAuth = () => {
     try {
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: refreshToken.value }),
+        credentials: 'include',
       });
-
       if (response.ok) {
-        const data = await response.json();
-        
-        accessToken.value = data.accessToken;
-        refreshToken.value = data.refreshToken;
-        
-        localStorage.setItem('accessToken', data.accessToken);
-        localStorage.setItem('refreshToken', data.refreshToken);
-        
-        return data.accessToken;
+        isAuthenticated.value = true;
+        return true;
       }
-      
       logout();
-      return null;
+      return false;
     } catch (error) {
       logout();
-      return null;
+      return false;
     }
   };
 
-  const logout = () => {
-    accessToken.value = null;
-    refreshToken.value = null;
-    localStorage.removeItem('accessToken');
-    localStorage.removeItem('refreshToken');
+  const logout = async () => {
+    try {
+      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+    } catch (e) {
+      // Ignore network errors
+    }
+    isAuthenticated.value = false;
   };
 
   return {
@@ -207,29 +249,20 @@ export const useAuth = () => {
     login,
     logout,
     refreshTokens,
-    accessToken: computed(() => accessToken.value),
   };
 };
 ```
-
-## 🔧 Backend Integration
-
-### Spring Boot Configuration
-
-```yaml
-# application.yml
-ricardo:
-  auth:
-    jwt:
-      secret: ${JWT_SECRET:your-dev-secret-key}
-      access-token-expiration: 900000  # 15 minutes for access tokens
-      refresh-token-expiration: 2592000000  # 30 days for refresh tokens
-    refresh-tokens:
-      enabled: true
-      repository:
-        type: "postgresql"
-      cleanup-interval: 3600000  # Hourly cleanup
-      max-tokens-per-user: 5
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
 ```
 
 ### Custom Token Service
@@ -484,54 +517,7 @@ server {
 
 ### Secure Token Storage
 
-```javascript
-// utils/secureStorage.js
-class SecureStorage {
-  constructor() {
-    this.tokenKey = 'auth_tokens';
-  }
-  
-  // Store tokens in httpOnly cookie (recommended)
-  setTokens(tokens) {
-    document.cookie = `access_token=${tokens.accessToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=900`;
-    document.cookie = `refresh_token=${tokens.refreshToken}; HttpOnly; Secure; SameSite=Strict; Max-Age=2592000`;
-  }
-  
-  // Alternative: Secure localStorage with encryption
-  setTokensEncrypted(tokens) {
-    const encryptedTokens = this.encrypt(JSON.stringify(tokens));
-    localStorage.setItem(this.tokenKey, encryptedTokens);
-  }
-  
-  getTokensEncrypted() {
-    const encryptedTokens = localStorage.getItem(this.tokenKey);
-    if (!encryptedTokens) return null;
-    
-    try {
-      return JSON.parse(this.decrypt(encryptedTokens));
-    } catch (error) {
-      this.clearTokens();
-      return null;
-    }
-  }
-  
-  clearTokens() {
-    localStorage.removeItem(this.tokenKey);
-    document.cookie = 'access_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-    document.cookie = 'refresh_token=; expires=Thu, 01 Jan 1970 00:00:00 UTC; path=/;';
-  }
-  
-  encrypt(text) {
-    // Use a proper encryption library like crypto-js
-    return CryptoJS.AES.encrypt(text, this.getEncryptionKey()).toString();
-  }
-  
-  decrypt(ciphertext) {
-    const bytes = CryptoJS.AES.decrypt(ciphertext, this.getEncryptionKey());
-    return bytes.toString(CryptoJS.enc.Utf8);
-  }
-}
-```
+Deprecated: Use secure cookies for token storage instead of localStorage or sessionStorage. This prevents XSS attacks from accessing tokens.
 
 ### Request Interceptor
 
@@ -749,4 +735,3 @@ class RefreshTokenIntegrationTest {
     }
 }
 ```
-

@@ -14,7 +14,7 @@ skinparam padding 10
 skinparam classFontSize 11
 skinparam packageFontSize 12
 
-title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v1.2.0)
+title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v2.0.0)
 
 !define DIRECTION left to right
 
@@ -210,8 +210,11 @@ package "Controller Layer" <<Rectangle>> {
         -jwtService: JwtService
         -authenticationManager: AuthenticationManager
         -refreshTokenService: RefreshTokenService
-        +login(request: LoginRequestDTO): ResponseEntity<TokenResponse>
-        +refreshToken(request: RefreshTokenRequest): ResponseEntity<TokenResponse>
+        -blocklist: TokenBlocklist
+        +login(request: LoginRequestDTO, response: HttpServletResponse): ResponseEntity
+        +refresh(refreshTokenCookie: String, response: HttpServletResponse): ResponseEntity
+        +logout(response: HttpServletResponse): ResponseEntity
+        +revokeToken(token: String): ResponseEntity
         +getAuthenticatedUser(authentication: Authentication): ResponseEntity<AuthenticatedUserDTO>
     }
     
@@ -277,15 +280,15 @@ package "Security Configuration" <<Rectangle>> {
         -jwtAuthFilter: JwtAuthFilter
         -userDetailsService: UserDetailsService
         +filterChain(http: HttpSecurity): SecurityFilterChain
-        +authenticationProvider(): DaoAuthenticationProvider
         +authenticationManager(config: AuthenticationConfiguration): AuthenticationManager
         +passwordEncoder(): PasswordEncoder
     }
     
     class JwtAuthFilter {
         -jwtService: JwtService
+        -tokenBlocklist: TokenBlocklist
         +doFilterInternal(request: HttpServletRequest, response: HttpServletResponse, filterChain: FilterChain): void
-        -extractTokenFromRequest(request: HttpServletRequest): String
+        ' Extracts JWT from access_token cookie
     }
     
     JwtAuthFilter .up.|> OncePerRequestFilter
@@ -530,11 +533,7 @@ note top of AuthAutoConfiguration #E8F4FD
   when starter is included
 end note
 
-note left of JwtAuthFilter #E8F4FD
-  **JWT Security Filter**
-  Handles token validation and
-  authentication in filter chain
-end note
+
 
 note right of RefreshTokenServiceImpl #E8F4FD
   **🆕 Refresh Token Service (v1.2.0)**
@@ -546,6 +545,69 @@ note right of PostgreSQLRefreshTokenRepository #E8F4FD
   **🆕 PostgreSQL Repository (v1.2.0)**
   Native queries with proper
   timestamp handling
+end note
+
+' NEW: Blocklist and Rate Limiter interfaces and implementations
+package "Blocklist & Rate Limiter" <<Rectangle>> {
+    interface TokenBlocklist {
+        +revoke(token: String): void
+        +isRevoked(token: String): boolean
+    }
+    class InMemoryTokenBlocklist {
+        +revoke(token: String): void
+        +isRevoked(token: String): boolean
+    }
+    class RedisTokenBlockList {
+        +revoke(token: String): void
+        +isRevoked(token: String): boolean
+    }
+    interface RateLimiter {
+        +isEnabled(): boolean
+        +allowRequest(key: String): boolean
+    }
+    class InMemoryRateLimiter {
+        +isEnabled(): boolean
+        +allowRequest(key: String): boolean
+    }
+    class RedisRateLimiter {
+        +isEnabled(): boolean
+        +allowRequest(key: String): boolean
+    }
+    TokenBlocklist <|.. InMemoryTokenBlocklist
+    TokenBlocklist <|.. RedisTokenBlockList
+    RateLimiter <|.. InMemoryRateLimiter
+    RateLimiter <|.. RedisRateLimiter
+}
+
+
+
+
+
+' Add notes for cookie-based token handling and security
+note right of AuthController #E8F4FD
+  **Cookie-based Auth (v2.0.0)**
+  All tokens are set and read via
+  secure, HttpOnly cookies only.
+  Includes /api/auth/revoke endpoint
+  for admin token revocation.
+end note
+
+note right of TokenBlocklist #E8F4FD
+  **Blocklist (v2.0.0)**
+  Supports in-memory and Redis
+  for token revocation.
+end note
+
+note right of RateLimiter #E8F4FD
+  **Rate Limiting (v2.0.0)**
+  In-memory and Redis implementations
+  for per-user/IP request limiting.
+end note
+
+note right of JwtAuthFilter #E8F4FD
+  **JWT via Cookie**
+  Extracts JWT from access_token cookie
+  for all protected endpoints.
 end note
 
 @enduml

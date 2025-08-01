@@ -8,6 +8,7 @@
 ## What You'll Learn
 
 How to configure and use Ricardo Auth's comprehensive password policy system:
+
 - ✅ Configure password strength requirements
 - ✅ Set up environment-specific policies
 - ✅ Handle password validation errors
@@ -117,6 +118,7 @@ ricardo:
 ### Using Spring Profiles
 
 #### application.yml (base configuration)
+
 ```yaml
 ricardo:
   auth:
@@ -176,6 +178,7 @@ export RICARDO_AUTH_PASSWORD_POLICY_PREVENT_COMMON_PASSWORDS=true
 ```
 
 #### application.yml with environment variables
+
 ```yaml
 ricardo:
   auth:
@@ -193,6 +196,7 @@ ricardo:
 ### Common Password Policy Errors
 
 #### 1. Password Too Short
+
 ```json
 {
   "error": "Bad Request",
@@ -202,6 +206,7 @@ ricardo:
 ```
 
 **Fix:** Use a longer password
+
 ```bash
 # ❌ Too short
 curl -X POST http://localhost:8080/api/users/create \
@@ -213,6 +218,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 #### 2. Missing Character Types
+
 ```json
 {
   "error": "Bad Request",
@@ -222,6 +228,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **Fix:** Add required character types
+
 ```bash
 # ❌ No uppercase
 curl -X POST http://localhost:8080/api/users/create \
@@ -233,6 +240,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 #### 3. Common Password Detected
+
 ```json
 {
   "error": "Bad Request",
@@ -242,6 +250,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ```
 
 **Fix:** Use a unique password
+
 ```bash
 # ❌ Common password
 curl -X POST http://localhost:8080/api/users/create \
@@ -255,6 +264,7 @@ curl -X POST http://localhost:8080/api/users/create \
 ### Frontend Error Handling
 
 #### JavaScript Example
+
 ```javascript
 async function registerUser(username, email, password) {
     try {
@@ -263,26 +273,26 @@ async function registerUser(username, email, password) {
             headers: {
                 'Content-Type': 'application/json',
             },
-            body: JSON.stringify({ username, email, password }),
+            body: JSON.stringify({username, email, password}),
         });
 
         if (!response.ok) {
             const error = await response.json();
-            
+
             // Handle specific password policy errors
             if (error.message.includes('Password must')) {
                 showPasswordPolicyError(error.message);
-                return { success: false, error: 'password_policy' };
+                return {success: false, error: 'password_policy'};
             }
-            
-            return { success: false, error: error.message };
+
+            return {success: false, error: error.message};
         }
 
         const user = await response.json();
-        return { success: true, user };
-        
+        return {success: true, user};
+
     } catch (error) {
-        return { success: false, error: 'Network error' };
+        return {success: false, error: 'Network error'};
     }
 }
 
@@ -363,20 +373,21 @@ done
 ### 2. Unit Test Example
 
 ```java
+
 @Test
 public void testPasswordPolicyValidation() {
     // Test too short password
     assertThatThrownBy(() -> {
         userService.createUser("test", "test@example.com", "short");
     }).isInstanceOf(PasswordPolicyException.class)
-      .hasMessageContaining("must be at least");
-    
+            .hasMessageContaining("must be at least");
+
     // Test missing uppercase
     assertThatThrownBy(() -> {
         userService.createUser("test", "test@example.com", "lowercase123!");
     }).isInstanceOf(PasswordPolicyException.class)
-      .hasMessageContaining("uppercase letter");
-    
+            .hasMessageContaining("uppercase letter");
+
     // Test valid password
     assertThatCode(() -> {
         userService.createUser("test", "test@example.com", "ValidPass123!");
@@ -391,37 +402,38 @@ public void testPasswordPolicyValidation() {
 While Ricardo Auth provides comprehensive built-in validation, you can extend it:
 
 ```java
+
 @Component
 public class CustomPasswordValidator {
-    
+
     @Autowired
     private PasswordPolicyService passwordPolicyService;
-    
+
     public void validateCustomRules(String password) {
         // Use built-in validation first
         passwordPolicyService.validatePassword(password);
-        
+
         // Add custom rules
         if (password.contains("company")) {
             throw new PasswordPolicyException("Password cannot contain company name");
         }
-        
+
         if (password.matches(".*([a-zA-Z])\\1{2,}.*")) {
             throw new PasswordPolicyException("Password cannot have more than 2 consecutive identical characters");
         }
-        
+
         // Check against custom dictionary
         if (isInCustomBlacklist(password)) {
             throw new PasswordPolicyException("Password is not allowed");
         }
     }
-    
+
     private boolean isInCustomBlacklist(String password) {
         // Implement custom blacklist check
         Set<String> customBlacklist = Set.of(
-            "companyname123",
-            "organization2024",
-            "department123"
+                "companyname123",
+                "organization2024",
+                "department123"
         );
         return customBlacklist.contains(password.toLowerCase());
     }
@@ -493,6 +505,7 @@ ricardo:
 ## Common Use Cases
 
 ### 1. SaaS Application
+
 ```yaml
 ricardo:
   auth:
@@ -506,6 +519,7 @@ ricardo:
 ```
 
 ### 2. Internal Corporate Application
+
 ```yaml
 ricardo:
   auth:
@@ -519,6 +533,7 @@ ricardo:
 ```
 
 ### 3. Consumer Mobile App
+
 ```yaml
 ricardo:
   auth:
@@ -532,6 +547,7 @@ ricardo:
 ```
 
 ### 4. Educational Platform
+
 ```yaml
 ricardo:
   auth:
@@ -544,39 +560,73 @@ ricardo:
       prevent-common-passwords: true
 ```
 
-## 🎉 What You've Learned
+## ⚠️ Breaking Changes in v1.2.0
 
-✅ **Password Policy Configuration** - Set up policies for any security requirement  
-✅ **Environment-Specific Policies** - Different rules for dev/test/prod  
-✅ **Error Handling** - Properly handle and display validation errors  
-✅ **Testing Strategies** - Test password policies effectively  
-✅ **Best Practices** - Security vs usability balance  
-✅ **Common Use Cases** - Real-world policy configurations
-
-## 🚀 Next Steps
-
-### Enhance Your Password Security
-- Implement password strength meters
-- Add password history checking
-- Create password generation tools
-- Set up password expiration policies
-
-### Learn More
-- **[Security Guide](../security-guide.md)** - Complete security best practices
-- **[Configuration Guide](../configuration/index.md)** - All configuration options
-- **[Troubleshooting](../troubleshooting/password-policy.md)** - Password policy problems
-
-## 🆘 Need Help?
-
-### Quick Fixes
-- **Password rejected?** → Check the error message for specific requirements
-- **Too strict for testing?** → Use development profile with relaxed rules
-- **Users complaining?** → Consider mobile-friendly configuration
-
-### Get Support
-- 📖 [Password Policy Troubleshooting](../troubleshooting/password-policy.md)
-- 💬 [GitHub Discussions](https://github.com/RicardoMorim/Auth-Provider/discussions)
+- **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`,
+  and `sameSite` flags by default. Update your frontend to use cookies for authentication.
+- **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
+- **Blocklist support**: Add `ricardo.auth.token-blocklist` config to enable in-memory or Redis-based token revocation.
+- **Rate limiting**: Add `ricardo.auth.rate-limiter` config for in-memory or Redis-based rate limiting.
+- **/api/auth/revoke endpoint**: New admin-only endpoint to revoke any access or refresh token.
 
 ---
 
-🔒 **Secure passwords are the foundation of application security!** Use these examples to implement the right policy for your needs.
+## Example: Full Security with Blocklist and Rate Limiting
+
+```yaml
+ricardo:
+  auth:
+    password-policy:
+      min-length: 10
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+    token-blocklist:
+      enabled: true
+      type: redis   # or 'memory' for dev
+    rate-limiter:
+      enabled: true
+      type: redis   # or 'memory' for dev
+      max-requests: 100
+      time-window-ms: 60000
+    cookies:
+      access:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /
+      refresh:
+        secure: true
+        httpOnly: true
+        sameSite: Strict
+        path: /api/auth/refresh
+    redirect-https: true
+```
+
+## Token Revocation (Admin Only)
+
+A new admin-only endpoint allows you to revoke any access or refresh token:
+
+```http
+POST /api/auth/revoke
+Authorization: Bearer <admin-access-token>
+Content-Type: application/json
+
+"<token-to-revoke>"
+```
+
+- Works for both access and refresh tokens.
+- Revoked tokens are blocked in memory or Redis (depending on config).
+
+## Cookie-based Authentication
+
+- All authentication now uses cookies for access and refresh tokens.
+- Cookies are set with `httpOnly`, `secure`, and `sameSite` flags for security.
+- Most endpoints do not accept Authorization headers anymore (except /revoke).
+
+---
+
+🔒 **Secure passwords are the foundation of application security!** Use these examples to implement the right policy for
+your needs.

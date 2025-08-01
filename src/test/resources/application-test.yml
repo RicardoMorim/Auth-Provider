@@ -27,7 +27,6 @@ ricardo:
       access-token-expiration: 900000    # 15 minutes
       refresh-token-expiration: 604800000 # 7 days
       secret: "dGVzdC1zZWNyZXQtZm9yLWp3dC10b2tlbnMtaW4tdGVzdHMtb25seQ=="
-
     password-policy:
       min-length: 10
       require-uppercase: true
@@ -36,6 +35,7 @@ ricardo:
       require-special-chars: true
       prevent-common-passwords: true
       max-length: 60 # 60 characters for the test environment use a reasonable limit in production
+    redirect-https: false
 
 
 # Logging Configuration

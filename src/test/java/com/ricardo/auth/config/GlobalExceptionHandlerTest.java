@@ -1,8 +1,14 @@
 package com.ricardo.auth.config;
 
+import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
+import com.ricardo.auth.domain.user.Email;
+import com.ricardo.auth.domain.user.Password;
+import com.ricardo.auth.domain.user.User;
+import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.dto.ErrorResponse;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
@@ -13,11 +19,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.WebRequest;
+
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -34,12 +43,15 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @Transactional
 class GlobalExceptionHandlerTest {
 
+    /**
+     * The Jwt service.
+     */
+    @Autowired
+    JwtService jwtService;
     @Autowired
     private MockMvc mockMvc;
-
     @Autowired
     private GlobalExceptionHandler globalExceptionHandler;
-
     // ========== DOMAIN EXCEPTION TESTS ==========
 
     /**
@@ -164,8 +176,21 @@ class GlobalExceptionHandlerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldReturnNotFoundForNonExistentUser() throws Exception {
+
+        User adminUser = new User(Username.valueOf("admin"),
+                Email.valueOf("admin@example.com"),
+                Password.fromHash("admin123"));
+
+
+        String token = jwtService.generateAccessToken(
+                adminUser.getEmail(),
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
         // Act & Assert
-        mockMvc.perform(get("/api/users/99999")
+        mockMvc.perform(get("/api/users/99999").cookie(accessTokenCookie)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -181,12 +206,12 @@ class GlobalExceptionHandlerTest {
     void shouldReturnBadRequestForInvalidUserData() throws Exception {
         // Arrange - Create user with invalid data
         String invalidUserJson = """
-            {
-                "username": "",
-                "email": "invalid-email",
-                "password": "123"
-            }
-            """;
+                {
+                    "username": "",
+                    "email": "invalid-email",
+                    "password": "123"
+                }
+                """;
 
         // Act & Assert
         mockMvc.perform(post("/api/users/create")
@@ -206,12 +231,12 @@ class GlobalExceptionHandlerTest {
     void shouldReturnConflictForDuplicateEmail() throws Exception {
         // Arrange - Create first user
         String userJson = """
-            {
-                "username": "testuser",
-                "email": "test@example.com",
-                "password": "Password@123"
-            }
-            """;
+                {
+                    "username": "testuser",
+                    "email": "test@example.com",
+                    "password": "Password@123"
+                }
+                """;
 
         // Create first user
         mockMvc.perform(post("/api/users/create")
@@ -237,11 +262,11 @@ class GlobalExceptionHandlerTest {
     void shouldReturnUnauthorizedForInvalidLogin() throws Exception {
         // Arrange
         String invalidLoginJson = """
-            {
-                "email": "nonexistent@example.com",
-                "password": "wrongpassword"
-            }
-            """;
+                {
+                    "email": "nonexistent@example.com",
+                    "password": "wrongpassword"
+                }
+                """;
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/login")
@@ -270,7 +295,7 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertNotNull(response.getBody());
         assertEquals(errorMessage, response.getBody().getMessage());
-        
+
         // Verify error response structure
         ErrorResponse errorResponse = response.getBody();
         assertNotNull(errorResponse.getMessage());
@@ -322,8 +347,20 @@ class GlobalExceptionHandlerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldReturnJsonContentType() throws Exception {
+        User adminUser = new User(Username.valueOf("admin"),
+                Email.valueOf("admin@example.com"),
+                Password.fromHash("admin123"));
+
+
+        String token = jwtService.generateAccessToken(
+                adminUser.getEmail(),
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
+
+        Cookie accessTokenCookie = new Cookie("access_token", token);
+
         // Act & Assert - Test that error responses are JSON
-        mockMvc.perform(get("/api/users/99999"))
+        mockMvc.perform(get("/api/users/99999").cookie(accessTokenCookie))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }
@@ -385,7 +422,7 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.INTERNAL_SERVER_ERROR, response.getStatusCode());
         assertNotNull(response.getBody());
-        
+
         // Should return generic message, not internal details
         assertEquals("An internal server error occurred. Please try again later.", response.getBody().getMessage());
         assertNotEquals("Internal database connection failed with sensitive info", response.getBody().getMessage());
@@ -398,16 +435,16 @@ class GlobalExceptionHandlerTest {
     void shouldHandleMultipleExceptionTypes() {
         // Test that different exception types return different status codes
         WebRequest request = null;
-        
+
         // Arrange & Act
         ResponseEntity<ErrorResponse> notFound = globalExceptionHandler.handleResourceNotFoundException(
-            new ResourceNotFoundException("Not found"), request);
+                new ResourceNotFoundException("Not found"), request);
         ResponseEntity<ErrorResponse> badRequest = globalExceptionHandler.handleIllegalArgumentException(
-            new IllegalArgumentException("Bad request"), request);
+                new IllegalArgumentException("Bad request"), request);
         ResponseEntity<ErrorResponse> conflict = globalExceptionHandler.handleDuplicateResourceException(
-            new DuplicateResourceException("Conflict"), request);
+                new DuplicateResourceException("Conflict"), request);
         ResponseEntity<ErrorResponse> unauthorized = globalExceptionHandler.handleAuthenticationException(
-            new BadCredentialsException("Unauthorized"), request);
+                new BadCredentialsException("Unauthorized"), request);
 
         // Assert
         assertEquals(HttpStatus.NOT_FOUND, notFound.getStatusCode());

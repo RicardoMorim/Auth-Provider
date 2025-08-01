@@ -67,6 +67,15 @@ public class User implements AuthUser<AppRole> {
         return id;
     }
 
+    /**
+     * Sets id.
+     *
+     * @param id the id
+     */
+    public void setId(Long id) {
+        this.id = id;
+    }
+
     @Override
     public String getEmail() {
         return email.getEmail();
@@ -77,20 +86,16 @@ public class User implements AuthUser<AppRole> {
         this.email = Email.valueOf(email);
     }
 
+    /**
+     * Gets authorities.
+     *
+     * @return the authorities
+     */
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getAuthority()))
                 .collect(Collectors.toSet());
-    }
-
-    /**
-     * Sets id.
-     *
-     * @param id the id
-     */
-    public void setId(Long id) {
-        this.id = id;
     }
 
     /**
@@ -111,6 +116,11 @@ public class User implements AuthUser<AppRole> {
         this.version = version;
     }
 
+    /**
+     * Gets password.
+     *
+     * @return the password
+     */
     @Override
     public String getPassword() {
         return password.getHashed();
@@ -121,6 +131,11 @@ public class User implements AuthUser<AppRole> {
         this.password = Password.fromHash(hashedPassword);
     }
 
+    /**
+     * Gets username.
+     *
+     * @return the username
+     */
     @Override
     public String getUsername() {
         return username.getUsername();
@@ -131,21 +146,41 @@ public class User implements AuthUser<AppRole> {
         this.username = Username.valueOf(username);
     }
 
+    /**
+     * Is account non expired boolean.
+     *
+     * @return the boolean
+     */
     @Override
     public boolean isAccountNonExpired() {
         return true;
     }
 
+    /**
+     * Is account non locked boolean.
+     *
+     * @return the boolean
+     */
     @Override
     public boolean isAccountNonLocked() {
         return true;
     }
 
+    /**
+     * Is credentials non expired boolean.
+     *
+     * @return the boolean
+     */
     @Override
     public boolean isCredentialsNonExpired() {
         return true;
     }
 
+    /**
+     * Is enabled boolean.
+     *
+     * @return the boolean
+     */
     @Override
     public boolean isEnabled() {
         return true;
