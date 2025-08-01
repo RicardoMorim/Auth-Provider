@@ -21,6 +21,12 @@ class InMemoryTokenBlocklistTest {
     private InMemoryTokenBlocklist blocklist;
 
 
+    @Test
+    void testBlocklistInitialization() {
+        assertNotNull(blocklist);
+        assertInstanceOf(InMemoryTokenBlocklist.class, blocklist);
+    }
+
     /**
      * Test revoke and is revoked.
      */

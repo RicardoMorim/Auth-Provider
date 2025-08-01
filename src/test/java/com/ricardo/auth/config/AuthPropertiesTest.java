@@ -98,10 +98,10 @@ class AuthPropertiesTest {
         AuthProperties properties = new AuthProperties();
 
         // Act
-        properties.getRefreshTokens().getRepository().setType(AuthProperties.RefreshTokenRepositoryType.POSTGRESQL.toString());
+        properties.getRefreshTokens().getRepository().setType(AuthProperties.RefreshTokenRepositoryType.POSTGRESQL);
 
         // Assert
-        assertThat(properties.getRefreshTokens().getRepository().getType()).isEqualTo(AuthProperties.RefreshTokenRepositoryType.POSTGRESQL.toString());
+        assertThat(properties.getRefreshTokens().getRepository().getType()).isEqualTo(AuthProperties.RefreshTokenRepositoryType.POSTGRESQL);
     }
 
     /**

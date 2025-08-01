@@ -93,7 +93,7 @@ public class AuthController {
             ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", accessToken)
                     .httpOnly(accessCfg.isHttpOnly())
                     .secure(accessCfg.isSecure())
-                    .sameSite(accessCfg.getSameSite())
+                    .sameSite(accessCfg.getSameSite().getValue())
                     .path(accessCfg.getPath())
                     .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000))
                     .build();
@@ -101,7 +101,7 @@ public class AuthController {
             ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshToken.getToken())
                     .httpOnly(refreshCfg.isHttpOnly())
                     .secure(refreshCfg.isSecure())
-                    .sameSite(refreshCfg.getSameSite())
+                    .sameSite(refreshCfg.getSameSite().getValue())
                     .path(refreshCfg.getPath())
                     .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000))
                     .build();
@@ -122,7 +122,7 @@ public class AuthController {
             ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", token)
                     .httpOnly(accessCfg.isHttpOnly())
                     .secure(accessCfg.isSecure())
-                    .sameSite(accessCfg.getSameSite())
+                    .sameSite(accessCfg.getSameSite().getValue())
                     .path(accessCfg.getPath())
                     .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000))
                     .build();
@@ -185,7 +185,7 @@ public class AuthController {
             ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", newAccessToken)
                     .httpOnly(accessCfg.isHttpOnly())
                     .secure(accessCfg.isSecure())
-                    .sameSite(accessCfg.getSameSite())
+                    .sameSite(accessCfg.getSameSite().getValue())
                     .path(accessCfg.getPath())
                     .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000))
                     .build();
@@ -193,7 +193,7 @@ public class AuthController {
             ResponseCookie refreshTokenCookieResp = ResponseCookie.from("refresh_token", newRefreshToken)
                     .httpOnly(refreshCfg.isHttpOnly())
                     .secure(refreshCfg.isSecure())
-                    .sameSite(refreshCfg.getSameSite())
+                    .sameSite(refreshCfg.getSameSite().getValue())
                     .path(refreshCfg.getPath())
                     .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000))
                     .build();
@@ -263,7 +263,7 @@ public class AuthController {
         ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", "")
                 .httpOnly(accessCfg.isHttpOnly())
                 .secure(accessCfg.isSecure())
-                .sameSite(accessCfg.getSameSite())
+                .sameSite(accessCfg.getSameSite().getValue())
                 .path(accessCfg.getPath())
                 .maxAge(0) // Expire immediately
                 .build();
@@ -271,7 +271,7 @@ public class AuthController {
         ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", "")
                 .httpOnly(refreshCfg.isHttpOnly())
                 .secure(refreshCfg.isSecure())
-                .sameSite(refreshCfg.getSameSite())
+                .sameSite(refreshCfg.getSameSite().getValue())
                 .path(refreshCfg.getPath())
                 .maxAge(0) // Expire immediately
                 .build();

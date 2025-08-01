@@ -34,6 +34,12 @@ class RedisRateLimiterTest {
         redisTemplate.getConnectionFactory().getConnection().flushDb();
     }
 
+    @Test
+    void testRateLimiterInitialization() {
+        assertNotNull(rateLimiter);
+        assertInstanceOf(RedisRateLimiter.class, rateLimiter);
+    }
+
     /**
      * Test allow request within limit.
      */

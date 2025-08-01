@@ -12,7 +12,7 @@ import java.util.concurrent.TimeUnit;
  * The type Redis token block list.
  */
 @Component
-@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "redis")
+@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "REDIS")
 public class RedisTokenBlockList implements TokenBlocklist {
 
     private final RedisTemplate<String, String> redisTemplate;

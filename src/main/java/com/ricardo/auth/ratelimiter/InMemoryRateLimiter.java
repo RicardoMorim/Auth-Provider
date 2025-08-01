@@ -14,7 +14,7 @@ import java.util.concurrent.locks.StampedLock;
  * The type In memory rate limiter.
  */
 @Component
-@ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "MEMORY", matchIfMissing = true)
 public class InMemoryRateLimiter implements RateLimiter {
 
     private final int maxRequests;

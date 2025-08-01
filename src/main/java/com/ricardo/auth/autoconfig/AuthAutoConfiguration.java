@@ -208,7 +208,7 @@ public class AuthAutoConfiguration {
      * PostgreSQL Refresh Token Repository Configuration (EXPLICIT ONLY)
      */
     @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens.repository", name = "type", havingValue = "postgresql")
+    @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens.repository", name = "type", havingValue = "POSTGRESQL")
     @ConditionalOnMissingBean(RefreshTokenRepository.class)
     static class PostgreSQLRefreshTokenRepositoryConfiguration {
         /**

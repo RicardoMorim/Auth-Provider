@@ -13,7 +13,7 @@ import java.util.concurrent.ConcurrentHashMap;
  * The type In memory token blocklist.
  */
 @Component
-@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "memory", matchIfMissing = true)
+@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "MEMORY", matchIfMissing = true)
 public class InMemoryTokenBlocklist implements TokenBlocklist {
     private final Map<String, Long> revokedTokens = new ConcurrentHashMap<>();
     private final long ttlMillis;

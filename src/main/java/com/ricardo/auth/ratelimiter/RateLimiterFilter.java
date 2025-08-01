@@ -17,7 +17,6 @@ import java.util.Optional;
 /**
  * The type Rate limiter filter.
  */
-@ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory")
 public class RateLimiterFilter extends OncePerRequestFilter {
     private final RateLimiter rateLimiter;
 

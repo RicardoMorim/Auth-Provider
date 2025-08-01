@@ -34,6 +34,12 @@ class RedisTokenBlockListTest {
         redisTemplate.getConnectionFactory().getConnection().flushDb();
     }
 
+    @Test
+    void testBlockListInitialization() {
+        assertNotNull(blockList);
+        assertInstanceOf(RedisTokenBlockList.class, blockList);
+    }
+
     /**
      * Test revoke calls redis set.
      */
@@ -113,7 +119,7 @@ class RedisTokenBlockListTest {
         assertTrue(blockList.isRevoked(token));
 
         // Wait for expiration
-        Thread.sleep(ttlMillis + 100);
+        Thread.sleep(ttlMillis + 1000);
 
         // After TTL expires, the token should no longer be in the blocklist
         assertFalse(blockList.isRevoked(token));

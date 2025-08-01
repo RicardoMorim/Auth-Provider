@@ -26,6 +26,11 @@ class InMemoryRateLimiterTest {
     @Autowired
     private AuthProperties properties;
 
+    @Test
+    void testRateLimiterInitialization() {
+        assertNotNull(rateLimiter);
+        assertInstanceOf(InMemoryRateLimiter.class, rateLimiter);
+    }
 
     /**
      * Test allow request within limit.

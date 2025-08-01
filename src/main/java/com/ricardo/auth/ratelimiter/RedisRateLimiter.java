@@ -16,7 +16,7 @@ import java.time.Instant;
  */
 @Component
 @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
-@ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "redis")
+@ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "REDIS")
 @Slf4j
 public class RedisRateLimiter implements RateLimiter {
 
