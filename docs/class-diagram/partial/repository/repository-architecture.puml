@@ -8,7 +8,7 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Repository Architecture (v1.2.0)
+title Ricardo Auth Starter - Repository Architecture (v3.0.0)
 
 package "Spring Data JPA" {
     interface "JpaRepository<T, ID>" as JpaRepository {
@@ -21,23 +21,40 @@ package "Spring Data JPA" {
 }
 
 package "User Repository Architecture" {
-    interface "UserRepository<U, ID>" as UserRepository {
+    interface "UserRepository<U, R, ID>" as UserRepository {
         +findByEmail(email: String): Optional<U>
+        +existsByEmail(email: String): boolean
+        +deleteById(id: ID): void
     }
     
-    interface "UserJpaRepository<U, ID>" as UserJpaRepository {
+    interface "UserJpaRepository<U, R, ID>" as UserJpaRepository {
         +findByEmail_Email(email: String): Optional<U>
         +findByUsername_Username(username: String): Optional<U>
         +existsByEmail_Email(email: String): boolean
+        +existsByUsername_Username(username: String): boolean
     }
     
     interface DefaultUserJpaRepository {
-        ' Default implementation for User and Long
+        ' Default implementation for DefaultUser, Role, and UUID
+    }
+    
+    ' NEW: PostgreSQL Native User Repository
+    class "UserPostgreSQLRepository<U, R, ID>" as UserPostgreSQLRepository {
+        -jdbcTemplate: JdbcTemplate
+        -userRowMapper: UserRowMapper<U>
+        -userSqlParameterMapper: UserSqlParameterMapper<U>
+        -idConverter: IdConverter<ID>
+        +findByEmail(email: String): Optional<U>
+        +existsByEmail(email: String): boolean
+        +save(user: U): U
+        +deleteById(id: ID): void
+        +findById(id: ID): Optional<U>
     }
     
     UserJpaRepository --|> UserRepository
     UserJpaRepository --|> JpaRepository
     DefaultUserJpaRepository --|> UserJpaRepository
+    UserPostgreSQLRepository --|> UserRepository
 }
 
 package "Refresh Token Repository Architecture" {
@@ -81,6 +98,55 @@ package "Refresh Token Repository Architecture" {
     JpaRefreshTokenRepository --|> JpaRepository
     DefaultJpaRefreshTokenRepository --|> JpaRefreshTokenRepository
     PostgreSQLRefreshTokenRepository --|> RefreshTokenRepository
+}
+
+package "Helper Classes" {
+    ' PostgreSQL Helper Classes
+    interface "UserRowMapper<U>" as UserRowMapper {
+        +mapRow(rs: ResultSet, rowNum: int): U
+    }
+    
+    interface "UserSqlParameterMapper<U>" as UserSqlParameterMapper {
+        +mapToSqlParameterSource(user: U): SqlParameterSource
+    }
+    
+    interface "IdConverter<ID>" as IdConverter {
+        +convert(id: Object): ID
+        +convertToString(id: ID): String
+    }
+    
+    class UUIDConverter {
+        +convert(id: Object): UUID
+        +convertToString(id: UUID): String
+    }
+    
+    UUIDConverter --|> IdConverter
+    UserPostgreSQLRepository --> UserRowMapper : uses
+    UserPostgreSQLRepository --> UserSqlParameterMapper : uses
+    UserPostgreSQLRepository --> IdConverter : uses
+}
+
+package "Factory Pattern" {
+    interface "AuthUserFactory<R>" as AuthUserFactory {
+        +createAuthUser(username: String, email: String, password: String, roles: Set<R>): AuthUser<R>
+        +createAuthUser(email: String, password: String, roles: Set<R>): AuthUser<R>
+        +createAuthUser(email: String, password: String, role: R): AuthUser<R>
+    }
+    
+    interface "UserFactory<U, R, ID>" as UserFactory {
+        +createUser(username: String, email: String, password: String, roles: Set<R>): U
+        +createUser(email: String, password: String, roles: Set<R>): U
+        +createUser(email: String, password: String, role: R): U
+    }
+    
+    class DefaultUserFactory {
+        +createUser(username: String, email: String, password: String, roles: Set<Role>): DefaultUser
+        +createUser(email: String, password: String, roles: Set<Role>): DefaultUser
+        +createUser(email: String, password: String, role: Role): DefaultUser
+    }
+    
+    DefaultUserFactory --|> UserFactory
+    DefaultUserFactory --|> AuthUserFactory
 }
 
 
@@ -176,6 +242,30 @@ note right of ConditionalOnProperty #E8F4FD
   
   - "jpa" → JPA implementation
   - "postgresql" → PostgreSQL implementation
+end note
+
+note right of UserPostgreSQLRepository #E8F4FD
+  **🆕 PostgreSQL User Repository (v3.0.0)**
+  Native JDBC implementation with:
+  - UUID primary key support
+  - Type-safe generic mappers
+  - Enhanced performance
+  - Custom SQL queries
+end note
+
+note bottom of UUIDConverter #E8F4FD
+  **🆕 Helper Classes (v3.0.0)**
+  Type converters and mappers for
+  PostgreSQL integration and
+  improved type safety with UUID support
+  These classes allow for total decoupling from User entity
+end note
+
+note right of UserFactory #E8F4FD
+  **🆕 Factory Pattern (v3.0.0)**
+  Decoupled user creation with
+  type-safe generics for enhanced
+  architecture flexibility and testability
 end note
 
 @enduml

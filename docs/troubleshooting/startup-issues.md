@@ -2,6 +2,13 @@
 
 Fix **application startup problems** with Ricardo Auth quickly and efficiently.
 
+---
+
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
+
 ## 📋 Quick Navigation
 
 - [Common Startup Errors](#common-startup-errors)

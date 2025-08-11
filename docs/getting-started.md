@@ -23,7 +23,7 @@ Add to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.1.0</version>
+    <version>3.0.0</version>
 </dependency>
 
 <!-- Required: Database support -->
@@ -159,6 +159,25 @@ curl --cookie "access_token=YOUR_ACCESS_TOKEN_HERE" \
 - ✅ Secure password policies
 - ✅ Role-based access control
 - ✅ Complete REST API
+
+## 🚨 Breaking Changes in v3.0.0
+
+- **UUID Primary Keys**: All user and entity IDs are now UUIDs instead of Long integers
+- **Database Schema Changes**: Primary keys and foreign keys now use UUID type
+- **Enhanced Decoupling**: New factory pattern and helper classes for better customization
+- **PostgreSQL Support**: Added native PostgreSQL implementation alongside JPA
+- **Generic Type Safety**: Improved type safety with proper Role generic parameters
+- **Repository Configuration**: New `ricardo.auth.repositories.type` setting (JPA or POSTGRESQL)
+
+### Migration from v2.x to v3.0.0
+
+**⚠️ Important**: This is a major version with breaking changes requiring database migration.
+
+**Key Changes:**
+- User IDs changed from `Long` to `UUID`
+- Response DTOs now return UUID strings instead of numbers
+- Path parameters in API endpoints accept UUID format
+- Database schema requires migration (see [Database Configuration](docs/configuration/database.md))
 
 ## 🚨 Breaking Changes & Security Notes
 

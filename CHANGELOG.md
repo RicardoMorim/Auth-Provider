@@ -5,6 +5,31 @@ All notable changes to the Ricardo Auth Spring Boot Starter will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [3.0.0] - 2025-08-11
+
+### Added
+
+- **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
+- **Repository Type Configuration**: Choose between JPA and PostgreSQL implementations
+- **Factory Pattern**: New `AuthUserFactory` and `UserFactory` for enhanced decoupling
+- **Helper Classes**: Added `UserRowMapper`, `UserSqlParameterMapper`, and `IdConverter`
+- **Enhanced Generics**: Improved type safety with explicit Role type parameters
+- **PostgreSQL Native Support**: Optimized PostgreSQL implementation alongside JPA
+
+### Changed
+
+- **BREAKING**: All user IDs changed from `Long` to `UUID`
+- **BREAKING**: Enhanced service generics: `UserService<U,R,ID>` with Role information
+- **BREAKING**: Database schema requires migration to UUID primary keys
+- **Repository Configuration**: New `ricardo.auth.repository.type` property (JPA/POSTGRESQL)
+
+### Migration
+
+- Update your database schema to use UUID columns for primary keys
+- Change all ID references in your code from `Long` to `UUID`
+- Update API responses to expect UUID format
+- See [Database Configuration](docs/configuration/database.md) for detailed migration steps
+
 ## [1.0.0] - 2025-06-24
 
 ### Added
