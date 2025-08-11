@@ -2,6 +2,14 @@
 
 Complete API reference for the Ricardo Auth Spring Boot Starter endpoints.
 
+## ⚠️ Breaking Changes in v3.0.0
+
+- **UUID Primary Keys**: All user IDs are now UUIDs instead of Long integers
+- **API Responses**: User ID fields return UUID strings (e.g., `"550e8400-e29b-41d4-a716-446655440000"`)
+- **Path Parameters**: Endpoints expecting user IDs now require UUID format
+- **Database Schema**: Requires migration from Long IDs to UUID (see [Database Configuration](configuration/database.md))
+- **Type Safety**: Enhanced generic types for better compile-time safety
+
 ## Base URL
 
 All endpoints are relative to your application's base URL:
@@ -250,7 +258,7 @@ Content-Type: application/json
 
 ```json
 {
-  "id": 1,
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "username": "johndoe",
   "email": "john@example.com"
 }
@@ -330,7 +338,7 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 
 **Path Parameters:**
 
-- `id` (number): User ID
+- `id` (UUID string): User ID (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 
 #### Response
 
@@ -338,7 +346,7 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 
 ```json
 {
-  "id": 1,
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "username": "johndoe",
   "email": "john@example.com"
 }
@@ -358,7 +366,7 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 #### Example
 
 ```bash
-curl -X GET http://localhost:8080/api/users/1 \
+curl -X GET http://localhost:8080/api/users/550e8400-e29b-41d4-a716-446655440000 \
   --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
 
@@ -386,7 +394,7 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 
 ```json
 {
-  "id": 1,
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "username": "johndoe",
   "email": "john@example.com"
 }
@@ -459,7 +467,7 @@ Content-Type: application/json
 
 **Path Parameters:**
 
-- `id` (number): User ID to update
+- `id` (UUID string): User ID to update (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 
 **Body:**
 
@@ -480,7 +488,7 @@ Content-Type: application/json
 
 ```json
 {
-  "id": 1,
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "username": "johnsmith",
   "email": "johnsmith@example.com"
 }
@@ -500,7 +508,7 @@ Content-Type: application/json
 #### Example
 
 ```bash
-curl -X PUT http://localhost:8080/api/users/update/1 \
+curl -X PUT http://localhost:8080/api/users/update/550e8400-e29b-41d4-a716-446655440000 \
   --cookie "access_token=YOUR_ACCESS_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
@@ -527,7 +535,7 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 
 **Path Parameters:**
 
-- `id` (number): User ID to delete
+- `id` (UUID string): User ID to delete (format: xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx)
 
 #### Response
 
@@ -542,9 +550,9 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 ```json
 {
   "error": "Not Found",
-  "message": "User not found with id: 999",
+  "message": "User not found with id: 550e8400-e29b-41d4-a716-446655440000",
   "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/users/delete/999"
+  "path": "/api/users/delete/550e8400-e29b-41d4-a716-446655440000"
 }
 ```
 
@@ -562,7 +570,7 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 #### Example
 
 ```bash
-curl -X DELETE http://localhost:8080/api/users/delete/1 \
+curl -X DELETE http://localhost:8080/api/users/delete/550e8400-e29b-41d4-a716-446655440000 \
   --cookie "access_token=YOUR_ACCESS_TOKEN_HERE"
 ```
 

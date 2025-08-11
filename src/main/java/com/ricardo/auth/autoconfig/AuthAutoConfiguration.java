@@ -2,19 +2,28 @@ package com.ricardo.auth.autoconfig;
 
 import com.ricardo.auth.blocklist.InMemoryTokenBlocklist;
 import com.ricardo.auth.blocklist.RedisTokenBlockList;
+import com.ricardo.auth.config.UserSecurityService;
 import com.ricardo.auth.controller.AuthController;
 import com.ricardo.auth.controller.UserController;
 import com.ricardo.auth.core.*;
+import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.domain.user.User;
+import com.ricardo.auth.factory.AuthUserFactory;
+import com.ricardo.auth.factory.UserFactory;
+import com.ricardo.auth.helper.*;
 import com.ricardo.auth.ratelimiter.InMemoryRateLimiter;
 import com.ricardo.auth.ratelimiter.RedisRateLimiter;
 import com.ricardo.auth.repository.refreshToken.DefaultJpaRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.PostgreSQLRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
+import com.ricardo.auth.repository.user.UserPostgreSQLRepository;
 import com.ricardo.auth.repository.user.UserRepository;
 import com.ricardo.auth.security.JwtAuthFilter;
 import com.ricardo.auth.service.*;
+import jakarta.annotation.PostConstruct;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.AutoConfiguration;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
@@ -30,10 +39,13 @@ import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.util.UUID;
 
 /**
  * Auto-configuration for Ricardo Auth Starter.
@@ -46,21 +58,25 @@ import javax.sql.DataSource;
 @ConditionalOnProperty(prefix = "ricardo.auth", name = "enabled", havingValue = "true", matchIfMissing = true)
 @EnableConfigurationProperties(AuthProperties.class)
 @ComponentScan(basePackages = "com.ricardo.auth")
-@EntityScan(basePackages = "com.ricardo.auth.domain")
-@EnableJpaRepositories(
-        basePackages = "com.ricardo.auth.repository",
-        includeFilters = @ComponentScan.Filter(
-                type = FilterType.ASSIGNABLE_TYPE,
-                classes = {DefaultUserJpaRepository.class, DefaultJpaRefreshTokenRepository.class}
-        )
-)
 public class AuthAutoConfiguration {
+    private static final Logger logger = LoggerFactory.getLogger(AuthAutoConfiguration.class);
 
-    // ========== REFRESH TOKEN REPOSITORY (CONFIGURABLE) ==========
+    // ========== JPA CONFIGURATION ==========
+    @Configuration
+    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "JPA", matchIfMissing = true)
+    @EntityScan(basePackages = "com.ricardo.auth.domain")
+    @EnableJpaRepositories(
+            basePackages = "com.ricardo.auth.repository",
+            includeFilters = @ComponentScan.Filter(
+                    type = FilterType.ASSIGNABLE_TYPE,
+                    classes = {DefaultUserJpaRepository.class, DefaultJpaRefreshTokenRepository.class}
+            )
+    )
+    static class JpaConfiguration {
+        // JPA configuration is handled by annotations
+    }
 
-
-    // JPA Refresh Token Repository Configuration (DEFAULT) (Spring data will automatically bean scan this)
-
+    // ========== COMMON SERVICES ==========
 
     /**
      * Jwt service jwt service.
@@ -74,8 +90,6 @@ public class AuthAutoConfiguration {
         return new JwtServiceImpl(authProperties);
     }
 
-    // ========== COMMON SERVICES ==========
-
     /**
      * User service user service.
      *
@@ -84,8 +98,14 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserService<User, Long> userService(UserRepository<User, Long> userRepository) {
+    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository) {
         return new UserServiceImpl<>(userRepository);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean
+    public UserSecurityService<User, AppRole, UUID> userSecurityService(UserService<User, AppRole, UUID> userService, IdConverter<UUID> idConverter) {
+        return new UserSecurityService<>(userService, idConverter);
     }
 
     /**
@@ -99,9 +119,9 @@ public class AuthAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens", name = "enabled", havingValue = "true", matchIfMissing = true)
-    public RefreshTokenService<User, Long> refreshTokenService(
+    public RefreshTokenService<User, AppRole, UUID> refreshTokenService(
             RefreshTokenRepository refreshTokenRepository,
-            UserService<User, Long> userService,
+            UserService<User, AppRole, UUID> userService,
             AuthProperties authProperties) {
 
         return new RefreshTokenServiceImpl<>(refreshTokenRepository, userService, authProperties);
@@ -115,7 +135,7 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserDetailsServiceImpl userDetailsService(UserService<User, Long> userService) {
+    public UserDetailsServiceImpl userDetailsService(UserService<User, AppRole, UUID> userService) {
         return new UserDetailsServiceImpl(userService);
     }
 
@@ -128,8 +148,8 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public JwtAuthFilter jwtAuthFilter(JwtService jwtService, TokenBlocklist tokenBlocklist) {
-        return new JwtAuthFilter(jwtService, tokenBlocklist);
+    public JwtAuthFilter jwtAuthFilter(JwtService jwtService, TokenBlocklist tokenBlocklist, AuthProperties authProperties) {
+        return new JwtAuthFilter(jwtService, tokenBlocklist, authProperties);
     }
 
     /**
@@ -157,13 +177,19 @@ public class AuthAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "auth.enabled", havingValue = "true", matchIfMissing = true)
-    public AuthController authController(
+    public AuthController<User, AppRole, UUID> authController(
             JwtService jwtService,
             AuthenticationManager authManager,
-            RefreshTokenService<User, Long> refreshTokenService,
+            RefreshTokenService<User, AppRole, UUID> refreshTokenService,
             AuthProperties authProperties,
             TokenBlocklist tokenBlocklist) {
-        return new AuthController(jwtService, authManager, refreshTokenService, authProperties, tokenBlocklist);
+        return new AuthController<>(jwtService, authManager, refreshTokenService, authProperties, tokenBlocklist);
+    }
+
+    @Bean
+    @ConditionalOnMissingBean(name = "appRoleMapper")
+    public RoleMapper<AppRole> appRoleMapper() {
+        return new AppRoleMapper();
     }
 
     // ========== CONTROLLERS ==========
@@ -171,19 +197,16 @@ public class AuthAutoConfiguration {
     /**
      * User controller user controller.
      *
-     * @param userService           the user service
-     * @param passwordEncoder       the password encoder
-     * @param passwordPolicyService the password policy service
+     * @param userService the user service
+     * @param userBuilder the user builder
      * @return the user controller
      */
     @Bean
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "user.enabled", havingValue = "true", matchIfMissing = true)
-    public UserController userController(
-            UserService<User, Long> userService,
-            PasswordEncoder passwordEncoder,
-            PasswordPolicyService passwordPolicyService) {
-        return new UserController(userService, passwordEncoder, passwordPolicyService);
+    public UserController<User, AppRole, UUID> userController(
+            UserService<User, AppRole, UUID> userService, AuthUserFactory<User, AppRole, UUID> userBuilder, IdConverter<UUID> idConverter) {
+        return new UserController<>(userService, userBuilder, idConverter);
     }
 
     /**
@@ -208,7 +231,7 @@ public class AuthAutoConfiguration {
      * PostgreSQL Refresh Token Repository Configuration (EXPLICIT ONLY)
      */
     @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.refresh-tokens.repository", name = "type", havingValue = "POSTGRESQL")
+    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
     @ConditionalOnMissingBean(RefreshTokenRepository.class)
     static class PostgreSQLRefreshTokenRepositoryConfiguration {
         /**
@@ -222,16 +245,169 @@ public class AuthAutoConfiguration {
         public RefreshTokenRepository refreshTokenRepository(
                 DataSource dataSource,
                 AuthProperties authProperties) {
-            System.out.println("✅ Creating PostgreSQL RefreshTokenRepository (EXPLICIT)");
+            logger.info("Creating PostgreSQL Repositories");
             return new PostgreSQLRefreshTokenRepository(dataSource, authProperties);
         }
+
+
+        @Bean
+        public UserRepository<User, AppRole, UUID> userRepository(
+                UserRowMapper<User, AppRole, UUID> userRowMapper,
+                UserSqlParameterMapper<User> userSqlParameterMapper,
+                RoleMapper<AppRole> roleMapper,
+                IdConverter<UUID> idConverter,
+                DataSource dataSource
+        ) {
+            logger.info("Creating PostgreSQL User Repository");
+            return new UserPostgreSQLRepository<>(
+                    userRowMapper,
+                    userSqlParameterMapper,
+                    roleMapper,
+                    idConverter,
+                    dataSource
+            );
+        }
     }
+
+    @Component
+    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
+    public static class RefreshTokenSchemaInitializer {
+
+        private final JdbcTemplate jdbcTemplate;
+
+        public RefreshTokenSchemaInitializer(JdbcTemplate jdbcTemplate) {
+            this.jdbcTemplate = jdbcTemplate;
+        }
+
+        @PostConstruct
+        public void initializeSchema() {
+            try {
+                createTableIfNotExists();
+                createIndexes();
+                logger.info("RefreshToken schema initialization completed successfully");
+            } catch (Exception e) {
+                logger.error("Failed to initialize RefreshToken schema", e);
+                throw new RuntimeException("RefreshToken schema initialization failed", e);
+            }
+        }
+
+        private void createTableIfNotExists() {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
+
+            String createTableSql = """
+                    CREATE TABLE IF NOT EXISTS refresh_tokens (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        token VARCHAR(1000) UNIQUE NOT NULL,
+                        user_email VARCHAR(255) NOT NULL,
+                        expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+                        revoked BOOLEAN NOT NULL DEFAULT FALSE,
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        version BIGINT NOT NULL DEFAULT 0
+                    )
+                    """;
+
+            jdbcTemplate.execute(createTableSql);
+            logger.debug("Table 'refresh_tokens' created or already exists");
+        }
+
+        private void createIndexes() {
+            // Note: UNIQUE constraint on token is already handled by table creation
+            String[] indexStatements = {
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_user_email ON refresh_tokens(user_email)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_expiry_date ON refresh_tokens(expiry_date)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_user_created ON refresh_tokens(user_email, created_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_revoked ON refresh_tokens(revoked)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_expiry_date_revoked ON refresh_tokens(expiry_date, revoked)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_version ON refresh_tokens(version)"
+            };
+
+            for (String indexSql : indexStatements) {
+                jdbcTemplate.execute(indexSql);
+            }
+
+            logger.debug("All indexes created or already exist");
+        }
+    }
+
+    @Component
+    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
+    public static class UserSchemaInitializer {
+
+        private final JdbcTemplate jdbcTemplate;
+
+        public UserSchemaInitializer(JdbcTemplate jdbcTemplate) {
+            this.jdbcTemplate = jdbcTemplate;
+        }
+
+        @PostConstruct
+        public void initializeSchema() {
+            try {
+                createUserTablesIfNotExists();
+                createUserIndexes();
+                logger.info("User schema initialization completed successfully");
+            } catch (Exception e) {
+                logger.error("Failed to initialize User schema", e);
+                throw new RuntimeException("User schema initialization failed", e);
+            }
+        }
+
+        private void createUserTablesIfNotExists() {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
+
+            // Create users table
+            String createUsersTableSql = """
+                    CREATE TABLE IF NOT EXISTS users (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        username VARCHAR(255) UNIQUE NOT NULL,
+                        email VARCHAR(255) UNIQUE NOT NULL,
+                        password VARCHAR(255) NOT NULL,
+                        version BIGINT DEFAULT 0,
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+                    )
+                    """;
+
+            jdbcTemplate.execute(createUsersTableSql);
+            logger.debug("Table 'users' created or already exists");
+
+            // Create user_roles table
+            String createUserRolesTableSql = """
+                    CREATE TABLE IF NOT EXISTS user_roles (
+                        user_id UUID NOT NULL,
+                        role VARCHAR(50) NOT NULL,
+                        PRIMARY KEY (user_id, role),
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                    """;
+
+            jdbcTemplate.execute(createUserRolesTableSql);
+            logger.debug("Table 'user_roles' created or already exists");
+        }
+
+        private void createUserIndexes() {
+            String[] indexStatements = {
+                    "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_id ON users(id)",
+                    "CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id)",
+                    "CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role)"
+            };
+
+            for (String indexSql : indexStatements) {
+                jdbcTemplate.execute(indexSql);
+            }
+
+            logger.debug("All user indexes created or already exist");
+        }
+    }
+
 
     /**
      * The type Memory rate limiter config.
      */
     @Configuration
     @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory")
+
     static class MemoryRateLimiterConfig {
         /**
          * Memory rate limiter rate limiter.
@@ -310,6 +486,63 @@ public class AuthAutoConfiguration {
         @Bean
         public TokenBlocklist inMemoryTokenBlocklist(AuthProperties authProperties) {
             return new InMemoryTokenBlocklist(authProperties);
+        }
+    }
+
+
+    @Configuration
+    @ConditionalOnMissingBean(AuthUserFactory.class)
+    static class AuthUserFactoryConfig {
+        /**
+         * Auth user factory auth user factory.
+         *
+         * @return the auth user factory
+         */
+        @Bean
+        public AuthUserFactory<User, AppRole, UUID> authUserFactory(PasswordPolicyService passwordPolicyService, PasswordEncoder passwordEncoder) {
+            return new UserFactory(passwordEncoder, passwordPolicyService);
+        }
+    }
+
+    @Configuration
+    @ConditionalOnMissingBean(IdConverter.class)
+    static class IdConverterConfig {
+        /**
+         * Id converter id converter.
+         *
+         * @return the id converter
+         */
+        @Bean
+        public IdConverter<UUID> idConverter() {
+            return new UUIDConverter();
+        }
+    }
+
+    @Configuration
+    @ConditionalOnMissingBean(UserRowMapper.class)
+    static class UserRowMapperConfig {
+        /**
+         * User row mapper user row mapper.
+         *
+         * @return the user row mapper
+         */
+        @Bean
+        public UserRowMapper<User, AppRole, UUID> userRowMapper(IdConverter<UUID> idConverter) {
+            return new UserRowMapperImpl(idConverter);
+        }
+    }
+
+    @Configuration
+    @ConditionalOnMissingBean(UserSqlParameterMapper.class)
+    static class UserSqlParameterMapperConfig {
+        /**
+         * User sql parameter mapper user sql parameter mapper.
+         *
+         * @return the user sql parameter mapper
+         */
+        @Bean
+        public UserSqlParameterMapper<User> userSqlParameterMapper() {
+            return new UserSqlMapper();
         }
     }
 }

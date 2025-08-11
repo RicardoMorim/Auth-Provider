@@ -2,6 +2,7 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.RefreshTokenService;
+import com.ricardo.auth.core.Role;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
@@ -23,12 +24,12 @@ import java.util.Base64;
  * @param <U>  the AuthUser type parameter
  * @param <ID> the ID type parameter
  */
-public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
-        implements RefreshTokenService<U, ID> {
+public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID>
+        implements RefreshTokenService<U, R, ID> {
 
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenServiceImpl.class);
     private final RefreshTokenRepository refreshTokenRepository;
-    private final UserService<U, ID> userService;
+    private final UserService<U, R, ID> userService;
     private final AuthProperties authProperties;
 
     /**
@@ -39,7 +40,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<?>, ID>
      * @param authProperties         the auth properties
      */
     public RefreshTokenServiceImpl(RefreshTokenRepository refreshTokenRepository,
-                                   UserService<U, ID> userService,
+                                   UserService<U, R, ID> userService,
                                    AuthProperties authProperties) {
         this.refreshTokenRepository = refreshTokenRepository;
         this.userService = userService;

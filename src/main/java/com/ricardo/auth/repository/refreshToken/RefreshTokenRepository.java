@@ -20,7 +20,7 @@ public interface RefreshTokenRepository {
     /**
      * Create a new refresh token for the user.
      *
-     * @param refreshToken the refresh token to save
+     * @param refreshToken the refresh token to saveUser
      * @return the refresh token
      */
     RefreshToken saveToken(RefreshToken refreshToken);

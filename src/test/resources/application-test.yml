@@ -36,6 +36,14 @@ ricardo:
       prevent-common-passwords: true
       max-length: 60 # 60 characters for the test environment use a reasonable limit in production
     redirect-https: false
+    cookies:
+      access:
+        http-only: false
+        secure: false
+      refresh:
+        secure: false
+        http-only: false
+
 
 
 # Logging Configuration

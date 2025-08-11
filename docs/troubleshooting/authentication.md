@@ -2,6 +2,12 @@
 
 Resolve **login, token, and authentication problems** with Ricardo Auth quickly and securely.
 
+## 🚨 Breaking Changes in v3.0.0
+
+- **UUID Primary Keys:** All user IDs are now UUID instead of Long
+- **Enhanced Decoupling:** New factory pattern for user creation
+- **Repository Types:** Choose between JPA and PostgreSQL implementations
+
 ## 🚨 Breaking Changes in v2.0.0
 
 - **Authentication cookies** now use secure flags (`HttpOnly`, `Secure`, `SameSite`) by default. HTTPS is required in

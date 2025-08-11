@@ -2,11 +2,19 @@
 
 This guide covers security best practices and considerations when using the Ricardo Auth Spring Boot Starter.
 
+---
+
+> **Enhanced Security in v3.0.0:**
+> - **UUID Primary Keys:** Better security and scalability with UUID-based IDs
+> - **Repository Types:** Choose optimized implementation for your database
+> - **Enhanced Decoupling:** Factory pattern improves security architecture
+
 ## Security Overview
 
 The Ricardo Auth Starter implements several security mechanisms:
 
 - **JWT Token Authentication**: Stateless authentication using JSON Web Tokens
+- **UUID Primary Keys**: Enhanced security with non-predictable user IDs
 - **Password Encryption**: BCrypt hashing with secure salts
 - **Role-Based Access Control**: Fine-grained permissions based on user roles
 - **Input Validation**: Protection against malicious input

@@ -7,7 +7,6 @@ package com.ricardo.auth.core;
  * e para as authorities do Spring Security.
  */
 public interface Role {
-
     /**
      * Retorna a representação em string da role.
      * Recomenda-se seguir a convenção do Spring Security

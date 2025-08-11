@@ -13,7 +13,7 @@ import java.util.Optional;
  * @param <U>  the type parameter
  * @param <ID> the type parameter
  */
-public interface UserService<U extends AuthUser<?>, ID> {
+public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
 
     /**
      * Gets user by id.

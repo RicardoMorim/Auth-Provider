@@ -6,7 +6,12 @@
 
 ---
 
-> **Breaking Change (v2.0.0):**
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
+> 
+> **v2.0.0 Changes:**
 > - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
     flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
     development only.
@@ -72,7 +77,7 @@ my-web-app/
         <dependency>
             <groupId>io.github.ricardomorim</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>2.0.0</version> <!-- Use 2.x for cookie-based authentication -->
+            <version>3.0.0</version> <!-- Use 3.x for UUID primary keys and enhanced features -->
         </dependency>
 
         <!-- Spring Boot Web -->

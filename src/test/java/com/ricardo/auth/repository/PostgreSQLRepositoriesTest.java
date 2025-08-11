@@ -41,10 +41,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-        "ricardo.auth.refresh-tokens.repository.type=postgresql"
-})
-@Transactional
-class PostgreSQLRefreshTokenRepositoryTest {
+        "ricardo.auth.repositories.type=POSTGRESQL",
+        "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
+})@Transactional
+class PostgreSQLRepositoriesTest {
 
     /**
      * The constant postgres.
@@ -74,7 +74,7 @@ class PostgreSQLRefreshTokenRepositoryTest {
         registry.add("spring.datasource.username", postgres::getUsername);
         registry.add("spring.datasource.password", postgres::getPassword);
         registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "create-drop");
+        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
         registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
     }
 
@@ -684,25 +684,6 @@ class PostgreSQLRefreshTokenRepositoryTest {
                 .isEqualTo(savedToken.getCreatedAt().truncatedTo(ChronoUnit.MILLIS));
     }
 
-    /**
-     * Helper method to create multiple tokens with different creation times
-     */
-    private List<RefreshToken> createMultipleTokensWithDelay(String userEmail, int count, String prefix) throws InterruptedException {
-        List<RefreshToken> tokens = new ArrayList<>();
 
-        for (int i = 0; i < count; i++) {
-            RefreshToken token = new RefreshToken(
-                    prefix + "-" + i,
-                    userEmail,
-                    Instant.now().plusSeconds(3600)
-            );
-            tokens.add(repository.saveToken(token));
-
-            if (i < count - 1) {
-                Thread.sleep(10); // Small delay to ensure different creation times
-            }
-        }
-
-        return tokens;
-    }
 }
+

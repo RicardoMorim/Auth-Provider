@@ -3,7 +3,11 @@
 Build a **multi-tenant SaaS application** with Ricardo Auth, featuring tenant isolation, custom user roles, and
 tenant-specific configurations.
 
-## 📋 Quick Navigation
+---
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long. Update entity IDs, repository generics, DTOs, controller path variables, and service signatures to use `UUID`.
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations## 📋 Quick Navigation
 
 - [Overview](#overview)
 - [Tenant Architecture](#tenant-architecture)

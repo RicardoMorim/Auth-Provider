@@ -70,14 +70,14 @@ public class AuthProperties {
     /**
      * Repository types for refresh tokens
      */
-    public enum RefreshTokenRepositoryType {
+    public enum RepositoryType {
         JPA("jpa"),
         POSTGRESQL("postgresql");
 
         @Getter
         private final String value;
 
-        RefreshTokenRepositoryType(String value) {
+        RepositoryType(String value) {
             this.value = value;
         }
 
@@ -243,7 +243,7 @@ public class AuthProperties {
         /**
          * Repository configuration specifically for refresh tokens
          */
-        private RefreshTokenRepository repository = new RefreshTokenRepository();
+        private Repositories repository = new Repositories();
     }
 
     /**
@@ -251,11 +251,11 @@ public class AuthProperties {
      */
     @Getter
     @Setter
-    public static class RefreshTokenRepository {
+    public static class Repositories {
         /**
          * Repository type for refresh tokens
          */
-        private RefreshTokenRepositoryType type = RefreshTokenRepositoryType.JPA;
+        private RepositoryType type = RepositoryType.JPA;
 
         /**
          * Database-specific settings for refresh tokens

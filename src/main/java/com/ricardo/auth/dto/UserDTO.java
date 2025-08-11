@@ -9,10 +9,8 @@ import java.io.Serializable;
  */
 @Getter
 public class UserDTO implements Serializable {
-    private String id;
     private String username;
     private String email;
-
 
     /**
      * Instantiates a new User dto.
@@ -28,20 +26,11 @@ public class UserDTO implements Serializable {
      * @param email    the email
      */
     public UserDTO(String id, String username, String email) {
-        this.id = id;
         this.username = username;
         this.email = email;
     }
 
 
-    /**
-     * Sets id.
-     *
-     * @param id the id
-     */
-    public void setId(String id) {
-        this.id = id;
-    }
 
     /**
      * Sets username.
