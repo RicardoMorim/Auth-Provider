@@ -11,7 +11,7 @@ import com.ricardo.auth.domain.user.AuthUser;
  * @param <U>  the AuthUser type parameter
  * @param <ID> the ID type parameter
  */
-public interface RefreshTokenService<U extends AuthUser<?>, ID> {
+public interface RefreshTokenService<U extends AuthUser<ID, R>, R extends Role, ID> {
 
     /**
      * Creates a new refresh token for the specified user.

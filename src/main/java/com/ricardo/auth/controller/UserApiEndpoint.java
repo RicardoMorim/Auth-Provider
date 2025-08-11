@@ -1,9 +1,11 @@
 package com.ricardo.auth.controller;
 
 /**
- * Interface marcadora para controllers relacionados com a gestão de utilizadores.
- * Permite que o UserController padrão seja desativado se um bean personalizado
- * que implemente esta interface for fornecido.
+ *
+ * Marker interface for controllers related to user management.
+ * Allows the default UserController to be disabled if a custom bean
+ * implementing this interface is provided.
+ *
  */
 public interface UserApiEndpoint {
 }

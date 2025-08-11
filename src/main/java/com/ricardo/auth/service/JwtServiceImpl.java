@@ -10,25 +10,22 @@ import io.jsonwebtoken.security.SignatureException;
 import jakarta.annotation.PostConstruct;
 import org.springframework.security.core.GrantedAuthority;
 
-import java.security.Key;
+import javax.crypto.SecretKey;
 import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
 /**
  * The type Jwt service.
- * * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
+ * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
 public class JwtServiceImpl implements JwtService {
     private static final String ISSUER = "ricardo-auth";
     private static final String AUDIENCE = "ricardo-auth-client";
 
-    private String secret;
-
-    private long access_token_expiration;
-
-
-    private Key key;
+    private final String secret;
+    private final long access_token_expiration;
+    private SecretKey key;  // Changed from Key to SecretKey
 
     /**
      * Instantiates a new Jwt service.
@@ -49,11 +46,30 @@ public class JwtServiceImpl implements JwtService {
     }
 
     /**
-     * Init.
+     * Init with enhanced secret validation.
      */
     @PostConstruct
     public void init() {
-        byte[] keyBytes = Decoders.BASE64.decode(this.secret);
+        // Enhanced secret validation
+        if (secret == null || secret.trim().isEmpty()) {
+            throw new IllegalStateException("JWT secret is required but not configured");
+        }
+
+        byte[] keyBytes;
+        try {
+            keyBytes = Decoders.BASE64.decode(this.secret);
+        } catch (IllegalArgumentException e) {
+            throw new IllegalStateException("JWT secret must be a valid Base64 encoded string", e);
+        }
+
+        // HMAC-SHA256 requires at least 256 bits (32 bytes)
+        if (keyBytes.length < 32) {
+            throw new IllegalStateException(
+                    "JWT secret must be at least 256 bits (32 bytes) when Base64 decoded. " +
+                            "Current length: " + keyBytes.length + " bytes"
+            );
+        }
+
         this.key = Keys.hmacShaKeyFor(keyBytes);
     }
 
@@ -77,7 +93,7 @@ public class JwtServiceImpl implements JwtService {
                 .subject(subject)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + access_token_expiration))
-                .signWith(key)
+                .signWith(key, Jwts.SIG.HS256)
                 .compact();
     }
 
@@ -105,7 +121,6 @@ public class JwtServiceImpl implements JwtService {
     @Override
     public boolean isTokenValid(String token) {
         try {
-
             Claims claims = extractAllClaims(token);
 
             // Validate token type
@@ -122,7 +137,6 @@ public class JwtServiceImpl implements JwtService {
             if (claims.getExpiration() == null) {
                 return false;
             }
-
 
             if (!ISSUER.equals(claims.getIssuer())) {
                 return false;
@@ -164,7 +178,7 @@ public class JwtServiceImpl implements JwtService {
 
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
-                .setSigningKey(key)
+                .verifyWith(key)
                 .build()
                 .parseSignedClaims(token)
                 .getPayload();

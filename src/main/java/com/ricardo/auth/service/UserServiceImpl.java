@@ -1,5 +1,6 @@
 package com.ricardo.auth.service;
 
+import com.ricardo.auth.core.Role;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
@@ -17,16 +18,15 @@ import java.util.Optional;
  * @param <U>  the type parameter
  * @param <ID> the type parameter
  */
-public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U, ID> {
+public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements UserService<U, R, ID> {
 
-    private final UserRepository<U, ID> userRepository;
-
+    private final UserRepository<U, R, ID> userRepository;
     /**
      * Instantiates a new User service.
      *
      * @param userRepository the user repository
      */
-    public UserServiceImpl(UserRepository<U, ID> userRepository) {
+    public UserServiceImpl(UserRepository<U, R, ID> userRepository) {
         this.userRepository = userRepository;
     }
 
@@ -41,7 +41,7 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new DuplicateResourceException("Email already exists: " + user.getEmail());
         }
-        return userRepository.save(user);
+        return userRepository.saveUser(user);
     }
 
     @Override
@@ -52,7 +52,7 @@ public class UserServiceImpl<U extends AuthUser<?>, ID> implements UserService<U
         if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
             user.setPassword(userDetails.getPassword());
         }
-        return userRepository.save(user);
+        return userRepository.saveUser(user);
     }
 
     @Override

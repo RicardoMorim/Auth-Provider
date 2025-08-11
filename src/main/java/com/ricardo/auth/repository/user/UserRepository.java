@@ -1,10 +1,11 @@
 package com.ricardo.auth.repository.user;
 
 
+import com.ricardo.auth.core.Role;
 import com.ricardo.auth.domain.user.AuthUser;
-import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -15,41 +16,37 @@ import java.util.Optional;
  * @param <ID> The user entity ID type.
  */
 @NoRepositoryBean
-public interface UserRepository<U extends AuthUser<?>, ID> extends JpaRepository<U, ID> {
-
-    /**
-     * Find by email string (queries the embedded Email object's email field).
-     * Implementation could use JPA generated methods (these are just for naming consistency).
-     *
-     * @param email the email string
-     * @return the optional user
-     */
+public interface UserRepository<U extends AuthUser<ID, R>, R extends Role, ID> {
     Optional<U> findByEmail(String email);
 
-    /**
-     * Find by username string (queries the embedded Username object's username field).
-     * Implementation could use JPA generated methods (these are just for naming consistency).
-     *
-     * @param username the username string
-     * @return the optional user
-     */
     Optional<U> findByUsername(String username);
 
-    /**
-     * Check if user exists by email string.
-     * Implementation could use JPA generated methods (these are just for naming consistency).
-     *
-     * @param email the email string
-     * @return true if exists
-     */
     boolean existsByEmail(String email);
 
-    /**
-     * Check if user exists by username string.
-     * Implementation could use JPA generated methods (these are just for naming consistency).
-     *
-     * @param username the username string
-     * @return true if exists
-     */
     boolean existsByUsername(String username);
+
+    Optional<U> findById(ID id);
+
+    boolean existsById(ID id);
+
+    <S extends U> S saveUser(S entity);
+
+    <S extends U> List<S> saveAll(Iterable<S> entities);
+
+    List<U> findAll();
+
+    List<U> findAllById(Iterable<ID> ids);
+
+    long count();
+
+    void deleteById(ID id);
+
+    void delete(U entity);
+
+    void deleteAllById(Iterable<? extends ID> ids);
+
+    void deleteAll(Iterable<? extends U> entities);
+
+    void deleteAll();
+    // Optionally add pagination and sorting signatures if needed, but not required for JdbcTemplate
 }
