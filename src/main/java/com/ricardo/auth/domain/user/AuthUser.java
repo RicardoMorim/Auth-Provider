@@ -3,6 +3,7 @@ package com.ricardo.auth.domain.user;
 import com.ricardo.auth.core.Role;
 import org.springframework.security.core.userdetails.UserDetails;
 
+import java.time.Instant;
 import java.util.Set;
 
 /**
@@ -12,14 +13,14 @@ import java.util.Set;
  *
  * @param <R> O tipo da Role, que deve implementar a interface Role.
  */
-public interface AuthUser<R extends Role> extends UserDetails {
+public interface AuthUser<ID, R extends Role> extends UserDetails {
 
     /**
      * Gets id.
      *
      * @return the id
      */
-    Object getId();
+    ID getId();
 
     /**
      * Gets email.
@@ -69,4 +70,21 @@ public interface AuthUser<R extends Role> extends UserDetails {
      * @param role the role
      */
     void removeRole(R role);
+
+    Long getVersion();
+
+    void setVersion(Long version);
+
+    void setId(ID id);
+
+    void setRoles(Set<R> roles);
+
+    Instant getCreatedAt();
+
+    void setCreatedAt(Instant createdAt);
+
+    Instant getUpdatedAt();
+
+    void setUpdatedAt(Instant updatedAt);
+
 }

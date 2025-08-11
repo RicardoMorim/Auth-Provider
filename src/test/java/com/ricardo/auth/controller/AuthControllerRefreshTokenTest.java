@@ -20,6 +20,8 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.UUID;
+
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -42,7 +44,7 @@ class AuthControllerRefreshTokenTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private RefreshTokenService<User, Long> refreshTokenService;
+    private RefreshTokenService<User, AppRole, UUID> refreshTokenService;
 
     @Autowired
     private JwtService jwtService;
@@ -122,7 +124,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(new Cookie("refresh_token", "invalid-refresh-token")))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+                .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
     /**
@@ -135,7 +137,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(new Cookie("refresh_token", "expired-or-nonexistent-token")))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+                .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
     /**
@@ -218,7 +220,7 @@ class AuthControllerRefreshTokenTest {
         Cookie newAccessTokenCookie = refreshResult.getResponse().getCookie("access_token");
         mockMvc.perform(get("/api/auth/me").cookie(newAccessTokenCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("test@example.com"));
+                .andExpect(jsonPath("$.email").value("test@example.com"));
     }
 
     /**
@@ -263,7 +265,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+                .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
     /**
@@ -288,7 +290,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(new Cookie("refresh_token", "potential-sql-injection'; DROP TABLE users; --")))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+                .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
     /**
@@ -327,7 +329,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+                .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
     /**
@@ -369,7 +371,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(post("/api/auth/refresh")
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
-                .andExpect(jsonPath("$.message").value("Invalid or expired refresh token"));
+                .andExpect(jsonPath("$.message").value("Authentication failed"));
     }
 
     /**

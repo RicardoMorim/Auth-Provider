@@ -4,12 +4,19 @@
 **Complexity:** ⭐⭐ Medium  
 **Time:** 25 minutes
 
+---
+
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
+
 ## What You'll Build
 
 A robust REST API backend for mobile applications with:
 
 - ✅ Mobile-optimized JWT authentication
-- ✅ User management endpoints
+- ✅ User management endpoints with UUID-based IDs
 - ✅ Extended token expiration for mobile use
 - ✅ CORS configuration for cross-origin requests
 - ✅ Rate limiting and security headers
@@ -65,7 +72,7 @@ mobile-api-backend/
         <dependency>
             <groupId>io.github.ricardomorim</groupId>
             <artifactId>auth-spring-boot-starter</artifactId>
-            <version>1.1.0</version>
+            <version>3.0.0</version>
         </dependency>
         
         <!-- Spring Boot Web -->
@@ -664,14 +671,14 @@ import java.util.Set;
  */
 public class MobileLoginResponse {
     private String token;
-    private Long userId;
+    private UUID userId;
     private String username;
     private String email;
     private Set<Role> roles;
     private Long expiresAt;
     private String tokenType = "Bearer";
     
-    public MobileLoginResponse(String token, Long userId, String username, 
+    public MobileLoginResponse(String token, UUID userId, String username, 
                               String email, Set<Role> roles, Long expiresAt) {
         this.token = token;
         this.userId = userId;
@@ -685,8 +692,8 @@ public class MobileLoginResponse {
     public String getToken() { return token; }
     public void setToken(String token) { this.token = token; }
     
-    public Long getUserId() { return userId; }
-    public void setUserId(Long userId) { this.userId = userId; }
+    public UUID getUserId() { return userId; }
+    public void setUserId(UUID userId) { this.userId = userId; }
     
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
@@ -719,7 +726,7 @@ import java.util.Set;
  * Mobile-optimized user profile DTO
  */
 public class UserProfileDTO {
-    private Long id;
+    private UUID id;
     private String username;
     private String email;
     private String firstName;
@@ -734,15 +741,15 @@ public class UserProfileDTO {
     // Constructors, getters, and setters
     public UserProfileDTO() {}
     
-    public UserProfileDTO(Long id, String username, String email) {
+    public UserProfileDTO(UUID id, String username, String email) {
         this.id = id;
         this.username = username;
         this.email = email;
     }
     
     // Getters and setters
-    public Long getId() { return id; }
-    public void setId(Long id) { this.id = id; }
+    public UUID getId() { return id; }
+    public void setId(UUID id) { this.id = id; }
     
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }

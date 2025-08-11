@@ -103,6 +103,22 @@ Add the following dependency to your `pom.xml`:
 </dependency>
 ```
 
+## 🚨 Breaking Changes in v3.0.0
+
+**UUID Primary Keys:** All user IDs are now UUID instead of Long for better scalability and security.
+
+**What You Need to Change:**
+- Update your database schema to use UUID columns
+- Change all ID references in your code from `Long` to `UUID`
+- Update API responses to expect UUID format (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+
+**New Features:**
+- **Repository Types:** Choose between JPA and PostgreSQL implementations
+- **Enhanced Decoupling:** New factory pattern for user creation
+- **Helper Classes:** `UserRowMapper`, `UserSqlParameterMapper`, `IdConverter`
+
+**Migration Guide:** See [Database Configuration](docs/configuration/database.md) for detailed migration steps.
+
 ## ⚡ Quick Start
 
 > **Prerequisites:** Java 17+, Maven/Gradle, and an existing Spring Boot project
@@ -114,7 +130,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>1.2.0</version>
+    <version>3.0.0</version>
 </dependency>
 
         <!-- Required: JPA support -->
@@ -424,7 +440,7 @@ Create a new user account with password policy validation.
 
 ```json
 {
-  "id": 1,
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "username": "johndoe",
   "email": "john@example.com"
 }
@@ -448,7 +464,7 @@ Get user by ID (requires authentication).
 
 ```json
 {
-  "id": 1,
+  "id": "550e8400-e29b-41d4-a716-446655440000",
   "username": "johndoe",
   "email": "john@example.com"
 }

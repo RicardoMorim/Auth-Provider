@@ -5,7 +5,12 @@ and cross-service authentication.
 
 ---
 
-> **Breaking Change (v2.0.0):**
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
+> 
+> **v2.0.0 Changes:**
 > - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
     flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
     development only.
@@ -74,7 +79,7 @@ and cross-service authentication.
     <dependency>
         <groupId>io.github.ricardomorim</groupId>
         <artifactId>auth-spring-boot-starter</artifactId>
-        <version>1.1.0</version>
+        <version>3.0.0</version>
     </dependency>
 
     <!-- Service Discovery -->
@@ -275,7 +280,7 @@ public class EnhancedUserController {
 
     @GetMapping("/{userId}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<UserDTO> getUserById(@PathVariable Long userId) {
+    public ResponseEntity<UserDTO> getUserById(@PathVariable UUID userId) {
         User user = userService.getUserById(userId);
         return ResponseEntity.ok(UserDTOMapper.toDTO(user));
     }

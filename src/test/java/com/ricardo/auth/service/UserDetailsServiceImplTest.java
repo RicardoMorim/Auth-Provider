@@ -45,7 +45,7 @@ class UserDetailsServiceImplTest {
     void setUp() {
         userRepository.deleteAll();
 
-        // Create and save test user
+        // Create and saveUser test user
         testUser = new User(
                 Username.valueOf("testuser"),
                 Email.valueOf("test@example.com"),

@@ -8,24 +8,26 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Domain Model (v1.2.0)
+title Ricardo Auth Starter - Domain Model (v3.0.0)
 
 package "User Domain" {
-    interface "AuthUser<T>" as AuthUser {
-        +getId(): Long
+    interface "AuthUser<R>" as AuthUser {
+        +getId(): UUID
         +getEmail(): String
         +getUsername(): String
-        +getRoles(): Set<T>
+        +getRoles(): Set<R>
         +getAuthorities(): Collection<GrantedAuthority>
     }
 
     class User {
-        -id: Long
+        -id: UUID
         -version: Long
         -username: Username
         -email: Email
         -password: Password
         -roles: Set<AppRole>
+        -createdAt: Instant
+        -updatedAt: Instant
         +User(username: Username, email: Email, password: Password)
     }
 
@@ -66,7 +68,7 @@ package "User Domain" {
 
 package "Refresh Token Domain" {
     class RefreshToken {
-        -id: Long
+        -id: UUID
         -token: String
         -userEmail: String
         -expiryDate: Instant
@@ -118,11 +120,11 @@ package "Password Policy" {
 }
 
 package "Core Services" {
-    interface "UserService<T, ID>" as UserService {
-        +createUser(user: T): T
-        +getUserById(id: ID): T
-        +getUserByEmail(email: String): T
-        +updateUser(id: ID, user: T): T
+    interface "UserService<U, R, ID>" as UserService {
+        +createUser(user: U): U
+        +getUserById(id: ID): U
+        +getUserByEmail(email: String): U
+        +updateUser(id: ID, user: U): U
         +deleteUser(id: ID): void
     }
     

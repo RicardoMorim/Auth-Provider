@@ -12,12 +12,11 @@ public class UserDTOMapper {
      * @param user the user
      * @return the user dto
      */
-    public static UserDTO toDTO(AuthUser<?> user) {
+    public static UserDTO toDTO(AuthUser<?, ?> user) {
         if (user == null) {
             return null;
         }
         UserDTO userDTO = new UserDTO();
-        userDTO.setId(String.valueOf(user.getId()));
         userDTO.setUsername(user.getUsername());
         userDTO.setEmail(user.getEmail());
         return userDTO;

@@ -2,22 +2,30 @@ package com.ricardo.auth.repository.refreshToken;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.domain.refreshtoken.RefreshToken;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.jdbc.support.GeneratedKeyHolder;
-import org.springframework.jdbc.support.KeyHolder;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
+import org.springframework.transaction.annotation.Transactional;
 
 import javax.sql.DataSource;
-import java.sql.*;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 
 /**
  * The type Postgre sql refresh token repository.
  */
 public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository {
 
+    private static final Logger logger = LoggerFactory.getLogger(PostgreSQLRefreshTokenRepository.class);
     private final JdbcTemplate jdbcTemplate;
     private final String tableName = "refresh_tokens";
 
@@ -69,38 +77,41 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
         if (refreshToken.getId() == null) {
             return insert(refreshToken);
         } else {
-            return update(refreshToken);
+            return updateWithOptimisticLocking(refreshToken);
         }
     }
 
     private RefreshToken insert(RefreshToken refreshToken) {
         String sql = String.format("""
-                INSERT INTO %s (token, user_email, expiry_date, revoked, created_at) 
-                VALUES (?, ?, ?, ?, ?) 
-                RETURNING id
+                INSERT INTO %s (token, user_email, expiry_date, revoked, created_at, version) 
+                VALUES (?, ?, ?, ?, ?, 0) RETURNING id
                 """, tableName);
 
-        KeyHolder keyHolder = new GeneratedKeyHolder();
-        jdbcTemplate.update(connection -> {
-            PreparedStatement ps = connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS);
-            ps.setString(1, refreshToken.getToken());
-            ps.setString(2, refreshToken.getUserEmail());
-            ps.setTimestamp(3, Timestamp.from(refreshToken.getExpiryDate()));
-            ps.setBoolean(4, refreshToken.isRevoked());
-            ps.setTimestamp(5, Timestamp.from(refreshToken.getCreatedAt()));
-            return ps;
-        }, keyHolder);
+        Object generatedId = jdbcTemplate.queryForObject(sql, Object.class,
+                refreshToken.getToken(),
+                refreshToken.getUserEmail(),
+                Timestamp.from(refreshToken.getExpiryDate()),
+                refreshToken.isRevoked(),
+                Timestamp.from(refreshToken.getCreatedAt())
+        );
 
-        Long id = keyHolder.getKey().longValue();
-        refreshToken.setId(id);
+        if (generatedId instanceof UUID uuid) {
+            refreshToken.setId(uuid);
+        } else if (generatedId instanceof String uuidStr) {
+            refreshToken.setId(UUID.fromString(uuidStr));
+        }else{
+            throw new IllegalArgumentException("Invalid ID type returned");
+        }
+
+        refreshToken.setVersion(0L); // Set initial version
         return refreshToken;
     }
 
-    private RefreshToken update(RefreshToken refreshToken) {
+    private RefreshToken updateWithOptimisticLocking(RefreshToken refreshToken) {
         String sql = String.format("""
                 UPDATE %s 
-                SET token = ?, user_email = ?, expiry_date = ?, revoked = ?
-                WHERE id = ?
+                SET token = ?, user_email = ?, expiry_date = ?, revoked = ?, version = version + 1
+                WHERE id = ? AND version = ?
                 """, tableName);
 
         int rowsAffected = jdbcTemplate.update(sql,
@@ -108,13 +119,19 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
                 refreshToken.getUserEmail(),
                 Timestamp.from(refreshToken.getExpiryDate()),
                 refreshToken.isRevoked(),
-                refreshToken.getId()
+                refreshToken.getId(),
+                refreshToken.getVersion()
         );
 
         if (rowsAffected == 0) {
-            throw new RuntimeException("Failed to update refresh token with id: " + refreshToken.getId());
+            throw new ObjectOptimisticLockingFailureException(RefreshToken.class,
+                "RefreshToken with id " + refreshToken.getId() + " and version " + refreshToken.getVersion() +
+                " was not found or has been modified by another transaction"
+            );
         }
 
+        // Increment version locally
+        refreshToken.setVersion(refreshToken.getVersion() + 1);
         return refreshToken;
     }
 
@@ -136,14 +153,32 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 
     @Override
     public void revokeAllUserTokens(String userEmail) {
-        String sql = String.format("UPDATE %s SET revoked = true WHERE user_email = ?", tableName);
-        jdbcTemplate.update(sql, userEmail);
+        // Use PostgreSQL's UPDATE with RETURNING for better performance
+        String sql = String.format("""
+                UPDATE %s 
+                SET revoked = true, version = version + 1 
+                WHERE user_email = ? AND revoked = false
+                RETURNING id
+                """, tableName);
+
+        List<UUID> revokedIds = jdbcTemplate.queryForList(sql, UUID.class, userEmail);
+        logger.debug("Revoked {} tokens for user: {}", revokedIds.size(), userEmail);
     }
 
     @Override
     public int deleteExpiredTokens(Instant now) {
-        String sql = String.format("DELETE FROM %s WHERE expiry_date < ?", tableName);
-        return jdbcTemplate.update(sql, Timestamp.from(now));
+        // Use PostgreSQL's efficient bulk delete with LIMIT for large datasets
+        String sql = String.format("""
+                WITH deleted AS (
+                    DELETE FROM %s 
+                    WHERE expiry_date < ? 
+                    RETURNING id
+                )
+                SELECT count(*) FROM deleted
+                """, tableName);
+
+        Integer deletedCount = jdbcTemplate.queryForObject(sql, Integer.class, Timestamp.from(now));
+        return deletedCount != null ? deletedCount : 0;
     }
 
     @Override
@@ -174,34 +209,116 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 
     @Override
     public int deleteOldestTokensForUser(String userEmail, int maxTokens) {
-        if (userEmail == null || userEmail.trim().isEmpty()) {
+        if (userEmail == null || userEmail.trim().isEmpty())
             return 0;
-        }
-
-        // First check if we need to delete anything
-        String countSql = "SELECT COUNT(*) FROM refresh_tokens WHERE user_email = ?";
-        Integer currentCount = jdbcTemplate.queryForObject(countSql, Integer.class, userEmail);
-
-        if (currentCount == null || currentCount <= maxTokens) {
-            return 0;
-        }
-
-        int tokensToDelete = currentCount - maxTokens;
-
-        String sql = """
-                DELETE FROM refresh_tokens 
-                WHERE user_email = ? 
-                AND id IN (
-                    SELECT id FROM (
-                        SELECT id FROM refresh_tokens 
-                        WHERE user_email = ? 
-                        ORDER BY created_at ASC 
-                        LIMIT ?
-                    ) AS subquery
+        // Use a simpler approach with OFFSET
+        String sql = String.format("""
+                WITH to_delete AS (
+                    SELECT id FROM %s
+                    WHERE user_email = ?
+                    ORDER BY created_at DESC
+                    OFFSET ?
+                ),
+                deleted AS (
+                    DELETE FROM %s
+                    WHERE id IN (SELECT id FROM to_delete)
+                    RETURNING id
                 )
-                """;
-        return jdbcTemplate.update(sql, userEmail, userEmail, tokensToDelete);
+                SELECT count(*) FROM deleted
+                """, tableName, tableName);
+
+        Integer deletedCount = jdbcTemplate.queryForObject(sql, Integer.class,
+                userEmail, maxTokens);
+        return deletedCount != null ? deletedCount : 0;
     }
+
+    @Transactional
+    public List<RefreshToken> saveAllTokens(List<RefreshToken> tokens) {
+        List<RefreshToken> toInsert = new ArrayList<>();
+        List<RefreshToken> toUpdate = new ArrayList<>();
+
+        // Separate inserts from updates
+        for (RefreshToken token : tokens) {
+            if (token.getId() == null) {
+                toInsert.add(token);
+            } else {
+                toUpdate.add(token);
+            }
+        }
+
+        List<RefreshToken> result = new ArrayList<>();
+
+        // Batch insert new tokens
+        if (!toInsert.isEmpty()) {
+            result.addAll(batchInsertTokens(toInsert));
+        }
+
+        // Update existing tokens (with optimistic locking)
+        for (RefreshToken token : toUpdate) {
+            result.add(updateWithOptimisticLocking(token));
+        }
+
+        return result;
+    }
+
+    private List<RefreshToken> batchInsertTokens(List<RefreshToken> tokens) {
+        if (tokens.isEmpty()) {
+            return tokens;
+        }
+
+        // Build the VALUES clause for all tokens
+        StringBuilder sqlBuilder = new StringBuilder();
+        sqlBuilder.append(String.format("""
+                INSERT INTO %s (token, user_email, expiry_date, revoked, created_at, version) 
+                VALUES 
+                """, tableName));
+
+        List<Object> parameters = new ArrayList<>();
+        
+        // Add VALUES clauses for each token
+        for (int i = 0; i < tokens.size(); i++) {
+            if (i > 0) {
+                sqlBuilder.append(", ");
+            }
+            sqlBuilder.append("(?, ?, ?, ?, ?, 0)");
+            
+            RefreshToken token = tokens.get(i);
+            parameters.add(token.getToken());
+            parameters.add(token.getUserEmail());
+            parameters.add(Timestamp.from(token.getExpiryDate()));
+            parameters.add(token.isRevoked());
+            parameters.add(Timestamp.from(token.getCreatedAt()));
+        }
+        
+        sqlBuilder.append(" RETURNING id, token");
+        
+        // Execute the query and map returned IDs back to tokens
+        List<TokenIdMapping> idMappings = jdbcTemplate.query(
+                sqlBuilder.toString(),
+                parameters.toArray(),
+                (rs, rowNum) -> new TokenIdMapping(
+                        (UUID) rs.getObject("id"),
+                        rs.getString("token")
+                )
+        );
+        
+        // Map returned IDs back to the original tokens by matching token values
+        for (RefreshToken token : tokens) {
+            TokenIdMapping mapping = idMappings.stream()
+                    .filter(m -> m.token().equals(token.getToken()))
+                    .findFirst()
+                    .orElseThrow(() -> new IllegalStateException(
+                            "Could not find returned ID for token: " + token.getToken()));
+            
+            token.setId(mapping.id());
+            token.setVersion(0L);
+        }
+
+        return tokens;
+    }
+    
+    // Helper record for mapping returned IDs to tokens
+    private record TokenIdMapping(UUID id, String token) {}
 
     @Override
     public int countActiveTokensByUser(String userEmail) {
@@ -236,9 +353,23 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
                     rs.getString("user_email"),
                     rs.getTimestamp("expiry_date").toInstant()
             );
-            token.setId(rs.getLong("id"));
+            Object id = rs.getObject("id");
+            if (!(id instanceof UUID)) {
+                throw new SQLException("Expected UUID for id, but got: " + id.getClass().getName());
+            }
+            token.setId((UUID) id);
             token.setRevoked(rs.getBoolean("revoked"));
             token.setCreatedAt(rs.getTimestamp("created_at").toInstant());
+
+            // Map version if it exists
+            try {
+                Long version = rs.getLong("version");
+                token.setVersion(version);
+            } catch (SQLException e) {
+                // Version column might not exist in older schemas
+                token.setVersion(0L);
+            }
+
             return token;
         }
     }

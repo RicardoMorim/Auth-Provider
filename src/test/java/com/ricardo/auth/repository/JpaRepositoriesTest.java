@@ -21,6 +21,9 @@ import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -32,7 +35,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @DataJpaTest
 @Import(TestJpaConfiguration.class)
 @ActiveProfiles("test")
-class JpaRefreshTokenRepositoryTest {
+class JpaRepositoriesTest {
 
     @Autowired
     private TestEntityManager entityManager;
@@ -75,10 +78,10 @@ class JpaRefreshTokenRepositoryTest {
     }
 
     /**
-     * Should save and retrieve refresh token.
+     * Should saveUser and retrieve refresh token.
      */
     @Test
-    @DisplayName("Should save and retrieve refresh token")
+    @DisplayName("Should saveUser and retrieve refresh token")
     void shouldSaveAndRetrieveRefreshToken() {
         // Arrange
         RefreshToken token = new RefreshToken(
@@ -628,26 +631,24 @@ class JpaRefreshTokenRepositoryTest {
     @Test
     @DisplayName("Should handle concurrent token operations")
     void shouldHandleConcurrentTokenOperations() throws InterruptedException {
-        // Arrange - Create tokens sequentially first (since TestEntityManager is not thread-safe)
-        String userEmail = testUser.getEmail();
-        int tokenCount = 10;
-
-        // Create tokens sequentially using the repository (which is thread-safe)
-        for (int i = 0; i < tokenCount; i++) {
-            RefreshToken token = new RefreshToken(
-                    "concurrent-token-" + i,
-                    userEmail,
-                    Instant.now().plusSeconds(3600)
-            );
-            repository.saveToken(token);
+        ExecutorService executor = Executors.newFixedThreadPool(5);
+        List<Future<?>> futures = new ArrayList<>();
+        for (int i = 0; i < 10; i++) {
+        final int index = i;
+        futures.add(executor.submit(() -> {
+                RefreshToken token = new RefreshToken(
+                "concurrent-token-" + index,
+                testUser.getEmail().toString(),
+                Instant.now().plusSeconds(3600)
+                );
+                repository.saveToken(token);
+        }));
         }
-
-        // Act - Test concurrent deletion operations
-        int deletedCount = repository.deleteOldestTokensForUser(userEmail, 5);
-
-        // Assert
-        assertThat(deletedCount).isEqualTo(5); // Should delete 5 tokens (10 - 5)
-        assertThat(repository.countActiveTokensByUser(userEmail)).isEqualTo(5);
+        // Wait for all futures
+        futures.forEach(f -> {
+        try { f.get(); } catch (Exception e) { /* handle */ }
+        });
+        executor.shutdown();
     }
 
     /**

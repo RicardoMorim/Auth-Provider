@@ -1,6 +1,11 @@
 # Refresh Token Configuration
 
-> **Breaking Change (v2.0.0):**
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
+> 
+> **v2.0.0 Changes:**
 > - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
     flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
     development only.
@@ -184,13 +189,13 @@ public interface RefreshTokenRepository {
     RefreshToken saveToken(RefreshToken token); 
     Optional<RefreshToken> findByToken(String token);
     void deleteExpiredTokens();
-    void revokeAllUserTokens(Long userId);
+    void revokeAllUserTokens(UUID userId);
     long count();
     // ... other methods
 }
 
 // JPA implementation - inherits save from JpaRepository
-public interface JpaRefreshTokenRepository extends RefreshTokenRepository, JpaRepository<RefreshToken, Long> {
+public interface JpaRefreshTokenRepository extends RefreshTokenRepository, JpaRepository<RefreshToken, UUID> {
     @Override
     default RefreshToken saveToken(RefreshToken token) {
         return save(token); // Delegates to JpaRepository's save method
@@ -451,7 +456,7 @@ public class CustomRefreshTokenRepository implements RefreshTokenRepository {
     
     @Override
     public void save(RefreshToken token) {
-        // Custom save logic
+        // Custom saveUser logic
     }
     
     @Override

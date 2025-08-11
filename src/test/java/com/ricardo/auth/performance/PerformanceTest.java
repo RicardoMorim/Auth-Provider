@@ -27,6 +27,7 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.UUID;
 import java.util.concurrent.*;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -48,7 +49,7 @@ class PerformanceTest {
     private JwtService jwtService;
 
     @Autowired
-    private UserService<User, Long> userService;
+    private UserService<User, AppRole, UUID> userService;
 
     @Autowired
     private DefaultUserJpaRepository userRepository;

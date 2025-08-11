@@ -14,33 +14,35 @@ skinparam padding 10
 skinparam classFontSize 11
 skinparam packageFontSize 12
 
-title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v2.0.0)
+title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v3.0.0)
 
 !define DIRECTION left to right
 
 package "Domain Layer" <<Rectangle>> {
     
-    interface "AuthUser<T>" as AuthUser {
-        +getId(): Long
+    interface "AuthUser<R>" as AuthUser {
+        +getId(): ID
         +getEmail(): String
         +setEmail(email: String): void
         +getUsername(): String
         +setUsername(username: String): void
         +getPassword(): String
         +setPassword(hashedPassword: String): void
-        +getRoles(): Set<T>
-        +addRole(role: T): void
-        +removeRole(role: T): void
+        +getRoles(): Set<R>
+        +addRole(role: R): void
+        +removeRole(role: R): void
         +getAuthorities(): Collection<GrantedAuthority>
     }
     
     class User {
-        -id: Long
+        -id: UUID
         -version: Long
         -username: Username
         -email: Email
         -password: Password
         -roles: Set<AppRole>
+        -createdAt: Instant
+        -updatedAt: Instant
         +User(username: Username, email: Email, password: Password)
         +isAccountNonExpired(): boolean
         +isAccountNonLocked(): boolean
@@ -77,7 +79,6 @@ package "Domain Layer" <<Rectangle>> {
         +getAuthority(): String
     }
     
-    ' NEW: Refresh Token Domain
     class RefreshToken {
         -id: Long
         -token: String
@@ -103,37 +104,37 @@ package "Domain Layer" <<Rectangle>> {
 }
 
 package "Core Interfaces" <<Rectangle>> {
-    
-    interface "UserService<T, ID>" as UserService {
-        +createUser(user: T): T
-        +getUserById(id: ID): T
-        +getUserByEmail(email: String): T
-        +getUserByUsername(username: String): T
+
+    interface "UserService<U, R, ID>" as UserService {
+        +createUser(user: U): U
+        +getUserById(id: ID): U
+        +getUserByEmail(email: String): U
+        +getUserByUsername(username: String): U
         +emailExists(email: String): boolean
         +usernameExists(username: String): boolean
-        +updateUser(id: ID, user: T): T
+        +updateUser(id: ID, user: U): U
         +deleteUser(id: ID): void
-        +getAllUsers(): List<T>
+        +getAllUsers(): List<U>
     }
-    
+
     interface JwtService {
         +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
         +extractSubject(token: String): String
+        +extractRoles(token: String): List<String>
         +isTokenValid(token: String): boolean
         +isTokenValid(token: String, email: String): boolean
     }
-    
+
     interface PasswordPolicyService {
         +validatePassword(password: String): boolean
         +generateSecurePassword(): String
     }
-    
+
     interface AuthenticatedUser {
-        +getName(): String
+        +getEmail(): String
         +getRoles(): List<String>
     }
-    
-    ' NEW: Refresh Token Service
+
     interface "RefreshTokenService<U, ID>" as RefreshTokenService {
         +createRefreshToken(user: U): RefreshToken
         +findByToken(token: String): Optional<RefreshToken>
@@ -146,18 +147,34 @@ package "Core Interfaces" <<Rectangle>> {
 
 package "Repository Layer" <<Rectangle>> {
     
-    interface "UserRepository<U, ID>" as UserRepository {
+    interface "UserRepository<U, R, ID>" as UserRepository {
         +findByEmail(email: String): Optional<U>
+        +existsByEmail(email: String): boolean
+        +deleteById(id: ID): void
     }
     
-    interface "UserJpaRepository<U, ID>" as UserJpaRepository {
+    interface "UserJpaRepository<U, R, ID>" as UserJpaRepository {
         +findByEmail_Email(email: String): Optional<U>
         +findByUsername_Username(username: String): Optional<U>
         +existsByEmail_Email(email: String): boolean
+        +existsByUsername_Username(username: String): boolean
     }
     
     interface DefaultUserJpaRepository {
-        ' Inherits from UserJpaRepository
+        ' Inherits from UserJpaRepository<DefaultUser, Role, UUID>
+    }
+    
+    ' NEW: PostgreSQL Native Repository
+    class "UserPostgreSQLRepository<U, R, ID>" as UserPostgreSQLRepository {
+        -jdbcTemplate: JdbcTemplate
+        -userRowMapper: UserRowMapper<U>
+        -userSqlParameterMapper: UserSqlParameterMapper<U>
+        -idConverter: IdConverter<ID>
+        +findByEmail(email: String): Optional<U>
+        +existsByEmail(email: String): boolean
+        +save(user: U): U
+        +deleteById(id: ID): void
+        +findById(id: ID): Optional<U>
     }
     
     ' NEW: Refresh Token Repository Architecture
@@ -198,6 +215,7 @@ package "Repository Layer" <<Rectangle>> {
     UserJpaRepository .up.|> UserRepository
     UserJpaRepository .up.|> JpaRepository
     DefaultUserJpaRepository .up.|> UserJpaRepository
+    UserPostgreSQLRepository .up.|> UserRepository
     JpaRefreshTokenRepository .up.|> RefreshTokenRepository
     JpaRefreshTokenRepository .up.|> JpaRepository
     DefaultJpaRefreshTokenRepository .up.|> JpaRefreshTokenRepository
@@ -209,7 +227,7 @@ package "Controller Layer" <<Rectangle>> {
     class AuthController {
         -jwtService: JwtService
         -authenticationManager: AuthenticationManager
-        -refreshTokenService: RefreshTokenService
+        -refreshTokenService: RefreshTokenService<U, ID>
         -blocklist: TokenBlocklist
         +login(request: LoginRequestDTO, response: HttpServletResponse): ResponseEntity
         +refresh(refreshTokenCookie: String, response: HttpServletResponse): ResponseEntity
@@ -219,16 +237,64 @@ package "Controller Layer" <<Rectangle>> {
     }
     
     class UserController {
-        -userService: UserService<User, Long>
+        -userService: UserService<U, R, ID>
         -passwordEncoder: PasswordEncoder
         -passwordPolicyService: PasswordPolicyService
         +createUser(request: CreateUserRequestDTO): ResponseEntity<UserDTO>
-        +getUserById(id: Long): ResponseEntity<UserDTO>
+        +getUserById(id: ID): ResponseEntity<UserDTO>
         +getUserByEmail(email: String): ResponseEntity<UserDTO>
-        +updateUser(id: Long, request: CreateUserRequestDTO): ResponseEntity<UserDTO>
-        +deleteUser(id: Long): ResponseEntity<Void>
+        +updateUser(id: ID, request: CreateUserRequestDTO): ResponseEntity<UserDTO>
+        +deleteUser(id: ID): ResponseEntity<Void>
     }
     
+}
+
+package "Factory Layer" <<Rectangle>> {
+    
+    interface "AuthUserFactory<R>" as AuthUserFactory {
+        +createAuthUser(username: String, email: String, password: String, roles: Set<R>): AuthUser<R>
+        +createAuthUser(email: String, password: String, roles: Set<R>): AuthUser<R>
+        +createAuthUser(email: String, password: String, role: R): AuthUser<R>
+    }
+    
+    interface "UserFactory<U, R, ID>" as UserFactory {
+        +createUser(username: String, email: String, password: String, roles: Set<R>): U
+        +createUser(email: String, password: String, roles: Set<R>): U
+        +createUser(email: String, password: String, role: R): U
+    }
+    
+    class DefaultUserFactory {
+        +createUser(username: String, email: String, password: String, roles: Set<Role>): DefaultUser
+        +createUser(email: String, password: String, roles: Set<Role>): DefaultUser
+        +createUser(email: String, password: String, role: Role): DefaultUser
+    }
+    
+    DefaultUserFactory .up.|> UserFactory
+    DefaultUserFactory .up.|> AuthUserFactory
+}
+
+package "Helper Classes" <<Rectangle>> {
+    
+    ' PostgreSQL Helper Classes
+    interface "UserRowMapper<U>" as UserRowMapper {
+        +mapRow(rs: ResultSet, rowNum: int): U
+    }
+    
+    interface "UserSqlParameterMapper<U>" as UserSqlParameterMapper {
+        +mapToSqlParameterSource(user: U): SqlParameterSource
+    }
+    
+    interface "IdConverter<ID>" as IdConverter {
+        +convert(id: Object): ID
+        +convertToString(id: ID): String
+    }
+    
+    class UUIDConverter {
+        +convert(id: Object): UUID
+        +convertToString(id: UUID): String
+    }
+    
+    UUIDConverter .up.|> IdConverter
 }
 
 package "DTO Layer" <<Rectangle>> {
@@ -245,7 +311,7 @@ package "DTO Layer" <<Rectangle>> {
     }
     
     class UserDTO {
-        -id: String
+        -id: UUID
         -username: String
         -email: String
     }
@@ -492,15 +558,16 @@ RefreshTokenServiceImpl --> RefreshTokenRepository : uses
 
 ' Notes with better styling
 note right of AuthUser #E8F4FD
-  **Generic Interface**
-  Allows custom role types and
-  enables polymorphic behavior
+  **Enhanced Generic Interface (v3.0.0)**
+  Type-safe role generics with
+  improved polymorphic behavior
+  and better decoupling
 end note
 
 note right of User #E8F4FD
-  **UserDetails Implementation**
-  Integrates with Spring Security
-  for authentication
+  **UserDetails Implementation (v3.0.0)**
+  UUID primary keys with enhanced
+  Spring Security integration
 end note
 
 note bottom of Username #E8F4FD
@@ -522,9 +589,10 @@ note bottom of RefreshTokenRepository #E8F4FD
 end note
 
 note bottom of UserServiceImpl #E8F4FD
-  **Generic Service**
-  Supports different User types
-  and ID types
+  **Enhanced Generic Service (v3.0.0)**
+  Three-type generics <U,R,ID>
+  with UUID support and improved
+  type safety
 end note
 
 note top of AuthAutoConfiguration #E8F4FD
@@ -541,13 +609,34 @@ note right of RefreshTokenServiceImpl #E8F4FD
   automatic cleanup and rotation
 end note
 
+note right of UserPostgreSQLRepository #E8F4FD
+  **🆕 PostgreSQL Native Repository (v3.0.0)**
+  Direct JDBC implementation
+  with enhanced performance and
+  custom SQL queries
+end note
+
+note right of UserFactory #E8F4FD
+  **🆕 Factory Pattern (v3.0.0)**
+  Decoupled user creation with
+  type-safe generics for enhanced
+  architecture flexibility
+end note
+
+note right of UUIDConverter #E8F4FD
+  **🆕 Helper Classes (v3.0.0)**
+  Type converters and mappers
+  for PostgreSQL integration
+  and better type safety
+end note
+
 note right of PostgreSQLRefreshTokenRepository #E8F4FD
   **🆕 PostgreSQL Repository (v1.2.0)**
   Native queries with proper
   timestamp handling
 end note
 
-' NEW: Blocklist and Rate Limiter interfaces and implementations
+' Blocklist and Rate Limiter interfaces and implementations
 package "Blocklist & Rate Limiter" <<Rectangle>> {
     interface TokenBlocklist {
         +revoke(token: String): void

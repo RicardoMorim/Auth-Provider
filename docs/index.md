@@ -1,11 +1,18 @@
 ---
-Last Updated: 2025-08-02
-Version: 2.0.0
+Last Updated: 2025-08-11
+Version: 3.0.0
 ---
 
 # Documentation Index
 
 Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps you find exactly what you need.
+
+---
+
+> **Breaking Changes (v3.0.0):**
+> - **UUID Primary Keys:** All user IDs are now UUID instead of Long
+> - **Enhanced Decoupling:** New factory pattern for user creation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
 
 ## 🚀 New to Ricardo Auth?
 

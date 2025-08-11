@@ -5,6 +5,7 @@ import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.RefreshTokenService;
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
@@ -14,6 +15,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.ApplicationContext;
 import org.springframework.test.context.ActiveProfiles;
+
+import java.util.UUID;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -68,7 +71,7 @@ class AuthAutoConfigurationTest {
      */
     @Test
     void shouldHandleGenericUserService() {
-        UserService<User, Long> userService = applicationContext.getBean(UserService.class);
+        UserService<User, AppRole, UUID> userService = applicationContext.getBean(UserService.class);
         assertThat(userService).isNotNull();
     }
 

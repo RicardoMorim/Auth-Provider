@@ -1,5 +1,6 @@
 package com.ricardo.auth.repository.user;
 
+import com.ricardo.auth.core.Role;
 import com.ricardo.auth.domain.user.AuthUser;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.repository.NoRepositoryBean;
@@ -14,7 +15,7 @@ import java.util.Optional;
  * @param <ID> the type parameter
  */
 @NoRepositoryBean
-public interface UserJpaRepository<U extends AuthUser<?>, ID> extends UserRepository<U, ID>, JpaRepository<U, ID> {
+public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID> extends UserRepository<U, R, ID>, JpaRepository<U, ID> {
     /**
      * Find by email email optional.
      *
@@ -65,5 +66,10 @@ public interface UserJpaRepository<U extends AuthUser<?>, ID> extends UserReposi
     @Override
     default boolean existsByUsername(String username) {
         return existsByUsername_Username(username);
+    }
+
+    @Override
+    default <S extends U> S saveUser(S entity) {
+        return save(entity);
     }
 }

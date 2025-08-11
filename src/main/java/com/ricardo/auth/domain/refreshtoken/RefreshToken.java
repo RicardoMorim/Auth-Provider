@@ -6,6 +6,7 @@ import jakarta.persistence.*;
 import lombok.*;
 
 import java.time.Instant;
+import java.util.UUID;
 
 /**
  * The type Refresh token.
@@ -15,18 +16,24 @@ import java.time.Instant;
 @Table(name = "refresh_tokens", indexes = {
         @Index(name = "idx_refresh_token_token", columnList = "token"),
         @Index(name = "idx_refresh_token_user_email", columnList = "user_email"),
-        @Index(name = "idx_refresh_token_expiry_date", columnList = "expiry_date"), // for cleanup
-        @Index(name = "idx_refresh_token_user_created", columnList = "user_email, created_at") // for oldest cleanup
+        @Index(name = "idx_refresh_token_expiry_date", columnList = "expiry_date"),
+        @Index(name = "idx_refresh_token_user_created", columnList = "user_email, created_at"),
+        @Index(name = "idx_refresh_token_revoked", columnList = "revoked")
 })
 @Data
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
 public class RefreshToken {
 
+    @Version
+    @Setter
+    private Long version;
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue(strategy = GenerationType.AUTO)
+    @Column(columnDefinition = "uuid")
+    private UUID id;
+
     @Column(unique = true, nullable = false, length = 1000)
     private String token;
     // store the email. works with ANY AuthUser implementation. no need for generic class as this handles it much simpler
@@ -132,7 +139,7 @@ public class RefreshToken {
      * @param id the ID to set
      */
     @SuppressWarnings("unused")
-    public void setId(Long id) {
+    public void setId(UUID id) {
         this.id = id;
     }
 }

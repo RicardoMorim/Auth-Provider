@@ -1,11 +1,11 @@
 # Basic Configuration
 
-> **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
-    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
-    development only.
-> - New blocklist and rate limiting features are available (see below).
-> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+> **Breaking Changes in v3.0.0:**
+> - **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
+> - **Repository Types**: New `ricardo.auth.repositories.type` configuration (JPA or POSTGRESQL)
+> - **Enhanced Decoupling**: Factory pattern and helper classes for custom implementations
+> - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags
+> - Database schema requires migration from Long IDs to UUID (see [Database Configuration](database.md))
 
 Get **Ricardo Auth running quickly** with minimal configuration. Perfect for development, prototyping, and getting
 started.
@@ -29,11 +29,11 @@ started.
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>2.0.0</version>
+    <version>3.0.0</version>
 </dependency>
 ```
 
-### Step 2: Set JWT Secret
+### Step 2: Set JWT Secret and Repository Type
 
 ```yaml
 # application.yml
@@ -43,6 +43,9 @@ ricardo:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
       access-token-expiration: 86400000   # 1 day (default)
       refresh-token-expiration: 604800000 # 7 days (default)
+    # New in v3.0.0: Choose repository implementation
+    repositories:
+      type: JPA  # Options: JPA (default) or POSTGRESQL
 
 ```
 
@@ -65,6 +68,27 @@ ricardo:
 - **JWT Configuration:** Added `access-token-expiration` and `refresh-token-expiration` properties.
 - **Blocklist/Rate Limiter:** New `token-blocklist` and `rate-limiter` sections.
 - **Cookie Security:** New `cookies` section for configuring token cookies.
+
+### What's New in v3.0.0
+
+**🚨 Breaking Changes:**
+- **UUID Primary Keys:** All entities now use UUID instead of Long for IDs
+- **Enhanced Decoupling:** New factory pattern for user creation
+- **PostgreSQL Support:** Native PostgreSQL implementation alongside JPA
+
+**New Features:**
+- **Repository Types:** Choose between JPA and PostgreSQL implementations
+- **Factory Pattern:** `AuthUserFactory` and `UserFactory` for custom user creation
+- **Helper Classes:** `UserRowMapper`, `UserSqlParameterMapper`, `IdConverter`
+- **Better Type Safety:** Enhanced generics with Role information
+
+**Repository Type Configuration:**
+```properties
+# Choose your repository implementation
+ricardo.auth.repository.type=JPA    # Default - works with all databases
+# OR
+ricardo.auth.repository.type=POSTGRESQL  # Optimized for PostgreSQL
+```
 - **HTTPS Redirect:** New `redirect-https` property to enforce HTTPS.
 
 ## Development Setup
@@ -124,7 +148,7 @@ server:
     <dependency>
         <groupId>io.github.ricardomorim</groupId>
         <artifactId>auth-spring-boot-starter</artifactId>
-        <version>1.1.0</version>
+        <version>3.0.0</version>
     </dependency>
     
     <!-- Spring Boot Web -->

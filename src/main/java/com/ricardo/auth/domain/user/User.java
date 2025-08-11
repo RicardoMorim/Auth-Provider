@@ -2,34 +2,43 @@ package com.ricardo.auth.domain.user;
 
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
+import org.hibernate.annotations.UuidGenerator;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
-import java.util.Collection;
-import java.util.HashSet;
-import java.util.Set;
+import java.time.Instant;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
  * The type User.
  */
+
+@Table(
+        name = "users",
+        indexes = {
+                @Index(name = "idx_users_email", columnList = "email"),
+                @Index(name = "idx_users_username", columnList = "username")
+        }
+)
 @Entity
-@Table(name = "users")
-public class User implements AuthUser<AppRole> {
+public class User implements AuthUser<UUID, AppRole> {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    @GeneratedValue
+    @UuidGenerator
+    @Column(name = "id", nullable = false, updatable = false)
+    private UUID id;
 
     @Version
     private Long version;
 
     @Embedded
-    @AttributeOverride(name = "username", column = @Column(unique = true, nullable = false))
+    @AttributeOverride(name = "username", column = @Column(name = "username", unique = true, nullable = false))
     private Username username;
 
     @Embedded
-    @AttributeOverride(name = "email", column = @Column(unique = true, nullable = false))
+    @AttributeOverride(name = "email", column = @Column(name = "email", unique = true, nullable = false))
     private Email email;
 
     @Embedded
@@ -37,10 +46,17 @@ public class User implements AuthUser<AppRole> {
 
     @ElementCollection(fetch = FetchType.EAGER)
     @Enumerated(EnumType.STRING)
-    @CollectionTable(name = "user_roles", joinColumns = @JoinColumn(name = "user_id"))
+    @CollectionTable(
+            name = "user_roles",
+            joinColumns = @JoinColumn(name = "user_id"),
+            foreignKey = @ForeignKey(name = "fk_user_roles_user_id")
+    )
     @Column(name = "role")
-    @BatchSize(size = 25)  // ✅ Add this to batch fetch roles
+    @BatchSize(size = 25)
     private Set<AppRole> roles = new HashSet<>();
+
+    private Instant createdAt;
+    private Instant updatedAt;
 
     /**
      * Instantiates a new User.
@@ -59,22 +75,16 @@ public class User implements AuthUser<AppRole> {
         this.username = username;
         this.email = email;
         this.password = password;
+        this.createdAt = Instant.now();
+        this.updatedAt = Instant.now();
         this.roles = new HashSet<>(); // dont add any roles, let the service handle it so any custom role can be added
     }
 
     @Override
-    public Long getId() {
+    public UUID getId() {
         return id;
     }
 
-    /**
-     * Sets id.
-     *
-     * @param id the id
-     */
-    public void setId(Long id) {
-        this.id = id;
-    }
 
     @Override
     public String getEmail() {
@@ -103,6 +113,7 @@ public class User implements AuthUser<AppRole> {
      *
      * @return the version
      */
+    @Override
     public Long getVersion() {
         return version;
     }
@@ -112,6 +123,7 @@ public class User implements AuthUser<AppRole> {
      *
      * @param version the version
      */
+    @Override
     public void setVersion(Long version) {
         this.version = version;
     }
@@ -203,5 +215,48 @@ public class User implements AuthUser<AppRole> {
         if (role != null) {
             this.roles.remove(role);
         }
+    }
+
+
+    @Override
+    public void setId(UUID id) {
+        if (id != null) {
+            this.id = id;
+        } else {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
+    }
+
+
+    @Override
+    public void setRoles(Set<AppRole> roles) {
+        if (roles == null || roles.isEmpty()) {
+            this.roles = new HashSet<>();
+            return;
+        }
+        // Defensive copy and null-filter
+        this.roles = roles.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    @Override
+    public Instant getCreatedAt() {
+        return createdAt;
+    }
+
+    @Override
+    public Instant getUpdatedAt() {
+        return updatedAt;
+    }
+
+    @Override
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
+    }
+
+    @Override
+    public void setUpdatedAt(Instant updatedAt) {
+        this.updatedAt = updatedAt != null ? updatedAt : Instant.now();
     }
 }

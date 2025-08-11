@@ -8,10 +8,10 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Service Architecture (v1.2.0)
+title Ricardo Auth Starter - Service Architecture (v3.0.0)
 
 package "Core Service Interfaces" {
-    interface "UserService<T, ID>" as UserService
+    interface "UserService<U, R, ID>" as UserService
     interface JwtService
     interface PasswordPolicyService
     interface "RefreshTokenService<U, ID>" as RefreshTokenService
@@ -19,12 +19,13 @@ package "Core Service Interfaces" {
 
 package "Service Implementations" {
     class UserServiceImpl {
-        -userRepository: UserRepository
-        +createUser(user: User): User
-        +getUserById(id: Long): User
-        +getUserByEmail(email: String): User
-        +updateUser(id: Long, user: User): User
-        +deleteUser(id: Long): void
+        -userRepository: UserRepository<U, R, ID>
+        -userFactory: UserFactory<U, R, ID>
+        +createUser(user: U): U
+        +getUserById(id: ID): U
+        +getUserByEmail(email: String): U
+        +updateUser(id: ID, user: U): U
+        +deleteUser(id: ID): void
     }
     
     class JwtServiceImpl {

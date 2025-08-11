@@ -1,10 +1,13 @@
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.domain.user.User;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+
+import java.util.UUID;
 
 /**
  * The type User details service.
@@ -12,14 +15,14 @@ import org.springframework.security.core.userdetails.UsernameNotFoundException;
  */
 public class UserDetailsServiceImpl implements UserDetailsService {
 
-    private final UserService<User, Long> userService;
+    private final UserService<User, AppRole, UUID> userService;
 
     /**
      * Instantiates a new User details service.
      *
      * @param userService the user service
      */
-    public UserDetailsServiceImpl(UserService<User, Long> userService) {
+    public UserDetailsServiceImpl(UserService<User, AppRole, UUID> userService) {
         this.userService = userService;
     }
 

@@ -1,5 +1,12 @@
 # Database Configuration
 
+> **Breaking Changes in v3.0.0:**
+> - **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
+> - **Database Schema**: Requires migration from Long IDs to UUID (see migration guide below)
+> - **Repository Types**: New `ricardo.auth.repositories.type` configuration (JPA or POSTGRESQL)
+> - **Enhanced Decoupling**: Factory pattern and helper classes for custom implementations
+> - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags
+
 > **Breaking Change (v2.0.0):**
 > - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
     flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
@@ -453,22 +460,33 @@ spring:
 **Migration files in `src/main/resources/db/migration/`:**
 
 ```sql
--- V1__Create_users_table.sql
+-- V1__Create_users_table.sql (v3.0.0)
 CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    version BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
 );
 
--- V2__Create_user_roles_table.sql
+-- V2__Create_user_roles_table.sql (v3.0.0)
 CREATE TABLE user_roles (
-    user_id BIGINT,
-    role VARCHAR(50),
+    user_id UUID NOT NULL,
+    role VARCHAR(50) NOT NULL,
     PRIMARY KEY (user_id, role),
-    FOREIGN KEY (user_id) REFERENCES users(id)
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- V3__Create_refresh_tokens_table.sql (v3.0.0)
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token VARCHAR(1000) UNIQUE NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
 );
 ```
 
@@ -487,18 +505,44 @@ spring:
     change-log: classpath:db/changelog/db.changelog-master.xml
 ```
 
-## Database Schema
+## Database Schema (v3.0.0)
+
+> **⚠️ Breaking Change**: v3.0.0 uses UUID primary keys instead of BIGINT. See migration guide below.
 
 Ricardo Auth creates these tables automatically:
 
 ### Users Table
 
 ```sql
+-- For PostgreSQL (Recommended)
 CREATE TABLE users (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     username VARCHAR(50) NOT NULL UNIQUE,
     email VARCHAR(255) NOT NULL UNIQUE,
     password VARCHAR(255) NOT NULL,
+    version BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT NOW(),
+    updated_at TIMESTAMP DEFAULT NOW()
+);
+
+-- For MySQL/MariaDB
+CREATE TABLE users (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    version BIGINT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+);
+
+-- For H2 (Development)
+CREATE TABLE users (
+    id UUID PRIMARY KEY DEFAULT RANDOM_UUID(),
+    username VARCHAR(50) NOT NULL UNIQUE,
+    email VARCHAR(255) NOT NULL UNIQUE,
+    password VARCHAR(255) NOT NULL,
+    version BIGINT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
@@ -507,11 +551,62 @@ CREATE TABLE users (
 ### User Roles Table
 
 ```sql
+-- For PostgreSQL (Recommended)
 CREATE TABLE user_roles (
-    user_id BIGINT NOT NULL,
+    user_id UUID NOT NULL,
     role VARCHAR(50) NOT NULL,
     PRIMARY KEY (user_id, role),
     FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- For MySQL/MariaDB
+CREATE TABLE user_roles (
+    user_id CHAR(36) NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+-- For H2 (Development)
+CREATE TABLE user_roles (
+    user_id UUID NOT NULL,
+    role VARCHAR(50) NOT NULL,
+    PRIMARY KEY (user_id, role),
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+);
+```
+
+### Refresh Tokens Table
+
+```sql
+-- For PostgreSQL (Recommended)
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+    token VARCHAR(1000) UNIQUE NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT NOW()
+);
+
+-- For MySQL/MariaDB
+CREATE TABLE refresh_tokens (
+    id CHAR(36) PRIMARY KEY DEFAULT (UUID()),
+    token VARCHAR(1000) UNIQUE NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- For H2 (Development)
+CREATE TABLE refresh_tokens (
+    id UUID PRIMARY KEY DEFAULT RANDOM_UUID(),
+    token VARCHAR(1000) UNIQUE NOT NULL,
+    user_email VARCHAR(255) NOT NULL,
+    expiry_date TIMESTAMP NOT NULL,
+    revoked BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 ```
 
@@ -521,6 +616,189 @@ CREATE TABLE user_roles (
 CREATE INDEX idx_users_email ON users(email);
 CREATE INDEX idx_users_username ON users(username);
 CREATE INDEX idx_user_roles_user_id ON user_roles(user_id);
+CREATE INDEX idx_refresh_tokens_token ON refresh_tokens(token);
+CREATE INDEX idx_refresh_tokens_user_email ON refresh_tokens(user_email);
+CREATE INDEX idx_refresh_tokens_expiry ON refresh_tokens(expiry_date);
+```
+
+## Migration Guide: v2.x to v3.0.0
+
+> **⚠️ Warning**: This is a breaking change that requires database migration. Always backup your database before migrating.
+
+### Migration Steps
+
+**1. Backup Your Database**
+
+```bash
+# PostgreSQL
+pg_dump -h localhost -U username -d database_name > backup_v2.sql
+
+# MySQL
+mysqldump -u username -p database_name > backup_v2.sql
+```
+
+**2. Create Migration Script**
+
+```sql
+-- PostgreSQL Migration Example
+-- Step 1: Add new UUID columns
+ALTER TABLE users ADD COLUMN new_id UUID DEFAULT gen_random_uuid();
+ALTER TABLE user_roles ADD COLUMN new_user_id UUID;
+
+-- Step 2: Update user_roles to reference new UUIDs
+UPDATE user_roles 
+SET new_user_id = users.new_id 
+FROM users 
+WHERE user_roles.user_id = users.id;
+
+-- Step 3: Drop old foreign keys and columns
+ALTER TABLE user_roles DROP CONSTRAINT fk_user_roles_user_id;
+ALTER TABLE user_roles DROP COLUMN user_id;
+ALTER TABLE users DROP COLUMN id;
+
+-- Step 4: Rename new columns
+ALTER TABLE users RENAME COLUMN new_id TO id;
+ALTER TABLE user_roles RENAME COLUMN new_user_id TO user_id;
+
+-- Step 5: Add primary key and foreign key constraints
+ALTER TABLE users ADD PRIMARY KEY (id);
+ALTER TABLE user_roles ADD CONSTRAINT fk_user_roles_user_id 
+    FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE;
+
+-- Step 6: Add version column for optimistic locking
+ALTER TABLE users ADD COLUMN version BIGINT DEFAULT 0;
+```
+
+**3. Update Application Configuration**
+
+Add repository type configuration (optional, defaults to JPA):
+
+```yaml
+ricardo:
+  auth:
+    repositories:
+      type: JPA  # or POSTGRESQL for native SQL implementation
+```
+
+**4. Test Migration**
+
+```java
+// Test that UUIDs are working correctly
+@Test
+void testUuidMigration() {
+    User user = userService.createUser(/* ... */);
+    assertThat(user.getId()).isInstanceOf(UUID.class);
+    assertThat(user.getId().toString()).hasSize(36);
+}
+```
+
+### Custom Implementation Migration
+
+If you have custom implementations, update your code:
+
+```java
+// Before (v2.x)
+public class CustomUserService implements UserService<User, Long> {
+    // Implementation with Long IDs
+}
+
+// After (v3.0.0)
+public class CustomUserService implements UserService<User, AppRole, UUID> {
+    // Implementation with UUID IDs and explicit Role type
+}
+```
+
+## Repository Type Configuration
+
+v3.0.0 introduces the ability to choose between JPA and native SQL implementations:
+
+```yaml
+ricardo:
+  auth:
+    repositories:
+      type: JPA          # Use JPA/Hibernate (default)
+      # type: POSTGRESQL # Use native PostgreSQL implementation
+```
+
+### JPA Implementation (Default)
+
+- Uses Spring Data JPA and Hibernate
+- Works with all supported databases
+- Automatic schema generation
+- ORM benefits and lazy loading
+
+### PostgreSQL Implementation
+
+- Native SQL with JDBC
+- Better performance for high-throughput applications
+- Direct UUID support with `gen_random_uuid()`
+- Optimized batch operations
+- Requires PostgreSQL database
+
+**When to use PostgreSQL implementation:**
+- High-performance requirements
+- PostgreSQL-specific features needed
+- Direct SQL control preferred
+- Reduced ORM overhead important
+
+## Custom Factory and Helper Classes
+
+v3.0.0 introduces better decoupling through factory and helper classes:
+
+### Custom User Factory
+
+```java
+@Component
+public class CustomUserFactory implements AuthUserFactory<CustomUser, CustomRole> {
+    
+    @Override
+    public CustomUser create(CreateUserRequestDTO request) {
+        // Custom user creation logic
+        return new CustomUser(
+            Username.valueOf(request.getUsername()),
+            Email.valueOf(request.getEmail()),
+            Password.valueOf(request.getPassword(), encoder, policyService)
+        );
+    }
+}
+```
+
+### Custom Row Mapper (PostgreSQL)
+
+```java
+@Component
+public class CustomUserRowMapper implements UserRowMapper<CustomUser> {
+    
+    @Override
+    public CustomUser mapRow(ResultSet rs, int rowNum) {
+        // Custom mapping logic for PostgreSQL results
+        CustomUser user = new CustomUser(/* ... */);
+        user.setId(rs.getObject("id", UUID.class));
+        return user;
+    }
+}
+```
+
+### Configuration for Custom Implementations
+
+```java
+@Configuration
+public class CustomAuthConfiguration {
+    
+    @Bean
+    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
+    public UserRepository<CustomUser, CustomRole, UUID> customUserRepository(
+            DataSource dataSource,
+            UserRowMapper<CustomUser> rowMapper,
+            UserSqlParameterMapper<CustomUser> sqlMapper) {
+        return new UserPostgreSQLRepository<>(rowMapper, sqlMapper, dataSource);
+    }
+    
+    @Bean
+    public IdConverter<UUID> uuidConverter() {
+        return new UUIDConverter();
+    }
+}
 ```
 
 ## Environment-Specific Configuration

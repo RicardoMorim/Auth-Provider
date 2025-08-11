@@ -202,7 +202,6 @@ class DtoAndMappingTest {
 
         // Assert
         assertNotNull(dto);
-        assertEquals("1", dto.getId());
         assertEquals("testuser", dto.getUsername());
         assertEquals("test@example.com", dto.getEmail());
     }
@@ -217,7 +216,6 @@ class DtoAndMappingTest {
 
         // Assert
         assertNotNull(dto);
-        assertNull(dto.getId());
         assertNull(dto.getUsername());
         assertNull(dto.getEmail());
     }
@@ -231,12 +229,10 @@ class DtoAndMappingTest {
         UserDTO dto = new UserDTO();
 
         // Act
-        dto.setId("1");
         dto.setUsername("testuser");
         dto.setEmail("test@example.com");
 
         // Assert
-        assertEquals("1", dto.getId());
         assertEquals("testuser", dto.getUsername());
         assertEquals("test@example.com", dto.getEmail());
     }
@@ -258,7 +254,7 @@ class DtoAndMappingTest {
 
         // Assert
         assertNotNull(dto);
-        assertEquals("test@example.com", dto.getName());
+        assertEquals("test@example.com", dto.getEmail());
         assertEquals(2, dto.getRoles().size());
         assertTrue(dto.getRoles().contains("ROLE_USER"));
         assertTrue(dto.getRoles().contains("ROLE_ADMIN"));
@@ -273,7 +269,7 @@ class DtoAndMappingTest {
         AuthenticatedUserDTO dto = new AuthenticatedUserDTO("test@example.com", List.of());
 
         // Assert
-        assertEquals("test@example.com", dto.getName());
+        assertEquals("test@example.com", dto.getEmail());
         assertTrue(dto.getRoles().isEmpty());
     }
 
@@ -283,11 +279,8 @@ class DtoAndMappingTest {
     @Test
     void authenticatedUserDTO_shouldHandleNullEmail() {
         // Act
-        AuthenticatedUserDTO dto = new AuthenticatedUserDTO(null, List.of());
 
-        // Assert
-        assertNull(dto.getName());
-        assertTrue(dto.getRoles().isEmpty());
+        assertThrows(NullPointerException.class, ()-> new AuthenticatedUserDTO(null, List.of()));
     }
 
     // ========== UserDTOMapper TESTS ==========
@@ -302,7 +295,6 @@ class DtoAndMappingTest {
 
         // Assert
         assertNotNull(dto);
-        assertEquals(String.valueOf(testUser.getId()), dto.getId());
         assertEquals("testuser", dto.getUsername());
         assertEquals("test@example.com", dto.getEmail());
     }
@@ -324,7 +316,7 @@ class DtoAndMappingTest {
      */
     @Test
     void userDTOMapper_shouldMapUserWithNoId() {
-        // Arrange - Create user without setting ID (before save)
+        // Arrange - Create user without setting ID (before saveUser)
         User unsavedUser = new User(
                 Username.valueOf("newuser"),
                 Email.valueOf("new@example.com"),
@@ -336,7 +328,6 @@ class DtoAndMappingTest {
 
         // Assert
         assertNotNull(dto);
-        assertEquals("null", dto.getId()); // ID will be null, mapped to "null" string
         assertEquals("newuser", dto.getUsername());
         assertEquals("new@example.com", dto.getEmail());
     }
@@ -405,7 +396,6 @@ class DtoAndMappingTest {
         UserDTO dto = new UserDTO("1", "testuser", "test@example.com");
 
         // Assert basic properties exist
-        assertNotNull(dto.getId());
         assertNotNull(dto.getUsername());
         assertNotNull(dto.getEmail());
     }
@@ -454,7 +444,7 @@ class DtoAndMappingTest {
         AuthenticatedUserDTO dto = new AuthenticatedUserDTO(emailWithSpecialChars, List.of());
 
         // Assert
-        assertEquals(emailWithSpecialChars, dto.getName());
+        assertEquals(emailWithSpecialChars, dto.getEmail());
     }
 
     /**
