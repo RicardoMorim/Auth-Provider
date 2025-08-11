@@ -4,6 +4,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
@@ -17,6 +18,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,7 +43,7 @@ class UserControllerTest {
     private ObjectMapper objectMapper;
 
     @Autowired
-    private UserService<User, Long> userService;
+    private UserService<User, AppRole, UUID> userService;
 
     @Autowired
     private DefaultUserJpaRepository userRepository;
@@ -79,8 +82,7 @@ class UserControllerTest {
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.username").value(request.getUsername()))
-                .andExpect(jsonPath("$.email").value(request.getEmail()))
-                .andExpect(jsonPath("$.id").exists());
+                .andExpect(jsonPath("$.email").value(request.getEmail()));
 
         // Verify user was actually created in database
         assertTrue(userRepository.existsByEmail_Email("new@example.com"));

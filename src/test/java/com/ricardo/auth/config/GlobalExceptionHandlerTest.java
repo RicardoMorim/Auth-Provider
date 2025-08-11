@@ -27,6 +27,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.context.request.WebRequest;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -190,7 +191,7 @@ class GlobalExceptionHandlerTest {
         Cookie accessTokenCookie = new Cookie("access_token", token);
 
         // Act & Assert
-        mockMvc.perform(get("/api/users/99999").cookie(accessTokenCookie)
+        mockMvc.perform(get("/api/users/" + UUID.randomUUID().toString()).cookie(accessTokenCookie)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON))
@@ -360,7 +361,7 @@ class GlobalExceptionHandlerTest {
         Cookie accessTokenCookie = new Cookie("access_token", token);
 
         // Act & Assert - Test that error responses are JSON
-        mockMvc.perform(get("/api/users/99999").cookie(accessTokenCookie))
+        mockMvc.perform(get("/api/users/" + UUID.randomUUID().toString()).cookie(accessTokenCookie))
                 .andExpect(status().isNotFound())
                 .andExpect(content().contentType(MediaType.APPLICATION_JSON));
     }

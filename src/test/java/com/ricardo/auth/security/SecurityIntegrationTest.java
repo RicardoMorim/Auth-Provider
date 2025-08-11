@@ -23,6 +23,7 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -76,7 +77,7 @@ class SecurityIntegrationTest {
                 Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
-        userRepository.save(testUser);
+        testUser = userRepository.save(testUser);
 
         // Create admin user
         adminUser = new User(
@@ -85,7 +86,7 @@ class SecurityIntegrationTest {
                 Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
         adminUser.addRole(AppRole.ADMIN);
-        userRepository.save(adminUser);
+        adminUser = userRepository.save(adminUser);
 
         // Perform login to get access token cookie
         LoginRequestDTO loginRequest = new LoginRequestDTO(testUser.getEmail(), "Password@123");
@@ -215,7 +216,7 @@ class SecurityIntegrationTest {
 
         mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("testuser"))
+                .andExpect(jsonPath("$.email").value("test@example.com"))
                 .andExpect(jsonPath("$.roles").isArray());
     }
 
@@ -294,7 +295,11 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_USER"))
         ));
 
-        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId() + 1)).cookie(accessTokenCookie))
+        UUID testUserId = testUser.getId();
+
+        // Attempt to delete a user with an ID that does not match the authenticated user
+        // This should be forbidden for a regular user
+        mockMvc.perform(delete("/api/users/delete/" + UUID.randomUUID().toString()).cookie(accessTokenCookie))
                 .andExpect(status().isForbidden());
     }
 
@@ -320,7 +325,7 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         ));
 
-        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId() + 1)).cookie(accessTokenCookie))
+        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId())).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -414,7 +419,7 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId()).cookie(accessTokenCookie))
+        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId().toString()).cookie(accessTokenCookie))
                 .andExpect(status().isForbidden());
     }
 
@@ -441,7 +446,7 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/users/delete/" + testUser.getId()).cookie(accessTokenCookie))
+        mockMvc.perform(delete("/api/users/delete/" + testUser.getId().toString()).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -502,7 +507,7 @@ class SecurityIntegrationTest {
 
         Cookie accessTokenCookie = new Cookie("access_token", token);
 
-        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId()).cookie(accessTokenCookie)
+        mockMvc.perform(delete("/api/users/delete/" + adminUser.getId().toString()).cookie(accessTokenCookie)
                         .accept(MediaType.APPLICATION_JSON))
                 .andExpect(status().isForbidden());
     }
@@ -600,7 +605,7 @@ class SecurityIntegrationTest {
         Cookie accessTokenCookie = new Cookie("access_token", token);
         mockMvc.perform(get("/api/auth/me").cookie(accessTokenCookie))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value(specialSubject));
+                .andExpect(jsonPath("$.email").value(specialSubject));
     }
 
     /**

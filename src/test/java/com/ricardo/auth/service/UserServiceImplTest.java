@@ -4,10 +4,7 @@ import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
-import com.ricardo.auth.domain.user.Email;
-import com.ricardo.auth.domain.user.Password;
-import com.ricardo.auth.domain.user.User;
-import com.ricardo.auth.domain.user.Username;
+import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -18,6 +15,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -30,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class UserServiceImplTest {
 
     @Autowired
-    private UserService<User, Long> userService;
+    private UserService<User, AppRole, UUID> userService;
 
     @Autowired
     private DefaultUserJpaRepository userRepository;
@@ -59,7 +57,7 @@ class UserServiceImplTest {
     }
 
     /**
-     * Create user should save and return user when email does not exist.
+     * Create user should saveUser and return user when email does not exist.
      */
     @Test
     void createUser_shouldSaveAndReturnUser_whenEmailDoesNotExist() {
@@ -117,8 +115,9 @@ class UserServiceImplTest {
     @Test
     void getUserById_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
         // Act & Assert
+        UUID nonExistentId = UUID.randomUUID();
         assertThrows(ResourceNotFoundException.class, () -> {
-            userService.getUserById(999L);
+            userService.getUserById(nonExistentId);
         });
     }
 
@@ -210,8 +209,9 @@ class UserServiceImplTest {
     @Test
     void deleteUser_shouldThrowResourceNotFoundException_whenUserDoesNotExist() {
         // Act & Assert
+        UUID nonExistentId = UUID.randomUUID();
         assertThrows(ResourceNotFoundException.class, () -> {
-            userService.deleteUser(999L);
+            userService.deleteUser(nonExistentId);
         });
     }
 

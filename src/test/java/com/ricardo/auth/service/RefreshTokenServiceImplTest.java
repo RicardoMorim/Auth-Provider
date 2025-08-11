@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -36,9 +37,9 @@ class RefreshTokenServiceImplTest {
     @Autowired
     AuthProperties authProperties;
     @Autowired
-    private RefreshTokenService<User, Long> refreshTokenService;
+    private RefreshTokenService<User, AppRole, UUID> refreshTokenService;
     @Autowired
-    private UserService<User, Long> userService;
+    private UserService<User, AppRole, UUID> userService;
     @Autowired
     private RefreshTokenRepository refreshTokenRepository;
     @Autowired
