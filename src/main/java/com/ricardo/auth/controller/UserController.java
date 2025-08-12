@@ -94,12 +94,12 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
      * Update user response entity.
      *
      * @param request        the request
-     * @param id             the id
+     * @param stringId             the id
      * @param authentication the authentication
      * @return the response entity
      */
     @PutMapping("/update/{id}")
-    @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwner(authentication.name, #id)")
+    @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwner(authentication.name, #stringId)")
     public ResponseEntity<UserDTO> updateUser(@RequestBody CreateUserRequestDTO request, @PathVariable("id") String stringId, Authentication authentication) {
         ID id = idConverter.fromString(stringId);
         U userDetails = userBuilder.create(request);

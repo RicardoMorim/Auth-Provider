@@ -428,6 +428,14 @@ ricardo:
 - See [Database Configuration](docs/configuration/database.md) for detailed migration steps
 - Update the front end to handle csrf tokens in requests
 
+## [3.0.1] - 2025-08-12
+
+### HotFix
+
+- Fixed wrong name of a path variable in the `update/{id}` endpoint of the `UserController` class. It was previously
+  named `id` but should be `stringId` to match the method signature and documentation.
+
+
 ### Future Considerations
 
 > **Note**: The following features are planned for future development as the project evolves and based on community

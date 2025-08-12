@@ -88,27 +88,20 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         }
         @SuppressWarnings("unchecked")
         U userDetails = (U) principal;
+        String accessToken = jwtService.generateAccessToken(
+                userDetails.getEmail(), // Using AuthUser's getEmail() method
+                userDetails.getAuthorities()
+        );
         if (refreshTokenService != null) {
             // Generate both access and refresh tokens
-            String accessToken = jwtService.generateAccessToken(
-                    userDetails.getEmail(), // Using AuthUser's getEmail() method
-                    userDetails.getAuthorities()
-            );
-
             RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails);
 
             setAuthCookies(response, accessToken, refreshToken.getToken());
-            return ResponseEntity.ok().build();
         } else {
             // Legacy behavior - single token
-            String accessToken = jwtService.generateAccessToken(
-                    userDetails.getEmail(), // Using AuthUser's getEmail() method
-                    userDetails.getAuthorities()
-            );
-
             setAccessCookie(response, accessToken);
-            return ResponseEntity.ok().build();
         }
+        return ResponseEntity.ok().build();
     }
 
     /**
