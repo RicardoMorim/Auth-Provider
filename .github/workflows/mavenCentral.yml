@@ -30,6 +30,9 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      - name: Create settings.xml
+        run: echo "${{ secrets.MAVEN_SETTINGS }}" > settings.xml
+
       - name: Import GPG key
         run: |
           echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
