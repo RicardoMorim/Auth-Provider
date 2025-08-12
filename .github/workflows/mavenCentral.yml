@@ -32,30 +32,16 @@ jobs:
 
       - name: Import GPG key
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" > private.key
-          gpg --batch --import private.key
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo RELOADAGENT | gpg-connect-agent
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
 
-      - name: Create Maven settings.xml
-        run: |
-          cat > settings.xml <<EOF
-          <settings>
-            <servers>
-              <server>
-                <id>ossrh</id>
-                <username>${{ secrets.CENTRAL_USERNAME }}</username>
-                <password>${{ secrets.CENTRAL_TOKEN }}</password>
-              </server>
-            </servers>
-            <profiles>
-              <profile>
-                <id>central</id>
-                <properties>
-                  <gpg.passphrase>${{ secrets.GPG_PASSPHRASE }}</gpg.passphrase>
-                </properties>
-              </profile>
-            </profiles>
-          </settings>
-          EOF
+      - name: Set GPG_TTY
+        run: echo "GPG_TTY=$(tty)" >> $GITHUB_ENV
 
       - name: Deploy to Maven Central
-        run: mvn clean deploy -Pcentral --settings settings.xml
+        run: mvn clean deploy -Pcentral --settings settings.xml -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          GPG_TTY: ${{ env.GPG_TTY }}
