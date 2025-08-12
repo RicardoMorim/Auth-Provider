@@ -23,7 +23,10 @@ ricardo:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
       access-token-expiration: 86400000
       refresh-token-expiration: 604800000
-    # --- NEW: Blocklist and Rate Limiter ---
+    # NEW in v3.0.0: CSRF protection is enabled by default
+    # No additional configuration needed - works out of the box
+    # Public endpoints (/api/auth/login, /api/users/create) are automatically exempt
+    # --- Blocklist and Rate Limiter ---
     token-blocklist:
       enabled: true
       type: memory   # or 'redis' for distributed blocklist
@@ -32,7 +35,7 @@ ricardo:
       type: memory   # or 'redis' for distributed rate limiting
       max-requests: 100
       time-window-ms: 60000
-    # --- NEW: Cookie Security ---
+    # --- Cookie Security ---
     cookies:
       access:
         secure: true      # Set to false for local dev only

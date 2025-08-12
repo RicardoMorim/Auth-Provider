@@ -1,8 +1,15 @@
-in# Refresh Token Examples
+# Refresh Token Examples
 
 Comprehensive examples for implementing refresh tokens in different scenarios.
 
-## ⚠️ Breaking Changes in v1.2.0
+## ⚠️ Breaking Changes in v3.0.0
+
+- **UUID Primary Keys:** All user IDs are now UUID instead of Long
+- **Enhanced Decoupling:** New factory pattern for user creation
+- **Repository Types:** Choose between JPA and PostgreSQL implementations
+- **CSRF Protection:** Cross-Site Request Forgery protection now enabled by default (NEW)
+
+## ⚠️ Breaking Changes in v2.0.0
 
 - **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`, and `sameSite` flags by default. **Tokens are not accessible via JavaScript.** The browser will automatically send cookies with requests; your frontend should not attempt to read or write token cookies directly.
 - **HTTPS enforcement**: By default, the API only allows HTTPS. To disable, set `ricardo.auth.redirect-https=false`.
@@ -14,109 +21,32 @@ Comprehensive examples for implementing refresh tokens in different scenarios.
 
 ## 📱 Frontend Integration
 
-
-### React/Next.js Example (Legacy, pre-v1.2.0)
-
-> **Deprecated:** This pattern is for legacy (pre-v1.2.0) usage and is no longer recommended. Token cookies are now managed by the backend as `httpOnly` and should not be accessed or set by frontend code. Use the minimal example below for current best practices.
-
-```javascript
-// hooks/useAuth.js (Legacy, pre-v1.2.0)
-import { useState, useEffect, useCallback } from 'react';
-
-export const useAuth = () => {
-  const [tokens, setTokens] = useState({
-    accessToken: null,
-    refreshToken: null,
-  });
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
-
-  // Load tokens from cookies on mount
-  useEffect(() => {
-    const accessToken = getCookie('access_token');
-    const refreshToken = getCookie('refresh_token');
-    
-    if (accessToken && refreshToken) {
-      setTokens({ accessToken, refreshToken });
-      setIsAuthenticated(true);
-    }
-  }, []);
-
-  // Login function
-  const login = async (email, password) => {
-    try {
-      const response = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Server already set httpOnly cookies. No client-side persistence required.
-        setIsAuthenticated(true);        
-        return { success: true };
-      } else {
-        return { success: false, error: 'Invalid credentials' };
-      }
-    } catch (error) {
-      return { success: false, error: error.message };
-    }
-  };
-
-  // Refresh token function
-  const refreshAccessToken = useCallback(async () => {
-    try {
-      const response = await fetch('/api/auth/refresh', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refreshToken: tokens.refreshToken }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        // Store tokens in cookies
-        setCookie('access_token', data.accessToken, 15 * 60, { secure: true, sameSite: 'Strict' });
-        setCookie('refresh_token', data.refreshToken, 30 * 24 * 60 * 60, { secure: true, sameSite: 'Strict' });        
-        setTokens(data);
-        return data.accessToken;
-      } else {
-        // Refresh failed, logout user
-        logout();
-        return null;
-      }
-    } catch (error) {
-      logout();
-      return null;
-    }
-  }, [tokens.refreshToken]);
-
-  // Logout function
-  const logout = async () => {
-    try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
-    } catch (e) {
-      // Ignore network errors
-    }
-    setTokens({ accessToken: null, refreshToken: null });
-    setIsAuthenticated(false);
-  };
-
-  // API call with automatic token refresh
-  const apiCall = useCallback(async (url, options = {}) => {
-    const makeRequest = async (token) => {
-```
 ### React/Next.js Example
-New best practice for v2.0.0 and later:
+
+**NEW v3.0.0+ with CSRF Protection:**
 ```javascript
 // hooks/useAuth.js
 import { useState, useCallback } from 'react';
 
+// Utility function to get CSRF token from cookie
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'XSRF-TOKEN') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+
 export const useAuth = () => {
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
   // Login function
   const login = async (email, password) => {
     try {
+      // Login endpoint doesn't require CSRF token (public endpoint)
       const response = await fetch('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -134,12 +64,22 @@ export const useAuth = () => {
     }
   };
 
-  // Refresh token function
+  // Refresh token function (requires CSRF token)
   const refreshAccessToken = useCallback(async () => {
     try {
+      const csrfToken = getCsrfToken();
+      if (!csrfToken) {
+        console.warn('CSRF token not found for refresh request');
+        return false;
+      }
+
       const response = await fetch('/api/auth/refresh', {
         method: 'POST',
         credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-XSRF-TOKEN': csrfToken // CSRF token required
+        }
       });
       if (response.ok) {
         setIsAuthenticated(true);
@@ -157,26 +97,60 @@ export const useAuth = () => {
   // Logout function
   const logout = async () => {
     try {
-      await fetch('/api/auth/logout', { method: 'POST', credentials: 'include' });
+      const csrfToken = getCsrfToken();
+      const headers = {};
+      
+      if (csrfToken) {
+        headers['X-XSRF-TOKEN'] = csrfToken;
+      }
+
+      await fetch('/api/auth/logout', { 
+        method: 'POST', 
+        credentials: 'include',
+        headers
+      });
     } catch (e) {
       // Ignore network errors
     }
     setIsAuthenticated(false);
   };
 
-  // API call with automatic token refresh
+  // API call with automatic token refresh and CSRF protection
   const apiCall = useCallback(async (url, options = {}) => {
-    let response = await fetch(url, {
-      ...options,
+    const defaultOptions = {
       credentials: 'include',
-    });
-    if (response.status === 401) {
-      await refreshAccessToken();
-      response = await fetch(url, {
-        ...options,
-        credentials: 'include',
-      });
+      headers: {
+        'Content-Type': 'application/json',
+        ...options.headers
+      },
+      ...options
+    };
+
+    // Add CSRF token for state-changing methods
+    if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase())) {
+      const csrfToken = getCsrfToken();
+      if (csrfToken) {
+        defaultOptions.headers['X-XSRF-TOKEN'] = csrfToken;
+      } else {
+        console.warn('CSRF token not found for', options.method, 'request to', url);
+      }
     }
+
+    let response = await fetch(url, defaultOptions);
+    
+    // Handle token expiration
+    if (response.status === 401) {
+      const refreshed = await refreshAccessToken();
+      if (refreshed) {
+        // Retry with fresh token and CSRF token
+        const newCsrfToken = getCsrfToken();
+        if (newCsrfToken && defaultOptions.headers['X-XSRF-TOKEN']) {
+          defaultOptions.headers['X-XSRF-TOKEN'] = newCsrfToken;
+        }
+        response = await fetch(url, defaultOptions);
+      }
+    }
+    
     return response;
   }, [refreshAccessToken]);
 
@@ -188,7 +162,6 @@ export const useAuth = () => {
   };
 };
 ```
-        
 
 ### Vue.js Example
 
@@ -251,18 +224,6 @@ export const useAuth = () => {
     refreshTokens,
   };
 };
-```
-      access:
-        secure: true
-        httpOnly: true
-        sameSite: Strict
-        path: /
-      refresh:
-        secure: true
-        httpOnly: true
-        sameSite: Strict
-        path: /api/auth/refresh
-    redirect-https: true
 ```
 
 ### Custom Token Service

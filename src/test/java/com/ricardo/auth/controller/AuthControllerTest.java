@@ -20,6 +20,7 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -132,7 +133,7 @@ class AuthControllerTest {
         Cookie accessTokenCookie = loginResult.getResponse().getCookie("access_token");
 
         // Use cookie to access protected endpoint
-        mockMvc.perform(get("/api/auth/me")
+        mockMvc.perform(get("/api/auth/me").with(csrf())
                         .cookie(accessTokenCookie))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("test@example.com"));
@@ -146,7 +147,7 @@ class AuthControllerTest {
     @Test
     void getAuthenticatedUser_shouldReturn401_whenNoTokenProvided() throws Exception {
         // Act & Assert
-        mockMvc.perform(get("/api/auth/me"))
+        mockMvc.perform(get("/api/auth/me").with(csrf()))
                 .andExpect(status().isUnauthorized());
     }
 
@@ -158,8 +159,8 @@ class AuthControllerTest {
     @Test
     void getAuthenticatedUser_shouldReturn401_whenTokenIsInvalid() throws Exception {
         // Act & Assert
-        mockMvc.perform(get("/api/auth/me")
-                        .header("Authorization", "Bearer invalid.jwt.token"))
+        mockMvc.perform(get("/api/auth/me").with(csrf())
+                        .cookie(new Cookie("access_token", "Bearer invalid.jwt.token")))
                 .andExpect(status().isUnauthorized());
     }
 }

@@ -24,6 +24,7 @@ import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
@@ -103,7 +104,7 @@ class AuthControllerRefreshTokenTest {
     @Test
     void refreshToken_shouldSetNewTokensInCookies_whenRefreshTokenIsValid() throws Exception {
         // Não envie body, apenas o cookie
-        MvcResult result = mockMvc.perform(post("/api/auth/refresh")
+        MvcResult result = mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists("access_token"))
@@ -121,7 +122,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldReturn401_whenRefreshTokenIsInvalid() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "invalid-refresh-token")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
@@ -134,7 +135,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldReturn401_whenRefreshTokenIsExpired() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "expired-or-nonexistent-token")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
@@ -148,7 +149,7 @@ class AuthControllerRefreshTokenTest {
     @Test
     void refreshToken_shouldReturn400_whenRequestIsInvalid() throws Exception {
         // Não envie body, apenas sem cookie
-        mockMvc.perform(post("/api/auth/refresh"))
+        mockMvc.perform(post("/api/auth/refresh").with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -160,7 +161,7 @@ class AuthControllerRefreshTokenTest {
     @Test
     void refreshToken_shouldReturn400_whenRequestBodyIsEmpty() throws Exception {
         // Não envie body, apenas sem cookie
-        mockMvc.perform(post("/api/auth/refresh"))
+        mockMvc.perform(post("/api/auth/refresh").with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -171,7 +172,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldReturn400_whenTokenIsTooShort() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "short")))
                 .andExpect(status().isBadRequest());
     }
@@ -183,7 +184,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldReturn400_whenTokenIsBlank() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "   ")))
                 .andExpect(status().isBadRequest());
     }
@@ -210,7 +211,7 @@ class AuthControllerRefreshTokenTest {
         mockMvc.perform(get("/api/auth/me").cookie(accessToken)).andExpect(status().isOk());
 
         // Não envie body, apenas o cookie
-        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh")
+        MvcResult refreshResult = mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshToken))
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists("access_token"))
@@ -242,7 +243,7 @@ class AuthControllerRefreshTokenTest {
         Cookie refreshTokenCookie = loginResult.getResponse().getCookie("refresh_token");
 
         for (int i = 0; i < 3; i++) {
-            MvcResult result = mockMvc.perform(post("/api/auth/refresh")
+            MvcResult result = mockMvc.perform(post("/api/auth/refresh").with(csrf())
                             .cookie(refreshTokenCookie))
                     .andExpect(status().isOk())
                     .andExpect(cookie().exists("access_token"))
@@ -262,7 +263,7 @@ class AuthControllerRefreshTokenTest {
     void refreshToken_shouldHandleRevokedToken() throws Exception {
         refreshTokenService.revokeToken(testRefreshToken.getToken());
 
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
@@ -276,7 +277,7 @@ class AuthControllerRefreshTokenTest {
     @Test
     void refreshToken_shouldHandleMalformedRequest() throws Exception {
         // Não envie body, apenas sem cookie
-        mockMvc.perform(post("/api/auth/refresh"))
+        mockMvc.perform(post("/api/auth/refresh").with(csrf()))
                 .andExpect(status().isBadRequest());
     }
 
@@ -287,7 +288,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldNotExposeInternalErrors() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "potential-sql-injection'; DROP TABLE users; --")))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
@@ -302,7 +303,7 @@ class AuthControllerRefreshTokenTest {
     void refreshToken_shouldRotateRefreshToken_whenRotationIsEnabled() throws Exception {
         String originalRefreshToken = testRefreshToken.getToken();
 
-        MvcResult result = mockMvc.perform(post("/api/auth/refresh")
+        MvcResult result = mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isOk())
                 .andExpect(cookie().exists("refresh_token"))
@@ -322,11 +323,11 @@ class AuthControllerRefreshTokenTest {
     void refreshToken_shouldRevokeOldTokenAfterRotation() throws Exception {
         String originalRefreshToken = testRefreshToken.getToken();
 
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
@@ -340,17 +341,17 @@ class AuthControllerRefreshTokenTest {
     @Test
     void refreshToken_shouldValidateRequestFields() throws Exception {
         // Sem cookie
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                 )
                 .andExpect(status().isBadRequest());
 
         // Cookie vazio
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "")))
                 .andExpect(status().isBadRequest());
 
         // Cookie muito curto
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(new Cookie("refresh_token", "short")))
                 .andExpect(status().isBadRequest());
     }
@@ -363,12 +364,12 @@ class AuthControllerRefreshTokenTest {
     @Test
     void refreshToken_shouldNotAllowReusedTokens() throws Exception {
         // Primeira vez
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isOk());
 
         // Segunda vez com o mesmo cookie/token
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized())
                 .andExpect(jsonPath("$.message").value("Authentication failed"));
@@ -381,12 +382,23 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldHandleConcurrentRequests() throws Exception {
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(post("/api/auth/refresh")
+        mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
                 .andExpect(status().isUnauthorized());
     }
+
+
+    @Test
+    void testLogout_WithCsrf_ShouldReturnOk() throws Exception {
+        mockMvc.perform(post("/api/auth/logout")
+                        .with(csrf())
+                        .cookie(accessTokenCookie)
+                        .cookie(refreshTokenCookie))
+                .andExpect(status().isOk());
+    }
+
 }

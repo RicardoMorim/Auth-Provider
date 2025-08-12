@@ -14,13 +14,13 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.config.annotation.authentication.configuration.AuthenticationConfiguration;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
-import org.springframework.security.config.annotation.web.configurers.AbstractHttpConfigurer;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
+import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -31,11 +31,12 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @EnableMethodSecurity(prePostEnabled = true)
 public class SecurityConfig {
 
-    private final static String[] PUBLIC_ENDPOINTS = {
-            "/api/auth/login",
-            "/api/users/create",
-            "/api/auth/refresh"
-    };
+    // Refresh é público para JWT (token pode estar expirado)
+    private final static String[] JWT_PUBLIC_ENDPOINTS = {"/api/auth/refresh", "/api/auth/login", "/api/users/create"};
+
+    // Apenas login e criação ignoram CSRF
+    private final static String[] CSRF_PUBLIC_ENDPOINTS = {"/api/auth/login", "/api/users/create"};
+
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
     @Autowired
@@ -48,7 +49,7 @@ public class SecurityConfig {
      * @return the boolean
      */
     public static boolean isPublicEndpoint(String url) {
-        for (String endpoint : PUBLIC_ENDPOINTS) {
+        for (String endpoint : JWT_PUBLIC_ENDPOINTS) {
             if (url.toLowerCase().equals(endpoint)) {
                 return true;
             }
@@ -103,22 +104,18 @@ public class SecurityConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 1)
     public SecurityFilterChain filterChain(HttpSecurity http, RateLimiter rateLimiter) throws Exception {
-        // SECURITY NOTE: CSRF protection disabled for JWT-based stateless API
-        // This is safe because:
-        // 1. No session cookies (SessionCreationPolicy.STATELESS)
-        // 2. JWT tokens require explicit Authorization header
-        // 3. Malicious sites cannot access JWT tokens due to browser security
-        // 4. No traditional form-based authentication endpoints
         if (authProperties.isRedirectHttps()) {
             http.redirectToHttps(withDefaults());
         }
         return http
-                .csrf(AbstractHttpConfigurer::disable)
+                .csrf(csrf -> csrf
+                        .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                        .ignoringRequestMatchers(CSRF_PUBLIC_ENDPOINTS)
+                )
                 .authorizeHttpRequests(auth -> auth
-                        .requestMatchers(PUBLIC_ENDPOINTS).permitAll()
+                        .requestMatchers(JWT_PUBLIC_ENDPOINTS).permitAll()
                         .anyRequest().authenticated()
                 )
-
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
                 .addFilterBefore(new RateLimiterFilter(rateLimiter), UsernamePasswordAuthenticationFilter.class)

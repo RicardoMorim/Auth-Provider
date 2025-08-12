@@ -10,6 +10,7 @@
 > - **UUID Primary Keys:** All user IDs are now UUID instead of Long
 > - **Enhanced Decoupling:** New factory pattern for user creation
 > - **Repository Types:** Choose between JPA and PostgreSQL implementations
+> - **CSRF Protection:** Cross-Site Request Forgery protection now enabled by default (NEW)
 > 
 > **v2.0.0 Changes:**
 > - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
@@ -460,12 +461,22 @@ public class HomeController {
 
 ### Authentication Service (static/js/auth.js)
 
-> **Ricardo Auth 2.x Example:**
-> This JavaScript example demonstrates cookie-based authentication. The login and refresh endpoints do not return tokens
-> in the response body. All authenticated requests must use `credentials: 'include'` to send cookies. Do not attempt to
-> read or write the `access_token` or `refresh_token` cookies from JavaScript—they are `HttpOnly` for security.
+> **Ricardo Auth 3.0.0 Example:**
+> This JavaScript example demonstrates cookie-based authentication with CSRF protection. Login and refresh endpoints require CSRF tokens for state-changing operations. All authenticated requests must use `credentials: 'include'` to send cookies and include CSRF tokens in headers.
 
 ```javascript
+// Utility function to get CSRF token from cookie
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'XSRF-TOKEN') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+
 // Login form handler
 document.addEventListener('DOMContentLoaded', function () {
     const loginForm = document.getElementById('loginForm');
@@ -475,13 +486,16 @@ document.addEventListener('DOMContentLoaded', function () {
             const email = document.getElementById('email').value;
             const password = document.getElementById('password').value;
             const errorDiv = document.getElementById('error');
+            
             try {
+                // Login endpoint doesn't require CSRF token (public endpoint)
                 const response = await fetch('/api/auth/login', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({email, password}),
                     credentials: 'include' // Important: send cookies
                 });
+                
                 if (response.ok) {
                     window.location.href = '/dashboard';
                 } else {
@@ -506,18 +520,22 @@ document.addEventListener('DOMContentLoaded', function () {
             const password = document.getElementById('password').value;
             const confirmPassword = document.getElementById('confirmPassword').value;
             const errorDiv = document.getElementById('error');
+            
             if (password !== confirmPassword) {
                 errorDiv.textContent = 'Passwords do not match';
                 errorDiv.classList.remove('d-none');
                 return;
             }
+            
             try {
+                // User creation endpoint doesn't require CSRF token (public endpoint)
                 const response = await fetch('/api/users/create', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({username, email, password}),
                     credentials: 'include'
                 });
+                
                 if (response.ok) {
                     alert('Registration successful! Please login.');
                     window.location.href = '/login';
@@ -534,29 +552,133 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 });
 
-// Example: Fetch current user info (requires authentication)
-async function getCurrentUser() {
-    try {
-        const response = await fetch('/api/auth/me', {
-            method: 'GET',
-            credentials: 'include'
-        });
-        if (response.ok) {
-            return await response.json();
+// Authentication service with CSRF support
+const authService = {
+    // Get current user info (requires authentication but not CSRF token for GET)
+    async getCurrentUser() {
+        try {
+            const response = await fetch('/api/auth/me', {
+                method: 'GET',
+                credentials: 'include'
+            });
+            if (response.ok) {
+                return await response.json();
+            }
+        } catch (err) {
+            console.error('Failed to get current user:', err);
         }
-    } catch (err) {
-        // Handle error
+        return null;
+    },
+
+    // Refresh token (requires CSRF token)
+    async refreshToken() {
+        try {
+            const csrfToken = getCsrfToken();
+            if (!csrfToken) {
+                console.warn('CSRF token not found for refresh request');
+                return false;
+            }
+
+            const response = await fetch('/api/auth/refresh', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-XSRF-TOKEN': csrfToken
+                }
+            });
+            
+            return response.ok;
+        } catch (err) {
+            console.error('Token refresh failed:', err);
+            return false;
+        }
+    },
+
+    // Make authenticated API request with CSRF token
+    async authenticatedRequest(url, options = {}) {
+        const defaultOptions = {
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                ...options.headers
+            },
+            ...options
+        };
+
+        // Add CSRF token for state-changing methods
+        if (['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method?.toUpperCase())) {
+            const csrfToken = getCsrfToken();
+            if (csrfToken) {
+                defaultOptions.headers['X-XSRF-TOKEN'] = csrfToken;
+            } else {
+                console.warn('CSRF token not found for', options.method, 'request to', url);
+            }
+        }
+
+        try {
+            let response = await fetch(url, defaultOptions);
+            
+            // Handle token expiration
+            if (response.status === 401) {
+                const refreshed = await this.refreshToken();
+                if (refreshed) {
+                    // Retry with fresh token and CSRF token
+                    const newCsrfToken = getCsrfToken();
+                    if (newCsrfToken && defaultOptions.headers['X-XSRF-TOKEN']) {
+                        defaultOptions.headers['X-XSRF-TOKEN'] = newCsrfToken;
+                    }
+                    response = await fetch(url, defaultOptions);
+                }
+            }
+            
+            return response;
+        } catch (err) {
+            console.error('Authenticated request failed:', err);
+            throw err;
+        }
     }
-    return null;
+};
+
+// Logout function with CSRF token
+async function logout() {
+    try {
+        const csrfToken = getCsrfToken();
+        const headers = {};
+        
+        if (csrfToken) {
+            headers['X-XSRF-TOKEN'] = csrfToken;
+        }
+
+        await fetch('/api/auth/logout', {
+            method: 'POST',
+            credentials: 'include',
+            headers
+        });
+    } catch (err) {
+        console.error('Logout request failed:', err);
+    }
+    
+    window.location.href = '/login';
 }
 
-// Logout function
-async function logout() {
-    await fetch('/api/auth/logout', {
-        method: 'POST',
-        credentials: 'include'
-    });
-    window.location.href = '/login';
+// Example: Using the authenticated request method
+async function updateUserProfile(profileData) {
+    try {
+        const response = await authService.authenticatedRequest('/api/users/profile', {
+            method: 'PUT',
+            body: JSON.stringify(profileData)
+        });
+        
+        if (response.ok) {
+            return await response.json();
+        } else {
+            throw new Error('Failed to update profile');
+        }
+    } catch (err) {
+        console.error('Profile update failed:', err);
+        throw err;
+    }
 }
 ```
 

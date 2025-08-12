@@ -10,6 +10,7 @@
 > - **UUID Primary Keys:** All user IDs are now UUID instead of Long
 > - **Enhanced Decoupling:** New factory pattern for user creation
 > - **Repository Types:** Choose between JPA and PostgreSQL implementations
+> - **CSRF Protection:** Cross-Site Request Forgery protection now enabled by default (NEW)
 
 ## What You'll Build
 
@@ -20,6 +21,7 @@ A robust REST API backend for mobile applications with:
 - ✅ Extended token expiration for mobile use
 - ✅ CORS configuration for cross-origin requests
 - ✅ Rate limiting and security headers
+- ✅ CSRF protection for enhanced security
 - ✅ API documentation and testing examples
 
 ## Project Structure

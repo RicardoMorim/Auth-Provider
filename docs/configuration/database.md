@@ -5,6 +5,7 @@
 > - **Database Schema**: Requires migration from Long IDs to UUID (see migration guide below)
 > - **Repository Types**: New `ricardo.auth.repositories.type` configuration (JPA or POSTGRESQL)
 > - **Enhanced Decoupling**: Factory pattern and helper classes for custom implementations
+> - **CSRF Protection**: Cross-Site Request Forgery protection now enabled by default (NEW)
 > - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags
 
 > **Breaking Change (v2.0.0):**

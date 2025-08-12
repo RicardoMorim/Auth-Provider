@@ -7,7 +7,17 @@ tenant-specific configurations.
 > **Breaking Changes (v3.0.0):**
 > - **UUID Primary Keys:** All user IDs are now UUID instead of Long. Update entity IDs, repository generics, DTOs, controller path variables, and service signatures to use `UUID`.
 > - **Enhanced Decoupling:** New factory pattern for user creation
-> - **Repository Types:** Choose between JPA and PostgreSQL implementations## 📋 Quick Navigation
+> - **Repository Types:** Choose between JPA and PostgreSQL implementations
+> - **CSRF Protection:** Cross-Site Request Forgery protection now enabled by default (NEW)
+>
+> **v2.0.0 Changes:**
+> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
+>     flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
+>     development only.
+> - New blocklist and rate limiting features are available (see below).
+> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+
+## 📋 Quick Navigation
 
 - [Overview](#overview)
 - [Tenant Architecture](#tenant-architecture)

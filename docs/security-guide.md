@@ -14,7 +14,7 @@ This guide covers security best practices and considerations when using the Rica
 The Ricardo Auth Starter implements several security mechanisms:
 
 - **JWT Token Authentication**: Stateless authentication using JSON Web Tokens
-- **UUID Primary Keys**: Enhanced security with non-predictable user IDs
+- **UUID Primary Keys**: Enhanced security and scalability with UUID-based IDs
 - **Password Encryption**: BCrypt hashing with secure salts
 - **Role-Based Access Control**: Fine-grained permissions based on user roles
 - **Input Validation**: Protection against malicious input
@@ -22,6 +22,7 @@ The Ricardo Auth Starter implements several security mechanisms:
 - **SQL Injection Prevention**: JPA/Hibernate protection
 - **Cookie-based Authentication**: All tokens are sent via secure cookies (HttpOnly, Secure, SameSite)
 - **Blocklist and Rate Limiting**: Prevent token reuse and abuse (in-memory or Redis)
+- **CSRF Protection**: Cross-Site Request Forgery protection with cookie-based tokens (NEW in v3.0.0)
 
 ## JWT Security
 
@@ -645,132 +646,310 @@ curl -X POST http://localhost:8080/api/auth/revoke \
 > - The Authorization header is deprecated for authentication (except for legacy user endpoints). Use secure cookies for
     all authentication flows.
 
-## Security Checklist
+## CSRF Protection
 
-### Development
+### Overview
 
-- [x] Use strong JWT secret keys
-- [x] Set appropriate token expiration times
-- [x] Implement input validation
-- [x] Use HTTPS in development
-- [x] Enable security logging
-- [x] Test authentication flows
-- [x] Enable blocklist and rate limiting
-- [x] Use cookies for all tokens
+**NEW in v3.0.0**: The Ricardo Auth Starter now includes built-in Cross-Site Request Forgery (CSRF) protection to prevent malicious websites from performing unauthorized actions on behalf of authenticated users.
 
-### Staging/Testing
+### How CSRF Protection Works
 
-- [ ] Test with realistic data volumes
-- [ ] Perform security penetration testing
-- [ ] Validate rate limiting
-- [ ] Test token expiration handling
-- [ ] Verify CORS configuration
+CSRF protection in Ricardo Auth uses the **Synchronizer Token Pattern**:
 
-### Production
+1. **Token Generation**: The server generates a unique CSRF token for each session
+2. **Token Storage**: The token is stored in a cookie named `XSRF-TOKEN` (readable by JavaScript)
+3. **Token Validation**: All state-changing requests must include the CSRF token
+4. **Token Verification**: The server validates the token matches the expected value
 
-- [ ] Use environment variables for secrets
-- [ ] Enable HTTPS with valid certificates
-- [ ] Configure proper CORS policies
-- [ ] Set up monitoring and alerting
-- [ ] Implement log aggregation
-- [ ] Regular security updates
-- [ ] Backup and recovery procedures
+### Configuration
 
-## Common Security Vulnerabilities
+CSRF protection is enabled by default and automatically configured:
 
-### 1. Weak JWT Secrets
-
-❌ **Problem:**
-
-```yaml
-ricardo:
-  auth:
-    jwt:
-      secret: "secret"  # Too short and predictable
+```java
+// Automatically configured by SecurityConfig
+.csrf(csrf -> csrf
+    .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+    .ignoringRequestMatchers(PUBLIC_ENDPOINTS)
+)
 ```
 
-✅ **Solution:**
+**Key Configuration Details:**
+- Uses `CookieCsrfTokenRepository.withHttpOnlyFalse()` to allow JavaScript access
+- Public endpoints (`/api/auth/login`, `/api/users/create`) are exempt
+- All other authenticated endpoints require CSRF tokens
 
-```yaml
-ricardo:
-  auth:
-    jwt:
-      secret: ${RICARDO_AUTH_JWT_SECRET}  # Long, random, environment-specific
-```
+### Endpoints and CSRF Requirements
 
-### 2. Token Storage in LocalStorage
+#### Exempt from CSRF Protection
+- `POST /api/auth/login` - Public authentication endpoint
+- `POST /api/users/create` - Public user registration endpoint
 
-❌ **Problem:**
+#### Require CSRF Protection
+- `POST /api/auth/refresh` - Token refresh
+- `POST /api/auth/revoke` - Token revocation (ADMIN)
+- `PUT /api/users/update/{id}` - User updates
+- `DELETE /api/users/delete/{id}` - User deletion
+- All other authenticated endpoints
+
+### Frontend Integration
+
+#### JavaScript/Fetch Implementation
 
 ```javascript
-// Vulnerable to XSS attacks
-localStorage.setItem('token', token);
+// Utility function to get CSRF token from cookie
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'XSRF-TOKEN') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+
+// Include CSRF token in authenticated requests
+fetch('/api/auth/refresh', {
+    method: 'POST',
+    credentials: 'include', // Include cookies
+    headers: {
+        'Content-Type': 'application/json',
+        'X-XSRF-TOKEN': getCsrfToken() // CSRF token
+    }
+});
 ```
 
-✅ **Solution:**
+#### Axios Configuration
 
 ```javascript
-// Use HttpOnly cookies or sessionStorage
-sessionStorage.setItem('token', token);
+import axios from 'axios';
+
+// Create axios instance with automatic CSRF token handling
+const api = axios.create({
+    withCredentials: true // Include cookies
+});
+
+// Add request interceptor for CSRF token
+api.interceptors.request.use(config => {
+    // Only add CSRF token for state-changing methods
+    if (['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())) {
+        const token = getCsrfToken();
+        if (token) {
+            config.headers['X-XSRF-TOKEN'] = token;
+        }
+    }
+    return config;
+});
+
+// Usage
+api.post('/api/auth/refresh'); // CSRF token automatically included
 ```
 
-### 3. No HTTPS
+#### jQuery Configuration
 
-❌ **Problem:**
-
+```javascript
+// Global AJAX setup for CSRF tokens
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        // Add CSRF token for state-changing requests
+        if (settings.type === 'POST' || settings.type === 'PUT' || 
+            settings.type === 'DELETE' || settings.type === 'PATCH') {
+            const token = getCsrfToken();
+            if (token) {
+                xhr.setRequestHeader('X-XSRF-TOKEN', token);
+            }
+        }
+    }
+});
 ```
-http://myapp.com/api/auth/login  // Credentials sent in plain text
+
+#### React Hook Example
+
+```javascript
+import { useState, useEffect } from 'react';
+
+// Custom hook for CSRF token management
+function useCsrfToken() {
+    const [csrfToken, setCsrfToken] = useState(null);
+
+    useEffect(() => {
+        const token = getCsrfToken();
+        setCsrfToken(token);
+    }, []);
+
+    return csrfToken;
+}
+
+// Usage in component
+function MyComponent() {
+    const csrfToken = useCsrfToken();
+
+    const handleRefresh = async () => {
+        if (!csrfToken) return;
+
+        const response = await fetch('/api/auth/refresh', {
+            method: 'POST',
+            credentials: 'include',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-XSRF-TOKEN': csrfToken
+            }
+        });
+    };
+
+    return <button onClick={handleRefresh}>Refresh Token</button>;
+}
 ```
 
-✅ **Solution:**
+### Error Handling
 
+When CSRF protection is violated, the server returns a 403 Forbidden response:
+
+```json
+{
+  "error": "Forbidden",
+  "message": "CSRF token missing or invalid",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/refresh"
+}
 ```
-https://myapp.com/api/auth/login  // Encrypted transport
+
+**Common CSRF Error Scenarios:**
+- Missing `X-XSRF-TOKEN` header
+- Invalid or expired CSRF token
+- Token mismatch between cookie and header
+- Attempting to use form parameter instead of header
+
+### Security Benefits
+
+1. **Prevents CSRF Attacks**: Blocks malicious sites from performing actions as authenticated users
+2. **Stateless Protection**: Works with JWT-based stateless authentication
+3. **Flexible Implementation**: Supports both header and form parameter tokens
+4. **Automatic Token Rotation**: Tokens are automatically refreshed as needed
+
+### Best Practices
+
+#### Development
+```javascript
+// Always check for CSRF token before making requests
+const csrfToken = getCsrfToken();
+if (!csrfToken) {
+    console.warn('CSRF token not found - request may fail');
+}
 ```
 
-### 4. Overly Permissive CORS
+#### Production
+- Ensure HTTPS is enabled (required for secure cookies)
+- Monitor CSRF error rates in application logs
+- Implement proper error handling for CSRF failures
+- Use `SameSite=Strict` cookies when possible for additional protection
 
-❌ **Problem:**
+#### Testing
+```javascript
+// Test CSRF protection in your test suite
+test('should reject requests without CSRF token', async () => {
+    const response = await fetch('/api/auth/refresh', {
+        method: 'POST',
+        credentials: 'include'
+        // No CSRF token header
+    });
+    
+    expect(response.status).toBe(403);
+    expect(await response.json()).toMatchObject({
+        error: 'Forbidden',
+        message: 'CSRF token missing or invalid'
+    });
+});
+```
+
+### Troubleshooting
+
+#### Common Issues
+
+**1. "CSRF token missing" errors**
+- **Cause**: Frontend not including `X-XSRF-TOKEN` header
+- **Solution**: Ensure CSRF token is read from cookie and included in headers
+
+**2. "Invalid CSRF token" errors**
+- **Cause**: Token mismatch or expiration
+- **Solution**: Refresh the page to get a new token
+
+**3. CSRF token not found in cookies**
+- **Cause**: Not making an initial request to get the token
+- **Solution**: Make a GET request to any authenticated endpoint first
+
+#### Debug Mode
+
+Enable CSRF debugging:
 
 ```yaml
-spring:
-  web:
-    cors:
-      allowed-origins: "*"  # Allows any origin
+logging:
+  level:
+    org.springframework.security.web.csrf: DEBUG
 ```
 
-✅ **Solution:**
+This will log CSRF token generation, validation, and failures.
 
-```yaml
-spring:
-  web:
-    cors:
-      allowed-origins: "https://yourdomain.com"  # Specific origins only
+### Customization
+
+#### Custom CSRF Token Repository
+
+```java
+@Configuration
+public class CustomCsrfConfig {
+    
+    @Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookieName("MY_CSRF_TOKEN"); // Custom cookie name
+        repository.setHeaderName("X-MY-CSRF-TOKEN"); // Custom header name
+        repository.setCookiePath("/api/"); // Restrict cookie path
+        return repository;
+    }
+}
 ```
 
-### 5. Long Token Expiration
+#### Disable CSRF for Specific Endpoints
 
-❌ **Problem:**
-
-```yaml
-ricardo:
-  auth:
-    jwt:
-      expiration: 31536000000  # 1 year - too long
+```java
+@Configuration
+public class CustomSecurityConfig {
+    
+    @Bean
+    public SecurityFilterChain customFilterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/webhooks/**") // Disable for webhooks
+            )
+            .build();
+    }
+}
 ```
 
-✅ **Solution:**
+### Migration from Previous Versions
 
-```yaml
-ricardo:
-  auth:
-    jwt:
-      expiration: 3600000  # 1 hour - appropriate for sensitive apps
+If upgrading from v2.x to v3.0.0:
+
+1. **Update Frontend Code**: Add CSRF token handling to all authenticated requests
+2. **Test Thoroughly**: Ensure all API calls include the CSRF token
+3. **Monitor Logs**: Watch for CSRF-related errors during deployment
+4. **Gradual Rollout**: Consider feature flags for gradual CSRF enforcement
+
+**Migration Script Example:**
+```javascript
+// Before v3.0.0
+fetch('/api/auth/refresh', {
+    method: 'POST',
+    credentials: 'include'
+});
+
+// After v3.0.0
+fetch('/api/auth/refresh', {
+    method: 'POST',
+    credentials: 'include',
+    headers: {
+        'X-XSRF-TOKEN': getCsrfToken() // Add this line
+    }
+});
 ```
-
-## Security Resources
-
-- [OWASP Top 10](https://owasp.org/www-project-top-ten/)
-- [JWT Security Best Practices](https://auth0.com/blog/a-look-at-the-latest-draft-for-jwt-bcp/)
-- [Spring Security Reference](https://docs.spring.io/spring-security/reference/)
-- [NIST Password Guidelines](https://pages.nist.gov/800-63-3/sp800-63b.html)

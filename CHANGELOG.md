@@ -15,6 +15,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **Helper Classes**: Added `UserRowMapper`, `UserSqlParameterMapper`, and `IdConverter`
 - **Enhanced Generics**: Improved type safety with explicit Role type parameters
 - **PostgreSQL Native Support**: Optimized PostgreSQL implementation alongside JPA
+- **CSRF Protection**: Enabled CSRF protection by default for all non public endpoints
 
 ### Changed
 
@@ -29,6 +30,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Change all ID references in your code from `Long` to `UUID`
 - Update API responses to expect UUID format
 - See [Database Configuration](docs/configuration/database.md) for detailed migration steps
+- Update the front end to handle csrf tokens in requests
 
 ## [1.0.0] - 2025-06-24
 

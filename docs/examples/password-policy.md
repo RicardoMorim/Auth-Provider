@@ -560,7 +560,14 @@ ricardo:
       prevent-common-passwords: true
 ```
 
-## ⚠️ Breaking Changes in v1.2.0
+## ⚠️ Breaking Changes in v3.0.0
+
+- **UUID Primary Keys:** All user IDs are now UUID instead of Long
+- **Enhanced Decoupling:** New factory pattern for user creation
+- **Repository Types:** Choose between JPA and PostgreSQL implementations
+- **CSRF Protection:** Cross-Site Request Forgery protection now enabled by default (NEW)
+
+## ⚠️ Breaking Changes in v2.0.0
 
 - **Token cookies**: Authentication now uses secure cookies for access and refresh tokens, with `httpOnly`, `secure`,
   and `sameSite` flags by default. Update your frontend to use cookies for authentication.

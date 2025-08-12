@@ -4,6 +4,7 @@
 > - **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
 > - **Repository Types**: New `ricardo.auth.repositories.type` configuration (JPA or POSTGRESQL)
 > - **Enhanced Decoupling**: Factory pattern and helper classes for custom implementations
+> - **CSRF Protection**: Cross-Site Request Forgery protection now enabled by default (NEW)
 > - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags
 > - Database schema requires migration from Long IDs to UUID (see [Database Configuration](database.md))
 

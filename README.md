@@ -10,7 +10,7 @@ A **plug-and-play** Spring Boot starter that adds JWT authentication and user ma
 minimal configuration required.
 
 > 🚀 **Zero-configuration setup** - Just add the dependency and you're ready to go!  
-> 🔐 **Production-ready security** - Built-in password policies, JWT tokens, and role-based access  
+> 🔐 **Production-ready security** - Built-in password policies, JWT tokens, CSRF protection, and role-based access  
 > 📚 **Complete documentation** - Comprehensive guides for setup, configuration, and deployment
 
 ## ✨ What You Get
@@ -27,6 +27,7 @@ minimal configuration required.
 - ⛔ Token blocklist (in-memory or Redis) for revogação instantânea de tokens
 - 🚦 Rate limiting (in-memory ou Redis) para proteção contra brute-force e abuso
 - 🍪 Secure cookies para tokens, com flags de segurança e opção de forçar HTTPS
+- 🛡️ CSRF protection with cookie-based tokens for enhanced security
 
 **Ready-to-Use API Endpoints**
 

@@ -7,6 +7,7 @@ Resolve **login, token, and authentication problems** with Ricardo Auth quickly 
 - **UUID Primary Keys:** All user IDs are now UUID instead of Long
 - **Enhanced Decoupling:** New factory pattern for user creation
 - **Repository Types:** Choose between JPA and PostgreSQL implementations
+- **CSRF Protection:** Cross-Site Request Forgery protection now enabled by default (NEW)
 
 ## 🚨 Breaking Changes in v2.0.0
 
@@ -24,6 +25,7 @@ Resolve **login, token, and authentication problems** with Ricardo Auth quickly 
 - [User Registration Issues](#user-registration-issues)
 - [Permission and Role Issues](#permission-and-role-issues)
 - [CORS Issues](#cors-issues)
+- [CSRF Issues](#csrf-issues)
 - [Session Problems](#session-problems)
 - [Testing and Debugging](#testing-and-debugging)
 
@@ -627,95 +629,288 @@ public ResponseEntity<?> handleOptions() {
 }
 ```
 
-## Session Problems
+## CSRF Issues
 
-> **New:**
-> - Session now depends on secure cookies and HTTPS. If the user is logged out immediately, check cookie flags and
-    HTTPS.
+> **New in v3.0.0:**
+> - CSRF protection is now enabled by default for enhanced security
+> - Public endpoints (`/api/auth/login`, `/api/users/create`) are exempt from CSRF protection
+> - All other authenticated endpoints require CSRF tokens
 
-### Session Not Persisting
+### CSRF Token Missing or Invalid
 
-**❌ Problem:** User gets logged out immediately
+**❌ Error:**
+
+```json
+{
+  "error": "Forbidden",
+  "message": "CSRF token missing or invalid",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/refresh"
+}
+```
 
 **✅ Solutions:**
 
-**1. Check JWT Expiration:**
+**1. Include CSRF Token in Request Headers:**
+
+```javascript
+// Get CSRF token from cookie
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'XSRF-TOKEN') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+
+// Include CSRF token in authenticated requests
+fetch('/api/auth/refresh', {
+    method: 'POST',
+    credentials: 'include', // Include cookies
+    headers: {
+        'Content-Type': 'application/json',
+        'X-XSRF-TOKEN': getCsrfToken() // CSRF token
+    }
+});
+```
+
+**2. For jQuery/AJAX:**
+
+```javascript
+// Set up CSRF token for all AJAX requests
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (settings.type === 'POST' || settings.type === 'PUT' || 
+            settings.type === 'DELETE' || settings.type === 'PATCH') {
+            const token = getCsrfToken();
+            if (token) {
+                xhr.setRequestHeader('X-XSRF-TOKEN', token);
+            }
+        }
+    }
+});
+```
+
+**3. Debug CSRF Token:**
+
+```bash
+# Check if CSRF token cookie is present
+curl -v http://localhost:8080/api/auth/me \
+  --cookie "access_token=YOUR_TOKEN" \
+  | grep -i "xsrf-token"
+```
+
+### CSRF Token Not Found in Cookies
+
+**❌ Problem:** No XSRF-TOKEN cookie is set
+
+**✅ Solutions:**
+
+**1. Make Initial Authenticated Request:**
+
+```javascript
+// Make a GET request first to receive CSRF token
+fetch('/api/auth/me', {
+    method: 'GET',
+    credentials: 'include'
+}).then(() => {
+    // Now CSRF token should be available in cookies
+    const csrfToken = getCsrfToken();
+    // Use token for subsequent requests
+});
+```
+
+**2. Check HTTPS Configuration:**
 
 ```yaml
 ricardo:
   auth:
-    jwt:
-      expiration: 86400000  # 24 hours (not too short)
+    redirect-https: true  # Required for secure cookies in production
 ```
 
-**2. Check Cookie Settings:**
+**3. Verify Cookie Settings:**
 
 ```yaml
 ricardo:
   auth:
     cookies:
       access:
-        http-only: true
-        secure: true  # Required in production
-        same-site: Strict
-      refresh:
-        http-only: true
-        secure: true
-        same-site: Strict
+        secure: true      # Must be true for HTTPS
+        same-site: Strict # Adjust if needed for cross-site requests
 ```
 
-**3. HTTPS enforcement:**
+### CSRF Protection Interfering with API Testing
 
-```yaml
-ricardo:
-  auth:
-    redirect-https: true
+**❌ Problem:** CSRF protection blocks API testing tools (Postman, curl)
+
+**✅ Solutions:**
+
+**1. Disable CSRF for Testing (Development Only):**
+
+```java
+@Configuration
+@Profile("dev")
+public class DevSecurityConfig {
+    
+    @Bean
+    @Primary
+    public SecurityFilterChain devFilterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf.disable()) // Disable CSRF in development
+            .build();
+    }
+}
 ```
 
-## Testing and Debugging
-
-### Token Revocation (Blocklist)
-
-- To revoke a token (access or refresh), use the endpoint:
+**2. Test with CSRF Token:**
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/revoke \
-  -H "Authorization: Bearer <ADMIN_TOKEN>" \
-  -H "Content-Type: application/json" \
-  -d '"TOKEN_TO_REVOKE"'
+# Step 1: Get CSRF token
+CSRF_TOKEN=$(curl -s -c cookies.txt http://localhost:8080/api/auth/me \
+  --cookie "access_token=YOUR_TOKEN" \
+  | grep -o 'XSRF-TOKEN=[^;]*' | cut -d'=' -f2)
+
+# Step 2: Use CSRF token in request
+curl -X POST http://localhost:8080/api/auth/refresh \
+  -b cookies.txt \
+  -H "X-XSRF-TOKEN: $CSRF_TOKEN"
 ```
 
-- Revoked tokens are rejected immediately on all protected routes.
+**3. Configure Specific Endpoints to Ignore CSRF:**
 
-### Rate Limiting
-
-- If you receive HTTP 429, check the configuration:
-
-```yaml
-ricardo:
-  auth:
-    rate-limiter:
-      enabled: true
-      type: memory # or redis
-      max-requests: 100
-      time-window-ms: 60000
+```java
+@Configuration
+public class CustomCsrfConfig {
+    
+    @Bean
+    public SecurityFilterChain customFilterChain(HttpSecurity http) throws Exception {
+        return http
+            .csrf(csrf -> csrf
+                .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
+                .ignoringRequestMatchers("/api/webhooks/**") // Ignore CSRF for webhooks
+            )
+            .build();
+    }
+}
 ```
 
-### Cookie Debugging
+### Frontend Framework Integration Issues
 
-- Use browser DevTools to inspect `access_token` and `refresh_token` cookies.
-- Ensure they have `HttpOnly`, `Secure`, `SameSite` flags and are only sent via HTTPS.
+**❌ Problem:** CSRF tokens not working with specific frontend frameworks
 
-### Logging
+**✅ Solutions:**
+
+**1. React/Axios Configuration:**
+
+```javascript
+import axios from 'axios';
+
+// Create axios instance with CSRF handling
+const api = axios.create({
+    withCredentials: true
+});
+
+// Add CSRF token interceptor
+api.interceptors.request.use(config => {
+    if (['post', 'put', 'delete', 'patch'].includes(config.method.toLowerCase())) {
+        const token = getCsrfToken();
+        if (token) {
+            config.headers['X-XSRF-TOKEN'] = token;
+        }
+    }
+    return config;
+});
+```
+
+**2. Angular HTTP Interceptor:**
+
+```typescript
+import { Injectable } from '@angular/core';
+import { HttpInterceptor, HttpRequest, HttpHandler } from '@angular/common/http';
+
+@Injectable()
+export class CsrfInterceptor implements HttpInterceptor {
+    
+    intercept(req: HttpRequest<any>, next: HttpHandler) {
+        // Get CSRF token from cookie
+        const csrfToken = this.getCsrfToken();
+        
+        if (csrfToken && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(req.method)) {
+            req = req.clone({
+                setHeaders: {
+                    'X-XSRF-TOKEN': csrfToken
+                }
+            });
+        }
+        
+        return next.handle(req);
+    }
+    
+    private getCsrfToken(): string | null {
+        // Implementation to get token from cookie
+        return document.cookie
+            .split(';')
+            .find(cookie => cookie.trim().startsWith('XSRF-TOKEN='))
+            ?.split('=')[1];
+    }
+}
+```
+
+**3. Enable Debug Logging for CSRF:**
 
 ```yaml
 logging:
   level:
-    com.ricardo.auth: DEBUG
-    org.springframework.security: DEBUG
+    org.springframework.security.web.csrf: DEBUG
 ```
 
----
+### Cross-Site Request Issues
 
-This guide covers the main changes and common issues after upgrading to v2.0.0. See also the troubleshooting files for
-refresh token, CORS, and password policy.
+**❌ Problem:** CSRF protection blocking legitimate cross-site requests
+
+**✅ Solutions:**
+
+**1. Configure SameSite Cookie Policy:**
+
+```yaml
+ricardo:
+  auth:
+    cookies:
+      access:
+        same-site: None  # Allow cross-site requests
+        secure: true     # Required when SameSite=None
+```
+
+**2. Handle CORS with Credentials:**
+
+```yaml
+spring:
+  web:
+    cors:
+      allowed-origins: 
+        - "https://yourfrontend.com"
+      allow-credentials: true  # Required for CSRF tokens
+      allowed-headers:
+        - "Content-Type"
+        - "X-XSRF-TOKEN"       # Allow CSRF token header
+```
+
+**3. Custom CSRF Token Repository for Cross-Site:**
+
+```java
+@Configuration
+public class CrossSiteCsrfConfig {
+    
+    @Bean
+    public CsrfTokenRepository csrfTokenRepository() {
+        CookieCsrfTokenRepository repository = CookieCsrfTokenRepository.withHttpOnlyFalse();
+        repository.setCookiePath("/");
+        repository.setCookieDomain(".yourdomain.com"); // Allow subdomain access
+        repository.setCookieMaxAge(3600); // 1 hour
+        return repository;
+    }
+}
+```

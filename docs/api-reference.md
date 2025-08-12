@@ -27,6 +27,102 @@ is no longer used for authentication (BREAKING CHANGE).**
 - Tokens are now set and read via HTTP-only, Secure cookies for improved security.
 - The frontend must send cookies with each request (see CORS and credentials).
 - All authentication flows require HTTPS in production for cookies to work.
+- **CSRF Protection**: Most authenticated endpoints require CSRF tokens (see CSRF Protection section below).
+
+## CSRF Protection
+
+**NEW in v3.0.0**: CSRF (Cross-Site Request Forgery) protection is now enabled by default for enhanced security.
+
+### How CSRF Works
+
+- CSRF tokens are automatically generated and stored in cookies (`XSRF-TOKEN`)
+- JavaScript can read the CSRF token from the cookie (not HttpOnly)
+- Include the CSRF token in requests via `X-XSRF-TOKEN` header or `_csrf` form parameter
+
+### Endpoints Exempt from CSRF
+
+The following public endpoints do **not** require CSRF tokens:
+- `POST /api/auth/login` (public authentication)
+- `POST /api/users/create` (public user registration)
+
+### Endpoints Requiring CSRF
+
+All other authenticated endpoints require CSRF tokens:
+- `POST /api/auth/refresh`
+- `POST /api/auth/revoke`
+- `PUT /api/users/update/{id}`
+- `DELETE /api/users/delete/{id}`
+
+### Frontend Integration
+
+**JavaScript/Fetch Example:**
+```javascript
+// Get CSRF token from cookie
+function getCsrfToken() {
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'XSRF-TOKEN') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
+}
+
+// Make authenticated request with CSRF token
+fetch('/api/auth/refresh', {
+    method: 'POST',
+    credentials: 'include', // Include cookies
+    headers: {
+        'Content-Type': 'application/json',
+        'X-XSRF-TOKEN': getCsrfToken() // Include CSRF token
+    }
+});
+```
+
+**jQuery Example:**
+```javascript
+// Set CSRF token for all AJAX requests
+$.ajaxSetup({
+    beforeSend: function(xhr, settings) {
+        if (settings.type === 'POST' || settings.type === 'PUT' || settings.type === 'DELETE') {
+            xhr.setRequestHeader('X-XSRF-TOKEN', getCsrfToken());
+        }
+    }
+});
+```
+
+**React/Axios Example:**
+```javascript
+import axios from 'axios';
+
+// Create axios instance with CSRF token interceptor
+const api = axios.create({
+    withCredentials: true
+});
+
+api.interceptors.request.use(config => {
+    const token = getCsrfToken();
+    if (token) {
+        config.headers['X-XSRF-TOKEN'] = token;
+    }
+    return config;
+});
+```
+
+### CSRF Error Response
+
+When CSRF token is missing or invalid, you'll receive:
+
+**Response (403 Forbidden):**
+```json
+{
+  "error": "Forbidden",
+  "message": "CSRF token missing or invalid",
+  "timestamp": "2024-01-15T10:30:00Z",
+  "path": "/api/auth/refresh"
+}
+```
 
 ## Authentication Endpoints
 
