@@ -5,32 +5,6 @@ All notable changes to the Ricardo Auth Spring Boot Starter will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [3.0.0] - 2025-08-11
-
-### Added
-
-- **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
-- **Repository Type Configuration**: Choose between JPA and PostgreSQL implementations
-- **Factory Pattern**: New `AuthUserFactory` and `UserFactory` for enhanced decoupling
-- **Helper Classes**: Added `UserRowMapper`, `UserSqlParameterMapper`, and `IdConverter`
-- **Enhanced Generics**: Improved type safety with explicit Role type parameters
-- **PostgreSQL Native Support**: Optimized PostgreSQL implementation alongside JPA
-- **CSRF Protection**: Enabled CSRF protection by default for all non public endpoints
-
-### Changed
-
-- **BREAKING**: All user IDs changed from `Long` to `UUID`
-- **BREAKING**: Enhanced service generics: `UserService<U,R,ID>` with Role information
-- **BREAKING**: Database schema requires migration to UUID primary keys
-- **Repository Configuration**: New `ricardo.auth.repository.type` property (JPA/POSTGRESQL)
-
-### Migration
-
-- Update your database schema to use UUID columns for primary keys
-- Change all ID references in your code from `Long` to `UUID`
-- Update API responses to expect UUID format
-- See [Database Configuration](docs/configuration/database.md) for detailed migration steps
-- Update the front end to handle csrf tokens in requests
 
 ## [1.0.0] - 2025-06-24
 
@@ -427,6 +401,33 @@ ricardo:
 - Review environment settings to ensure HTTPS in production.
 - See configuration examples in the README.md.
 
+## [3.0.0] - 2025-08-11
+
+### Added
+
+- **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
+- **Repository Type Configuration**: Choose between JPA and PostgreSQL implementations
+- **Factory Pattern**: New `AuthUserFactory` and `UserFactory` for enhanced decoupling
+- **Helper Classes**: Added `UserRowMapper`, `UserSqlParameterMapper`, and `IdConverter`
+- **Enhanced Generics**: Improved type safety with explicit Role type parameters
+- **PostgreSQL Native Support**: Optimized PostgreSQL implementation alongside JPA
+- **CSRF Protection**: Enabled CSRF protection by default for all non public endpoints
+
+### Changed
+
+- **BREAKING**: All user IDs changed from `Long` to `UUID`
+- **BREAKING**: Enhanced service generics: `UserService<U,R,ID>` with Role information
+- **BREAKING**: Database schema requires migration to UUID primary keys
+- **Repository Configuration**: New `ricardo.auth.repository.type` property (JPA/POSTGRESQL)
+
+### Migration
+
+- Update your database schema to use UUID columns for primary keys
+- Change all ID references in your code from `Long` to `UUID`
+- Update API responses to expect UUID format
+- See [Database Configuration](docs/configuration/database.md) for detailed migration steps
+- Update the front end to handle csrf tokens in requests
+
 ### Future Considerations
 
 > **Note**: The following features are planned for future development as the project evolves and based on community
@@ -455,7 +456,7 @@ If you need any of these features, please consider contributing! See [CONTRIBUTI
 
 ### Breaking Changes (Future Versions)
 
-> No breaking changes planned for 2.x series. Major version increments will be used for breaking changes.
+> No breaking changes planned for 3.x series. Major version increments will be used for breaking changes.
 
 ## Version Support Policy
 
