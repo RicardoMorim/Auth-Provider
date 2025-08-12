@@ -21,48 +21,25 @@ jobs:
           --health-retries 5
 
     steps:
-      - name: Checkout code
+      - name: Checkout source
         uses: actions/checkout@v4
 
-      - name: Set up Java
+      - name: Set up Java, Maven Central credentials, and GPG signing
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
+          distribution: temurin
           java-version: '21'
+          server-id: central                          # must match <id> in pom.xml
+          server-username: CENTRAL_USERNAME
+          server-password: CENTRAL_TOKEN
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase:  ${{ secrets.GPG_PASSPHRASE }}
 
-      - name: Create settings.xml
-        run: |
-          echo '<?xml version="1.0" encoding="UTF-8"?>' > settings.xml
-          echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"' >> settings.xml
-          echo '         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' >> settings.xml
-          echo '         xsi:schemaLocation="http://maven.apache.org/xsd/settings-1.0.0.xsd">' >> settings.xml
-          echo '  <servers>' >> settings.xml
-          echo '    <server>' >> settings.xml
-          echo '      <id>central</id>' >> settings.xml
-          echo '      <username>${{ secrets.CENTRAL_USERNAME }}</username>' >> settings.xml
-          echo '      <password>${{ secrets.CENTRAL_TOKEN }}</password>' >> settings.xml
-          echo '    </server>' >> settings.xml
-          echo '    <server>' >> settings.xml
-          echo '      <id>github</id>' >> settings.xml
-          echo '      <username>RicardoMorim</username>' >> settings.xml
-          echo '      <password>${{ secrets.GITHUB_TOKEN }}</password>' >> settings.xml
-          echo '    </server>' >> settings.xml
-          echo '  </servers>' >> settings.xml
-          echo '</settings>' >> settings.xml
-
-
-      - name: Import GPG key
-        run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
-          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
-          echo RELOADAGENT | gpg-connect-agent
-        env:
-          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
-
-      - name: Set GPG_TTY
-        run: echo "GPG_TTY=$(tty)" >> $GITHUB_ENV
+      - name: (Optional) List GPG keys to verify import
+        run: gpg --list-secret-keys --keyid-format LONG
 
       - name: Deploy to Maven Central
-        run: mvn clean deploy -Pcentral --settings settings.xml -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        run: mvn -B clean deploy -Pcentral -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
-          GPG_TTY: ${{ env.GPG_TTY }}
+          CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          CENTRAL_TOKEN:    ${{ secrets.CENTRAL_TOKEN }}
