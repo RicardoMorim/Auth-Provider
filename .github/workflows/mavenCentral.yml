@@ -31,7 +31,25 @@ jobs:
           java-version: '21'
 
       - name: Create settings.xml
-        run: echo "${{ secrets.MAVEN_SETTINGS }}" > settings.xml
+        run: |
+          echo '<?xml version="1.0" encoding="UTF-8"?>' > settings.xml
+          echo '<settings xmlns="http://maven.apache.org/SETTINGS/1.0.0"' >> settings.xml
+          echo '         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"' >> settings.xml
+          echo '         xsi:schemaLocation="http://maven.apache.org/xsd/settings-1.0.0.xsd">' >> settings.xml
+          echo '  <servers>' >> settings.xml
+          echo '    <server>' >> settings.xml
+          echo '      <id>central</id>' >> settings.xml
+          echo '      <username>${{ secrets.CENTRAL_USERNAME }}</username>' >> settings.xml
+          echo '      <password>${{ secrets.CENTRAL_TOKEN }}</password>' >> settings.xml
+          echo '    </server>' >> settings.xml
+          echo '    <server>' >> settings.xml
+          echo '      <id>github</id>' >> settings.xml
+          echo '      <username>RicardoMorim</username>' >> settings.xml
+          echo '      <password>${{ secrets.GITHUB_TOKEN }}</password>' >> settings.xml
+          echo '    </server>' >> settings.xml
+          echo '  </servers>' >> settings.xml
+          echo '</settings>' >> settings.xml
+
 
       - name: Import GPG key
         run: |
