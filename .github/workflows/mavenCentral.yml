@@ -30,10 +30,17 @@ jobs:
           distribution: 'temurin'
           java-version: '21'
 
+      # --- FIX: Import and configure GPG for CI ---
       - name: Import GPG key
         run: |
-          echo "${{ secrets.GPG_PRIVATE_KEY }}" > private.key
-          gpg --batch --import private.key
+          echo "${{ secrets.GPG_PRIVATE_KEY }}" | gpg --batch --import
+          echo "allow-loopback-pinentry" >> ~/.gnupg/gpg-agent.conf
+          echo RELOADAGENT | gpg-connect-agent
+        env:
+          GPG_PRIVATE_KEY: ${{ secrets.GPG_PRIVATE_KEY }}
+
+      - name: Set GPG_TTY
+        run: echo "GPG_TTY=$(tty)" >> $GITHUB_ENV
 
       - name: Create Maven settings.xml
         run: |
@@ -57,5 +64,8 @@ jobs:
           </settings>
           EOF
 
+
       - name: Deploy to Maven Central
-        run: mvn clean deploy -Pcentral --settings settings.xml
+        run: mvn clean deploy -Pcentral --settings settings.xml -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
+        env:
+          GPG_TTY: ${{ env.GPG_TTY }}
