@@ -435,6 +435,10 @@ ricardo:
 - Fixed wrong name of a path variable in the `update/{id}` endpoint of the `UserController` class. It was previously
   named `id` but should be `stringId` to match the method signature and documentation.
 
+## [3.0.2] - 2025-08-13
+
+### Added
+- Added a findByUsername method to the UserService interface for better user lookup by username.
 
 ### Future Considerations
 

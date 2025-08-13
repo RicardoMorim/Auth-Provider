@@ -84,4 +84,10 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         return userRepository.findByEmail(email)
                 .filter(user -> encoder.matches(rawPassword, user.getPassword()));
     }
+
+    @Override
+    public U getUserByUserName(String username) {
+        return userRepository.findByUsername(username)
+                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+    }
 }

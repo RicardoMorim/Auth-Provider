@@ -79,4 +79,6 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @return the optional
      */
     Optional<U> authenticate(String email, String rawPassword, PasswordEncoder encoder);
+
+    U getUserByUserName(String userName);
 }
