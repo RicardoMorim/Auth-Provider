@@ -31,6 +31,7 @@ class RedisTokenBlockListTest {
      */
     @BeforeEach
     void cleanRedis() {
+        assertNotNull(redisTemplate.getConnectionFactory());
         redisTemplate.getConnectionFactory().getConnection().flushDb();
     }
 

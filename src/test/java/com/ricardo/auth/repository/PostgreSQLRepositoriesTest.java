@@ -41,7 +41,7 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-        "ricardo.auth.repositories.type=POSTGRESQL",
+        "ricardo.auth.repository.type=POSTGRESQL",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
 })@Transactional
 class PostgreSQLRepositoriesTest {
@@ -50,7 +50,7 @@ class PostgreSQLRepositoriesTest {
      * The constant postgres.
      */
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18beta3")
             .withDatabaseName("AuthLibraryTest")
             .withUsername("postgres")
             .withPassword("8080");

@@ -5,6 +5,7 @@ import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.AuthUser;
+import com.ricardo.auth.domain.user.domainevents.UserCreatedEvent;
 import com.ricardo.auth.repository.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -21,12 +22,14 @@ import java.util.Optional;
 public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements UserService<U, R, ID> {
 
     private final UserRepository<U, R, ID> userRepository;
+    private final EventPublisher eventPublisher;
     /**
      * Instantiates a new User service.
      *
      * @param userRepository the user repository
      */
-    public UserServiceImpl(UserRepository<U, R, ID> userRepository) {
+    public UserServiceImpl(UserRepository<U, R, ID> userRepository, EventPublisher eventPublisher) {
+        this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
     }
 
@@ -41,6 +44,8 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         if (userRepository.existsByEmail(user.getEmail())) {
             throw new DuplicateResourceException("Email already exists: " + user.getEmail());
         }
+
+        eventPublisher.publishEvent(new UserCreatedEvent(user.getUsername(), user.getEmail(), user.getRoles()));
         return userRepository.saveUser(user);
     }
 

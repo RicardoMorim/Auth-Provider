@@ -98,10 +98,10 @@ class AuthPropertiesTest {
         AuthProperties properties = new AuthProperties();
 
         // Act
-        properties.getRefreshTokens().getRepository().setType(AuthProperties.RepositoryType.POSTGRESQL);
+        properties.getRepository().setType(AuthProperties.RepositoryType.POSTGRESQL);
 
         // Assert
-        assertThat(properties.getRefreshTokens().getRepository().getType()).isEqualTo(AuthProperties.RepositoryType.POSTGRESQL);
+        assertThat(properties.getRepository().getType()).isEqualTo(AuthProperties.RepositoryType.POSTGRESQL);
     }
 
     /**
@@ -111,11 +111,11 @@ class AuthPropertiesTest {
     void shouldSupportDatabaseTableConfiguration() {
         AuthProperties properties = new AuthProperties();
 
-        properties.getRefreshTokens().getRepository().getDatabase().setRefreshTokensTable("custom_tokens");
-        assertThat(properties.getRefreshTokens().getRepository().getDatabase().getRefreshTokensTable()).isEqualTo("custom_tokens");
+        properties.getRepository().getDatabase().setRefreshTokensTable("custom_tokens");
+        assertThat(properties.getRepository().getDatabase().getRefreshTokensTable()).isEqualTo("custom_tokens");
 
-        properties.getRefreshTokens().getRepository().getDatabase().setRefreshTokensTable("custom_users");
-        assertThat(properties.getRefreshTokens().getRepository().getDatabase().getRefreshTokensTable()).isEqualTo("custom_users");
+        properties.getRepository().getDatabase().setRefreshTokensTable("custom_users");
+        assertThat(properties.getRepository().getDatabase().getRefreshTokensTable()).isEqualTo("custom_users");
     }
 
     /**

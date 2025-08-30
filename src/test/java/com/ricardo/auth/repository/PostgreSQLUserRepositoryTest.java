@@ -43,7 +43,7 @@ import static org.assertj.core.api.Assertions.*;
         "spring.datasource.username=postgres",
         "spring.datasource.password=8080",
         "spring.datasource.driver-class-name=org.postgresql.Driver",
-        "ricardo.auth.repositories.type=POSTGRESQL",
+        "ricardo.auth.repository.type=POSTGRESQL",
         // Disable JPA/Hibernate completely when using PostgreSQL
         "spring.jpa.hibernate.ddl-auto=none",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
@@ -52,7 +52,7 @@ import static org.assertj.core.api.Assertions.*;
 class PostgreSQLUserRepositoryTest {
 
     @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:17")
+    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18beta3")
             .withDatabaseName("AuthLibraryTest")
             .withUsername("postgres")
             .withPassword("8080");

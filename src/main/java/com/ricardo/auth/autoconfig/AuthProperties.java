@@ -67,6 +67,8 @@ public class AuthProperties {
      */
     private Cookies cookies = new Cookies();
 
+    private Repositories repository = new Repositories();
+
     /**
      * Repository types for refresh tokens
      */
@@ -240,10 +242,6 @@ public class AuthProperties {
 
         private boolean autoCleanup = true;
 
-        /**
-         * Repository configuration specifically for refresh tokens
-         */
-        private Repositories repository = new Repositories();
     }
 
     /**

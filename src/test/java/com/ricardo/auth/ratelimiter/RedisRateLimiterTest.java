@@ -31,6 +31,7 @@ class RedisRateLimiterTest {
      */
     @BeforeEach
     void cleanRedis() {
+        assertNotNull(redisTemplate.getConnectionFactory());
         redisTemplate.getConnectionFactory().getConnection().flushDb();
     }
 

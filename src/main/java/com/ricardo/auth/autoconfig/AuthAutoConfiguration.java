@@ -63,7 +63,7 @@ public class AuthAutoConfiguration {
 
     // ========== JPA CONFIGURATION ==========
     @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "JPA", matchIfMissing = true)
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "JPA", matchIfMissing = true)
     @EntityScan(basePackages = "com.ricardo.auth.domain")
     @EnableJpaRepositories(
             basePackages = "com.ricardo.auth.repository",
@@ -98,8 +98,8 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository) {
-        return new UserServiceImpl<>(userRepository);
+    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher) {
+        return new UserServiceImpl<>(userRepository, eventPublisher);
     }
 
     @Bean
@@ -231,7 +231,7 @@ public class AuthAutoConfiguration {
      * PostgreSQL Refresh Token Repository Configuration (EXPLICIT ONLY)
      */
     @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     @ConditionalOnMissingBean(RefreshTokenRepository.class)
     static class PostgreSQLRefreshTokenRepositoryConfiguration {
         /**
@@ -269,8 +269,8 @@ public class AuthAutoConfiguration {
         }
     }
 
-    @Component
-    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
+    @Component("RefreshTokenSchemaInitializer")
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class RefreshTokenSchemaInitializer {
 
         private final JdbcTemplate jdbcTemplate;
@@ -329,8 +329,8 @@ public class AuthAutoConfiguration {
         }
     }
 
-    @Component
-    @ConditionalOnProperty(prefix = "ricardo.auth.repositories", name = "type", havingValue = "POSTGRESQL")
+    @Component("userSchemaInitializer")
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class UserSchemaInitializer {
 
         private final JdbcTemplate jdbcTemplate;
