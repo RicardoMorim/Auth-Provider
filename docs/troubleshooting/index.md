@@ -6,8 +6,11 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 
 **App won't start?** → [Startup Issues](startup-issues.md)  
 **Login fails?** → [Authentication Issues](authentication.md)  
+**Cookie authentication not working?** → [Authentication Issues](authentication.md)  
+**CORS errors?** → [Authentication Issues](authentication.md)  
 **Token refresh fails?** → [Refresh Token Issues](refresh-token.md)  
 **Password rejected?** → [Password Policy Issues](password-policy.md)  
+**Password reset not working?** → [Password Reset Issues](password-reset.md)  
 **Database errors?** → [Database Issues](database.md)  
 **Performance problems?** → [Performance Issues](performance.md)
 
@@ -25,11 +28,13 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 
 ### 🔐 **Authentication & Security**
 
-| Issue              | Guide                                      | Common Causes                     |
-|--------------------|--------------------------------------------|-----------------------------------|
-| Login always fails | [Authentication Issues](authentication.md) | Wrong credentials, user not found |
-| JWT token invalid  | [Authentication Issues](authentication.md) | Expired token, wrong secret       |
-| CORS errors        | [Authentication Issues](authentication.md) | Missing CORS configuration        |
+| Issue                       | Guide                                      | Common Causes                              |
+|-----------------------------|--------------------------------------------|-------------------------------------------|
+| Cookie authentication fails | [Authentication Issues](authentication.md) | CORS not configured, HTTPS required       |
+| Login always fails          | [Authentication Issues](authentication.md) | Wrong credentials, user not found         |
+| CORS errors                 | [Authentication Issues](authentication.md) | Missing CORS configuration, credentials   |
+| HTTPS redirect issues       | [Authentication Issues](authentication.md) | SSL certificate problems                  |
+| Password reset fails        | [Password Reset Issues](password-reset.md) | Email not configured, token expired       |
 
 ### 🔑 **Password Policy**
 

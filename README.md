@@ -17,25 +17,32 @@ minimal configuration required.
 
 **Authentication & Security**
 
-- 🔑 JWT access and refresh token generation, validation, and refresh
+- 🔑 JWT access and refresh token generation, validation, and refresh via secure cookies
 - 🔄 Secure refresh token system with automatic rotation
 - 🛡️ Configurable password policies with strength validation
 - 🔒 BCrypt password encryption
-- 👥 Role-based access control (RBAC)
+- 👥 Role-based access control (RBAC) with full role management API
 - 🚫 Protection against common weak passwords
 - 🗄️ Flexible token storage (JPA/PostgreSQL)
-- ⛔ Token blocklist (in-memory or Redis) for revogação instantânea de tokens
-- 🚦 Rate limiting (in-memory ou Redis) para proteção contra brute-force e abuso
-- 🍪 Secure cookies para tokens, com flags de segurança e opção de forçar HTTPS
+- ⛔ Token blocklist (in-memory or Redis) for instant token revocation
+- 🚦 Rate limiting (in-memory or Redis) for brute-force and abuse protection
+- 🍪 Secure HTTP-only cookies with configurable security flags
 - 🛡️ CSRF protection with cookie-based tokens for enhanced security
+- 📧 Password reset system with email integration and OWASP compliance
+- 🌐 Comprehensive CORS configuration with credentials support
+- 📖 Complete OpenAPI/Swagger documentation integration
 
 **Ready-to-Use API Endpoints**
 
-- `/api/auth/login` - User authentication with refresh token
-- `/api/auth/refresh` - Refresh access token using refresh token
+- `/api/auth/login` - User authentication with secure cookies
+- `/api/auth/refresh` - Refresh access token using refresh cookie
 - `/api/auth/register` - User registration
-- `/api/auth/revoke` - Revoga tokens (ADMIN only)
+- `/api/auth/revoke` - Revoke tokens (ADMIN only)
+- `/api/auth/me` - Get current user information
+- `/api/auth/password-reset/request` - Request password reset via email
+- `/api/auth/password-reset/confirm` - Confirm password reset with token
 - `/api/users/*` - Complete user management CRUD
+- `/api/roles/*` - Role management API with proper authorization
 
 **Developer Experience**
 
@@ -104,21 +111,28 @@ Add the following dependency to your `pom.xml`:
 </dependency>
 ```
 
-## 🚨 Breaking Changes in v3.0.0
+## 🚨 Breaking Changes in v4.0.0
 
-**UUID Primary Keys:** All user IDs are now UUID instead of Long for better scalability and security.
+**Cookie-Only Authentication:** Authentication now exclusively uses secure HTTP-only cookies instead of Bearer tokens.
 
-**What You Need to Change:**
-- Update your database schema to use UUID columns
-- Change all ID references in your code from `Long` to `UUID`
-- Update API responses to expect UUID format (e.g., `550e8400-e29b-41d4-a716-446655440000`)
+**What Changed:**
+- **Cookie Authentication:** All endpoints now use secure HTTP-only cookies (`access_token`, `refresh_token`)
+- **No More Bearer Tokens:** Authorization header authentication has been removed for security
+- **HTTPS Required:** Secure cookies require HTTPS in production environments
+- **Enhanced CORS:** Comprehensive CORS configuration with credentials support
+- **OpenAPI Documentation:** Complete Swagger/OpenAPI integration with cookie authentication
+- **Password Reset System:** OWASP-compliant password reset with email integration
+- **Role Management API:** Full CRUD operations for roles with proper authorization
+- **Domain Events:** Comprehensive audit trail with domain event publishing
+- **Enhanced Security:** Rate limiting, input validation, and sanitization improvements
 
-**New Features:**
-- **Repository Types:** Choose between JPA and PostgreSQL implementations
-- **Enhanced Decoupling:** New factory pattern for user creation
-- **Helper Classes:** `UserRowMapper`, `UserSqlParameterMapper`, `IdConverter`
+**What You Need to Update:**
+- **Frontend:** Remove Authorization headers, ensure cookies are sent with requests
+- **Configuration:** Add CORS configuration for your frontend domains
+- **HTTPS:** Configure SSL/TLS for production environments
+- **Email:** Configure email settings for password reset functionality
 
-**Migration Guide:** See [Database Configuration](docs/configuration/database.md) for detailed migration steps.
+**Migration Guide:** See [Security Guide](docs/security-guide.md) and [Configuration Guide](docs/configuration/) for detailed migration steps.
 
 ## ⚡ Quick Start
 
@@ -131,7 +145,7 @@ Add the following dependency to your `pom.xml`:
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>3.0.1</version>
+    <version>4.0.0</version>
 </dependency>
 
         <!-- Required: JPA support -->
@@ -270,7 +284,7 @@ ricardo:
         enabled: true
       user:
         enabled: true
-    # Token blocklist (revogação de tokens)
+    # Token blocklist (token revocation)
     token-blocklist:
       enabled: true
       type: memory # memory|redis
@@ -280,7 +294,7 @@ ricardo:
       type: memory # memory|redis
       max-requests: 100
       time-window-ms: 60000
-    # Cookies para tokens
+    # Secure cookies for tokens
     cookies:
       access:
         secure: true
@@ -292,9 +306,27 @@ ricardo:
         http-only: true
         same-site: Strict
         path: /api/auth/refresh
-    # Forçar HTTPS (recomendado em produção)
+    # Force HTTPS (recommended in production)
     redirect-https: true
-    # Configuração Redis (se usar Redis para blocklist/rate-limiter)
+    # CORS configuration
+    cors:
+      allowed-origins: ["http://localhost:3000", "https://yourdomain.com"]
+      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed-headers: ["*"]
+      allow-credentials: true
+      max-age: 3600
+    # Email configuration for password reset
+    email:
+      enabled: true
+      from: "noreply@yourdomain.com"
+      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
+    # Password reset configuration
+    password-reset:
+      enabled: true
+      token-expiration: 3600000 # 1 hour
+      max-attempts: 3
+      cleanup-interval: 3600000
+    # Redis configuration (if using Redis for blocklist/rate-limiter)
     redis:
       host: localhost
       port: 6379
@@ -318,6 +350,13 @@ ricardo:
       port: 6379
       password: "senha"
       database: 0
+    cors:
+      allowed-origins: ["https://yourdomain.com"]
+      allow-credentials: true
+    email:
+      enabled: true
+      from: "noreply@yourdomain.com"
+      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
 ```
 
 ### Password Policy Configuration
@@ -387,9 +426,34 @@ Revokes an access or refresh token. Example usage:
 
 ```bash
 curl -X POST http://localhost:8080/api/auth/revoke \
+  --cookie "access_token=ADMIN_ACCESS_TOKEN" \
   -H "Content-Type: application/json" \
-  -H "Authorization: Bearer {accessToken}" \
   -d '"TOKEN_TO_REVOKE"'
+```
+
+#### POST `/api/auth/password-reset/request`
+
+Requests a password reset via email.
+
+```bash
+curl -X POST http://localhost:8080/api/auth/password-reset/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com"
+  }'
+```
+
+#### POST `/api/auth/password-reset/confirm`
+
+Confirms password reset with token from email.
+
+```bash
+curl -X POST http://localhost:8080/api/auth/password-reset/confirm \
+  -H "Content-Type: application/json" \
+  -d '{
+    "token": "reset-token-from-email",
+    "newPassword": "NewSecurePass@123!"
+  }'
 ```
 
 #### GET `/api/auth/me`
@@ -398,8 +462,9 @@ Returns information about the authenticated user.
 
 **Authentication:**
 
-- All endpoints (except user endpoints) require authentication via secure cookies (`access_token`, `refresh_token`).
-- The Authorization header is no longer used for authentication (except for legacy user endpoints).
+- All endpoints use secure HTTP-only cookies (`access_token`, `refresh_token`) for authentication
+- CORS must be configured to allow credentials from your frontend domain
+- HTTPS is required in production for secure cookies to function properly
 
 **Response:**
 
@@ -493,6 +558,48 @@ Update user information (requires ADMIN role or ownership).
 
 Delete a user (requires ADMIN role or ownership).
 
+### Role Management Endpoints
+
+#### GET `/api/roles`
+
+Get all available roles (requires authentication).
+
+**Response:**
+```json
+[
+  {
+    "id": 1,
+    "name": "ROLE_USER",
+    "description": "Standard user role"
+  },
+  {
+    "id": 2,
+    "name": "ROLE_ADMIN",
+    "description": "Administrator role"
+  }
+]
+```
+
+#### POST `/api/roles` (ADMIN only)
+
+Create a new role.
+
+**Request:**
+```json
+{
+  "name": "ROLE_MODERATOR",
+  "description": "Moderator role with limited admin privileges"
+}
+```
+
+#### PUT `/api/roles/{id}` (ADMIN only)
+
+Update an existing role.
+
+#### DELETE `/api/roles/{id}` (ADMIN only)
+
+Delete a role (if not assigned to any users).
+
 ## 🔐 Security
 
 ### Cookie-Based Tokens (BREAKING CHANGE)
@@ -525,11 +632,12 @@ Protects sensitive endpoints from brute-force and abuse. Supports in-memory or R
 
 ## 🚨 Breaking Changes & Migration Notes
 
-- **All authentication now uses secure cookies (`HttpOnly`, `Secure`, `SameSite`).**
-- **The Authorization header is no longer used for authentication (except for legacy user endpoints).**
-- **HTTPS is required in production for cookies to work.**
-- **Blocklist and rate limiting are enabled by default.**
-- **Token revocation endpoint `/api/auth/revoke` (ADMIN) can revoke any token.**
+- **All authentication now uses secure HTTP-only cookies instead of Authorization headers**
+- **CORS configuration is required for frontend applications**
+- **HTTPS is required in production for secure cookies to function**
+- **Email configuration is required for password reset functionality**
+- **Enhanced security with rate limiting and input validation enabled by default**
+- **Complete OpenAPI documentation available at `/swagger-ui.html`**
 
 ## 🎯 Usage Examples
 

@@ -4,27 +4,113 @@ This guide covers security best practices and considerations when using the Rica
 
 ---
 
-> **Enhanced Security in v3.0.0:**
-> - **UUID Primary Keys:** Better security and scalability with UUID-based IDs
-> - **Repository Types:** Choose optimized implementation for your database
-> - **Enhanced Decoupling:** Factory pattern improves security architecture
+> **Major Security Enhancements in v4.0.0:**
+> - **Cookie-Only Authentication:** Exclusive use of secure HTTP-only cookies for maximum XSS protection
+> - **Enhanced CORS:** Comprehensive CORS configuration with credentials support
+> - **Password Reset System:** OWASP-compliant password reset with email integration
+> - **Domain Events:** Complete audit trail with event publishing for security monitoring
+> - **Advanced Security:** Enhanced input validation, sanitization, and security headers
+> - **OpenAPI Documentation:** Complete Swagger integration with security schemes
 
 ## Security Overview
 
-The Ricardo Auth Starter implements several security mechanisms:
+The Ricardo Auth Starter implements comprehensive security mechanisms:
 
-- **JWT Token Authentication**: Stateless authentication using JSON Web Tokens
+- **Cookie-Only Authentication**: Secure HTTP-only cookies with configurable security flags
+- **Enhanced CORS**: Comprehensive cross-origin configuration with credentials support
 - **UUID Primary Keys**: Enhanced security and scalability with UUID-based IDs
 - **Password Encryption**: BCrypt hashing with secure salts
-- **Role-Based Access Control**: Fine-grained permissions based on user roles
-- **Input Validation**: Protection against malicious input
-- **CORS Protection**: Cross-Origin Resource Sharing controls
-- **SQL Injection Prevention**: JPA/Hibernate protection
-- **Cookie-based Authentication**: All tokens are sent via secure cookies (HttpOnly, Secure, SameSite)
-- **Blocklist and Rate Limiting**: Prevent token reuse and abuse (in-memory or Redis)
-- **CSRF Protection**: Cross-Site Request Forgery protection with cookie-based tokens (NEW in v3.0.0)
+- **Role-Based Access Control**: Fine-grained permissions with full role management API
+- **Input Validation & Sanitization**: Advanced protection against injection attacks
+- **CSRF Protection**: Cross-Site Request Forgery protection with token-based validation
+- **Password Reset System**: OWASP-compliant password reset with email integration
+- **Domain Events**: Comprehensive audit trail for security monitoring
+- **Rate Limiting**: Protection against brute-force and abuse attacks
+- **Token Blocklist**: Instant token revocation capabilities
+- **HTTPS Enforcement**: Automatic HTTPS redirection in production
 
-## JWT Security
+## Cookie-Based Authentication Security
+
+### Overview
+
+Starting with v4.0.0, the Ricardo Auth Starter exclusively uses secure HTTP-only cookies for authentication, providing maximum protection against XSS attacks and improving overall security posture.
+
+### Cookie Security Features
+
+**HTTP-Only Cookies:**
+- Prevents JavaScript access to tokens, eliminating XSS token theft
+- Automatically handled by browsers for authentication
+- Secure transmission only over HTTPS in production
+
+**Security Flags:**
+```yaml
+ricardo:
+  auth:
+    cookies:
+      access:
+        secure: true        # HTTPS only
+        http-only: true     # No JavaScript access
+        same-site: Strict   # CSRF protection
+        path: /             # Scope to entire application
+        max-age: 900        # 15 minutes
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: /api/auth/refresh  # Scope to refresh endpoint only
+        max-age: 604800     # 7 days
+```
+
+### CORS Configuration for Cookie Authentication
+
+**Backend Configuration:**
+```yaml
+ricardo:
+  auth:
+    cors:
+      allowed-origins: ["https://yourdomain.com", "https://app.yourdomain.com"]
+      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed-headers: ["*"]
+      allow-credentials: true  # Required for cookies
+      max-age: 3600
+```
+
+**Frontend Integration:**
+```javascript
+// Ensure cookies are sent with all requests
+fetch('/api/auth/me', {
+  credentials: 'include'  // Always include cookies
+});
+
+// Axios configuration
+axios.defaults.withCredentials = true;
+
+// jQuery configuration
+$.ajaxSetup({
+  xhrFields: {
+    withCredentials: true
+  }
+});
+```
+
+### HTTPS Requirements
+
+**Production Security:**
+- HTTPS is mandatory for secure cookies in production
+- Automatic HTTPS redirection enabled by default
+- SSL/TLS certificates required
+
+**Development Configuration:**
+```yaml
+ricardo:
+  auth:
+    redirect-https: false  # Disable for development only
+    cookies:
+      access:
+        secure: false      # Allow HTTP in development
+      refresh:
+        secure: false
+```
 
 ### Token Generation
 
@@ -271,6 +357,109 @@ Monitor these metrics:
 - Password policy violation rates
 - Common password attempt frequency
 - Password strength distribution
+
+## Password Reset Security
+
+### OWASP-Compliant Implementation
+
+The Ricardo Auth Starter implements a secure password reset system following OWASP guidelines:
+
+**Security Features:**
+- **Time-Limited Tokens**: Reset tokens expire after configurable time period
+- **Cryptographically Secure Tokens**: Uses SecureRandom for token generation
+- **Rate Limiting**: Prevents password reset abuse and enumeration attacks
+- **Email Verification**: Requires access to user's email account
+- **Single-Use Tokens**: Tokens are invalidated after use
+- **Audit Trail**: Complete logging via domain events
+
+### Configuration
+
+```yaml
+ricardo:
+  auth:
+    password-reset:
+      enabled: true
+      token-expiration: 3600000    # 1 hour (recommended)
+      max-attempts: 3              # Per user per time window
+      cleanup-interval: 3600000    # Clean expired tokens hourly
+    email:
+      enabled: true
+      from: "noreply@yourdomain.com"
+      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
+```
+
+### Security Best Practices
+
+**Token Security:**
+- **Short Expiration**: 15-60 minutes maximum
+- **Strong Randomness**: 256-bit cryptographically secure tokens
+- **Single Use**: Tokens invalidated immediately after use
+- **Database Storage**: Hashed token storage (never plain text)
+
+**Rate Limiting:**
+```yaml
+ricardo:
+  auth:
+    rate-limiter:
+      enabled: true
+      max-requests: 3      # Max reset requests per hour
+      time-window-ms: 3600000
+```
+
+**Email Security:**
+- **HTTPS Links**: Always use HTTPS for reset URLs
+- **Clear Instructions**: Include security warnings in emails
+- **Branded Templates**: Use recognizable email templates
+- **SPF/DKIM**: Configure email authentication
+
+### Frontend Integration
+
+**Secure Reset Flow:**
+```javascript
+// 1. Request password reset
+const requestReset = async (email) => {
+  const response = await fetch('/api/auth/password-reset/request', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+    credentials: 'include'
+  });
+  
+  if (response.ok) {
+    // Show success message (don't reveal if email exists)
+    showMessage('If the email exists, a reset link has been sent.');
+  }
+};
+
+// 2. Confirm password reset
+const confirmReset = async (token, newPassword) => {
+  const response = await fetch('/api/auth/password-reset/confirm', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ token, newPassword }),
+    credentials: 'include'
+  });
+  
+  if (response.ok) {
+    // Redirect to login
+    window.location.href = '/login';
+  }
+};
+```
+
+### Monitoring and Alerting
+
+**Security Monitoring:**
+- Track password reset request patterns
+- Monitor for enumeration attempts
+- Alert on unusual reset volumes
+- Log all reset activities via domain events
+
+**Metrics to Track:**
+- Reset requests per user/IP
+- Token usage patterns
+- Failed reset attempts
+- Email delivery success rates
 
 ## Role-Based Access Control (RBAC)
 

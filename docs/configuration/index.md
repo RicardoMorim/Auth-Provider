@@ -1,11 +1,11 @@
 # Configuration Overview
 
-> **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
-    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
-    development only.
-> - New blocklist and rate limiting features are available (see below).
-> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+> **Breaking Changes (v4.0.0):**
+> - **Cookie-Only Authentication**: All authentication now uses secure HTTP-only cookies exclusively
+> - **CORS Configuration Required**: Frontend applications must configure CORS with credentials support
+> - **HTTPS Required**: Secure cookies require HTTPS in production environments
+> - **Email Integration**: Password reset functionality requires email configuration
+> - **Enhanced Security**: Advanced input validation, sanitization, and security headers enabled by default
 
 Complete guide to configuring Ricardo Auth for your specific needs.
 
@@ -23,10 +23,25 @@ ricardo:
       secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
       access-token-expiration: 86400000
       refresh-token-expiration: 604800000
-    # NEW in v3.0.0: CSRF protection is enabled by default
-    # No additional configuration needed - works out of the box
-    # Public endpoints (/api/auth/login, /api/users/create) are automatically exempt
-    # --- Blocklist and Rate Limiter ---
+    # CORS configuration (REQUIRED for frontend apps)
+    cors:
+      allowed-origins: ["http://localhost:3000", "https://yourdomain.com"]
+      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
+      allowed-headers: ["*"]
+      allow-credentials: true
+      max-age: 3600
+    # Email configuration for password reset
+    email:
+      enabled: true
+      from: "noreply@yourdomain.com"
+      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
+    # Password reset configuration
+    password-reset:
+      enabled: true
+      token-expiration: 3600000 # 1 hour
+      max-attempts: 3
+      cleanup-interval: 3600000
+    # Token blocklist and rate limiting
     token-blocklist:
       enabled: true
       type: memory   # or 'redis' for distributed blocklist
@@ -35,19 +50,20 @@ ricardo:
       type: memory   # or 'redis' for distributed rate limiting
       max-requests: 100
       time-window-ms: 60000
-    # --- Cookie Security ---
+    # Secure cookies (REQUIRED)
     cookies:
       access:
         secure: true      # Set to false for local dev only
         http-only: true
-        same-site: Strict # Strict/Lax/None
+        same-site: Strict
         path: /
       refresh:
         secure: true
         http-only: true
         same-site: Strict
         path: /api/auth/refresh
-    redirect-https: true   # Enforce HTTPS (recommended for production)```
+    redirect-https: true   # Enforce HTTPS (recommended for production)
+```
 
   That's it! Ricardo Auth will use sensible defaults for everything else.
 
@@ -96,7 +112,7 @@ ricardo:
 
 ### **Development Environment**
 Quick setup for local development:
-  ```yaml
+```yaml
 ricardo:
   auth:
     jwt:
@@ -106,19 +122,26 @@ ricardo:
     password-policy:
       min-length: 6         # Relaxed for testing
       require-special-chars: false
-    # --- NEW: Blocklist and Rate Limiter ---
+    # CORS for development
+    cors:
+      allowed-origins: ["http://localhost:3000", "http://localhost:3001"]
+      allow-credentials: true
+    # Email configuration (optional for development)
+    email:
+      enabled: false        # Disable email for development
+    # Token blocklist and rate limiting
     token-blocklist:
       enabled: true
-      type: memory   # or 'redis' for distributed blocklist
+      type: memory
     rate-limiter:
       enabled: true
-      type: memory   # or 'redis' for distributed rate limiting
+      type: memory
       max-requests: 100
       time-window-ms: 60000
-    # --- NEW: Cookie Security ---
+    # Cookie security (relaxed for development)
     cookies:
       access:
-        secure: false      # Set to true in production
+        secure: false      # Allow HTTP in development
         http-only: true
         same-site: Lax
         path: /
@@ -127,7 +150,7 @@ ricardo:
         http-only: true
         same-site: Lax
         path: /api/auth/refresh
-  redirect-https: false   # Disable HTTPS redirect for development
+    redirect-https: false   # Disable HTTPS redirect for development
 ```
 
 👉 **See:** [Basic Configuration](basic.md#development-setup)

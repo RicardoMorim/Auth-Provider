@@ -4,12 +4,12 @@ This section provides practical, real-world examples for implementing Ricardo Au
 
 ---
 
-> **Breaking Change (v2.0.0):**
-> - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
-    flags by default. You must use HTTPS in production or set `ricardo.auth.cookies.access.secure: false` for local
-    development only.
-> - New blocklist and rate limiting features are available (see below).
-> - New `/api/auth/revoke` admin endpoint for revoking tokens (access or refresh).
+> **Breaking Changes (v4.0.0):**
+> - **Cookie-Only Authentication**: All authentication now uses secure HTTP-only cookies exclusively
+> - **CORS Configuration Required**: Frontend applications must configure CORS with credentials support
+> - **HTTPS Required**: Secure cookies require HTTPS in production environments
+> - **Email Integration**: Password reset functionality requires email configuration
+> - **Enhanced Security**: Advanced input validation, sanitization, and security headers enabled by default
 
 ## 🚀 Quick Navigation
 
