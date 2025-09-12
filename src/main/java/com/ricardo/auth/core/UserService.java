@@ -81,4 +81,6 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
     Optional<U> authenticate(String email, String rawPassword, PasswordEncoder encoder);
 
     U getUserByUserName(String userName);
+
+    int countAdmins();
 }

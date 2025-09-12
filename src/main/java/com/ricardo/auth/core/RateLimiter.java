@@ -18,4 +18,17 @@ public interface RateLimiter {
      * @return the boolean
      */
     boolean isEnabled();
+
+    /**
+     * Change settings.
+     *
+     * @param maxRequests the max requests
+     * @param windowMillis the window millis
+     */
+    void changeSettings(int maxRequests, long windowMillis);
+
+    /**
+     * Clear all.
+     */
+    void clearAll();
 }
