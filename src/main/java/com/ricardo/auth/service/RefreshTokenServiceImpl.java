@@ -48,6 +48,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     }
 
     @Override
+    @Transactional
     public RefreshToken createRefreshToken(U user) {
         cleanupOldestTokensForUser(user.getEmail());
 

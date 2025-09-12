@@ -2,10 +2,12 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.Role;
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.domainevents.UserDeletedEvent;
+import com.ricardo.auth.domain.domainevents.UserUpdatedEvent;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.AuthUser;
-import com.ricardo.auth.domain.user.domainevents.UserCreatedEvent;
+import com.ricardo.auth.domain.domainevents.UserCreatedEvent;
 import com.ricardo.auth.repository.user.UserRepository;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -23,14 +25,19 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
 
     private final UserRepository<U, R, ID> userRepository;
     private final EventPublisher eventPublisher;
+    private final PasswordEncoder passwordEncoder;
+    
     /**
      * Instantiates a new User service.
      *
      * @param userRepository the user repository
+     * @param eventPublisher the event publisher
+     * @param passwordEncoder the password encoder
      */
-    public UserServiceImpl(UserRepository<U, R, ID> userRepository, EventPublisher eventPublisher) {
+    public UserServiceImpl(UserRepository<U, R, ID> userRepository, EventPublisher eventPublisher, PasswordEncoder passwordEncoder) {
         this.eventPublisher = eventPublisher;
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     @Override
@@ -52,11 +59,20 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     @Override
     public U updateUser(ID id, U userDetails) {
         U user = getUserById(id);
+        
+        // Validate email uniqueness if changing email
+        if (!user.getEmail().equals(userDetails.getEmail()) && 
+            userRepository.existsByEmail(userDetails.getEmail())) {
+            throw new DuplicateResourceException("Email already exists: " + userDetails.getEmail());
+        }
+
+        user.setRoles(userDetails.getRoles());
         user.setUsername(userDetails.getUsername());
         user.setEmail(userDetails.getEmail());
-        if (userDetails.getPassword() != null && !userDetails.getPassword().isEmpty()) {
-            user.setPassword(userDetails.getPassword());
-        }
+        
+        // PASSWORD IS NOT UPDATED HERE. CHECK THE PASSWORD RESET CONTROLLER FOR THAT
+
+        eventPublisher.publishEvent(new UserUpdatedEvent(user.getUsername(), user.getEmail()));
         return userRepository.saveUser(user);
     }
 
@@ -65,6 +81,10 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         if (!userRepository.existsById(id)) {
             throw new ResourceNotFoundException("User not found with id: " + id);
         }
+
+        U user = getUserById(id);
+
+        eventPublisher.publishEvent(new UserDeletedEvent(user.getUsername(), user.getEmail()));
         userRepository.deleteById(id);
     }
 
@@ -94,5 +114,10 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public U getUserByUserName(String username) {
         return userRepository.findByUsername(username)
                 .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+    }
+
+    @Override
+    public int countAdmins() {
+        return userRepository.countUsersByRole("ADMIN");
     }
 }

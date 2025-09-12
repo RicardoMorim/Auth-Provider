@@ -4,9 +4,10 @@ import com.ricardo.auth.core.Publisher;
 import lombok.AllArgsConstructor;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.stereotype.Service;
 
 @AllArgsConstructor
-@ConditionalOnMissingBean(Publisher.class)
+@Service
 public class EventPublisher implements Publisher {
 
     private final ApplicationEventPublisher applicationEventPublisher;
