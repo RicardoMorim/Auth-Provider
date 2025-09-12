@@ -9,6 +9,7 @@ import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.repository.refreshToken.JpaRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.PostgreSQLRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -30,13 +31,14 @@ class RepositorySwitchingTest {
     /**
      * The type Jpa repository test.
      */
+    @Nested
     @SpringBootTest
     @ActiveProfiles("test")
     @TestPropertySource(properties = {
             "ricardo.auth.repository.type=jpa"
     })
     @Transactional
-    static class JpaRepositoryTest {
+    class JpaRepositoryTest {
 
         @Autowired
         private RefreshTokenRepository repository;
@@ -87,14 +89,22 @@ class RepositorySwitchingTest {
     /**
      * The type Postgre sql repository test.
      */
+    @Nested
     @SpringBootTest
     @ActiveProfiles("test")
     @TestPropertySource(properties = {
-            "ricardo.auth.repository.type=postgresql",
-            "spring.datasource.url=jdbc:h2:mem:testdb;MODE=PostgreSQL"
+            "spring.datasource.url=jdbc:postgresql://localhost:5432/AuthLibraryTest",
+            "spring.datasource.username=postgres",
+            "spring.datasource.password=8080",
+            "spring.datasource.driver-class-name=org.postgresql.Driver",
+            "ricardo.auth.repository.type=POSTGRESQL",
+            // Disable JPA/Hibernate completely when using PostgreSQL
+            "spring.jpa.hibernate.ddl-auto=none",
+            "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
+
     })
     @Transactional
-    static class PostgreSQLRepositoryTest {
+    class PostgreSQLRepositoryTest {
 
         @Autowired
         private RefreshTokenRepository repository;

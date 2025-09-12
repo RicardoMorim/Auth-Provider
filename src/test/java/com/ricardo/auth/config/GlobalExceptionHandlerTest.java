@@ -178,7 +178,7 @@ class GlobalExceptionHandlerTest {
     @WithMockUser(roles = "ADMIN")
     void shouldReturnNotFoundForNonExistentUser() throws Exception {
 
-        User adminUser = new User(Username.valueOf("admin"),
+        User adminUser = new User(Username.valueOf("admin123"),
                 Email.valueOf("admin@example.com"),
                 Password.fromHash("admin123"));
 
@@ -348,7 +348,7 @@ class GlobalExceptionHandlerTest {
     @Test
     @WithMockUser(roles = "ADMIN")
     void shouldReturnJsonContentType() throws Exception {
-        User adminUser = new User(Username.valueOf("admin"),
+        User adminUser = new User(Username.valueOf("admin123"),
                 Email.valueOf("admin@example.com"),
                 Password.fromHash("admin123"));
 

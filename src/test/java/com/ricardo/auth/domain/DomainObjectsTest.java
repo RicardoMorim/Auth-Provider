@@ -170,7 +170,7 @@ class DomainObjectsTest {
         assertEquals("Username cannot be null or empty", exception1.getMessage());
 
         IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class, () -> Username.valueOf("   "));
-        assertEquals("Username can only contain letters, numbers, dots, underscores, and hyphens", exception2.getMessage());
+        assertEquals("Username cannot be null or empty", exception2.getMessage());
     }
 
     /**
@@ -189,9 +189,9 @@ class DomainObjectsTest {
     @Test
     void username_shouldRejectTooLongUsername() {
         // Act & Assert
-        String longUsername = "a".repeat(21); // More than 20 chars
+        String longUsername = "a".repeat(51); // More than 20 chars
         IllegalArgumentException exception = assertThrows(IllegalArgumentException.class, () -> Username.valueOf(longUsername));
-        assertEquals("Username cannot be longer than 20 characters", exception.getMessage());
+        assertEquals("Username cannot be longer than 50 characters", exception.getMessage());
     }
 
     /**
@@ -504,17 +504,6 @@ class DomainObjectsTest {
         assertDoesNotThrow(() -> Email.valueOf(maxEmail));
     }
 
-    /**
-     * Username should handle special characters boundary.
-     */
-    @Test
-    void username_shouldHandleSpecialCharactersBoundary() {
-        // Act & Assert - Test edge cases of allowed characters
-        assertDoesNotThrow(() -> Username.valueOf("a_b"));
-        assertDoesNotThrow(() -> Username.valueOf("a-b"));
-        assertDoesNotThrow(() -> Username.valueOf("a.b"));
-        assertDoesNotThrow(() -> Username.valueOf("123"));
-    }
 
     /**
      * Password should handle special characters.

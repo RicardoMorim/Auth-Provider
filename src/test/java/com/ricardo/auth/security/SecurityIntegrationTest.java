@@ -326,7 +326,7 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         ));
 
-        mockMvc.perform(delete("/api/users/delete/" + (testUser.getId())).with(csrf()).cookie(accessTokenCookie))
+        mockMvc.perform(delete("/api/users/delete/" + (testUser.getUsername())).with(csrf()).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -362,7 +362,7 @@ class SecurityIntegrationTest {
 
         Cookie accessTokenCookie = new Cookie("access_token", token);
 
-        mockMvc.perform(get("/api/users/" + testUser.getId()).with(csrf()).cookie(accessTokenCookie))
+        mockMvc.perform(get("/api/users/" + testUser.getUsername()).with(csrf()).cookie(accessTokenCookie))
                 .andExpect(status().isOk());
     }
 
@@ -447,7 +447,7 @@ class SecurityIntegrationTest {
         mockMvc.perform(get("/api/auth/me").with(csrf()).cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
-        mockMvc.perform(delete("/api/users/delete/" + testUser.getId().toString()).with(csrf()).cookie(accessTokenCookie))
+        mockMvc.perform(delete("/api/users/delete/" + testUser.getUsername()).with(csrf()).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -558,13 +558,14 @@ class SecurityIntegrationTest {
 
         // Extract cookies
         Cookie accessTokenCookie = loginResult.getResponse().getCookie("access_token");
+
         // Step 2: Use admin token to access user management
-        mockMvc.perform(get("/api/users/" + testUser.getId()).with(csrf())
+        mockMvc.perform(get("/api/users/" + testUser.getUsername()).with(csrf())
                         .cookie(accessTokenCookie))
                 .andExpect(status().isOk());
 
         // Step 3: Use admin token to delete user
-        mockMvc.perform(delete("/api/users/delete/" + testUser.getId()).with(csrf())
+        mockMvc.perform(delete("/api/users/delete/" + testUser.getUsername()).with(csrf())
                         .cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }

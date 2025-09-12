@@ -81,13 +81,13 @@ class UserControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
-                .andExpect(jsonPath("$.username").value(request.getUsername()))
+                .andExpect(jsonPath("$.username").value(request.getUsername().toLowerCase()))
                 .andExpect(jsonPath("$.email").value(request.getEmail()));
 
         // Verify user was actually created in database
         assertTrue(userRepository.existsByEmail_Email("new@example.com"));
         User createdUser = userRepository.findByEmail_Email("new@example.com").orElseThrow();
-        assertEquals("newUser", createdUser.getUsername());
+        assertEquals("newuser", createdUser.getUsername());
     }
 
     /**

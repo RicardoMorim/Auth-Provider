@@ -1,5 +1,6 @@
 package com.ricardo.auth.ratelimiter;
 
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -12,6 +13,7 @@ import static org.junit.jupiter.api.Assertions.*;
 /**
  * The type Redis rate limiter test.
  */
+@Slf4j
 @SpringBootTest
 @TestPropertySource(properties = {
         "ricardo.auth.rate-limiter.type=redis",
@@ -31,8 +33,15 @@ class RedisRateLimiterTest {
      */
     @BeforeEach
     void cleanRedis() {
-        assertNotNull(redisTemplate.getConnectionFactory());
+        // Make sure each test gets clean Redis state
         redisTemplate.getConnectionFactory().getConnection().flushDb();
+    }
+
+    @Test
+    void contextLoads() {
+        // Context loads test
+        assertNotNull(redisTemplate);
+        log.info("Max Requests: {}, Time Window (ms): {}, ", rateLimiter.getMaxRequests(), rateLimiter.getWindowMillis());
     }
 
     @Test
