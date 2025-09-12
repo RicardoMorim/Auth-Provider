@@ -8,6 +8,7 @@ import org.springframework.stereotype.Component;
 
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.atomic.AtomicLong;
 import java.util.concurrent.locks.StampedLock;
 
 /**
@@ -17,8 +18,8 @@ import java.util.concurrent.locks.StampedLock;
 @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "MEMORY", matchIfMissing = true)
 public class InMemoryRateLimiter implements RateLimiter {
 
-    private final int maxRequests;
-    private final long windowMillis;
+    private final AtomicInteger maxRequests;
+    private final AtomicLong windowMillis;
     private final ConcurrentHashMap<String, RequestCounter> counters = new ConcurrentHashMap<>();
     private final StampedLock countersLock = new StampedLock();
     private final boolean enabled;
@@ -29,15 +30,31 @@ public class InMemoryRateLimiter implements RateLimiter {
      * @param properties the properties
      */
     public InMemoryRateLimiter(AuthProperties properties) {
-        this.maxRequests = properties.getRateLimiter().getMaxRequests();
-        this.windowMillis = properties.getRateLimiter().getTimeWindowMs();
-        if (maxRequests <= 0) {
+        this.maxRequests = new AtomicInteger();
+        this.windowMillis = new AtomicLong();
+        this.maxRequests.set(properties.getRateLimiter().getMaxRequests());
+        this.windowMillis.set(properties.getRateLimiter().getTimeWindowMs());
+        if (maxRequests.get() <= 0) {
             throw new IllegalArgumentException("maxRequests must be positive");
         }
-        if (windowMillis <= 0) {
+        if (windowMillis.get() <= 0) {
             throw new IllegalArgumentException("windowMillis must be positive");
         }
         this.enabled = properties.getRateLimiter().isEnabled();
+    }
+
+    @Override
+    public void changeSettings(int maxRequests, long windowMillis) {
+        if (maxRequests <= 0) {
+            throw new IllegalArgumentException("maxRequests must be positive");
+        }
+
+        if (windowMillis <= 0) {
+            throw new IllegalArgumentException("windowMillis must be positive");
+        }
+
+        this.maxRequests.set(maxRequests);
+        this.windowMillis.set(windowMillis);
     }
 
     @Override
@@ -60,7 +77,7 @@ public class InMemoryRateLimiter implements RateLimiter {
             long stamp = lock.writeLock();
             try {
                 counter.cleanup(currentTime);
-                if (counter.getCount() >= maxRequests) {
+                if (counter.getCount() >= maxRequests.get()) {
                     return false;
                 }
                 counter.increment(currentTime);
@@ -78,7 +95,7 @@ public class InMemoryRateLimiter implements RateLimiter {
      */
     @Scheduled(fixedRateString = "${ricardo.auth.rate-limiter.cleanup-interval:60000}")
     public void cleanupOldEntries() {
-        long cutoff = System.currentTimeMillis() - windowMillis;
+        long cutoff = System.currentTimeMillis() - windowMillis.get();
         long writeStamp = countersLock.writeLock();
         try {
             counters.entrySet().removeIf(entry ->
@@ -100,7 +117,7 @@ public class InMemoryRateLimiter implements RateLimiter {
          * @param currentTime the current time
          */
         void cleanup(long currentTime) {
-            long cutoff = currentTime - windowMillis;
+            long cutoff = currentTime - windowMillis.get();
             timestamps.keySet().removeIf(timestamp -> timestamp < cutoff);
         }
 
@@ -134,6 +151,16 @@ public class InMemoryRateLimiter implements RateLimiter {
          */
         long getLastAccess() {
             return lastAccess;
+        }
+    }
+
+    @Override
+    public void clearAll() {
+        long writeStamp = countersLock.writeLock();
+        try {
+            counters.clear();
+        } finally {
+            countersLock.unlockWrite(writeStamp);
         }
     }
 }
