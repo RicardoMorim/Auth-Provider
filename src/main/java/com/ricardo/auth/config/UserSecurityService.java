@@ -42,4 +42,13 @@ public class UserSecurityService<U extends AuthUser<ID, R>, R extends Role, ID> 
             return false;
         }
     }
+
+    public boolean isOwnerUsername(String email, String username) {
+        try {
+            U user = userService.getUserByUserName(username);
+            return user.getEmail().equals(email);
+        } catch (ResourceNotFoundException e) {
+            return false;
+        }
+    }
 }

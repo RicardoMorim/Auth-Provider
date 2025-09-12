@@ -13,6 +13,9 @@ import com.ricardo.auth.factory.UserFactory;
 import com.ricardo.auth.helper.*;
 import com.ricardo.auth.ratelimiter.InMemoryRateLimiter;
 import com.ricardo.auth.ratelimiter.RedisRateLimiter;
+import com.ricardo.auth.repository.PasswordResetToken.DefaultJpaPasswordResetTokenRepository;
+import com.ricardo.auth.repository.PasswordResetToken.PasswordResetTokenRepository;
+import com.ricardo.auth.repository.PasswordResetToken.PostgreSqlPasswordResetTokenRepository;
 import com.ricardo.auth.repository.refreshToken.DefaultJpaRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.PostgreSQLRefreshTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
@@ -21,6 +24,7 @@ import com.ricardo.auth.repository.user.UserPostgreSQLRepository;
 import com.ricardo.auth.repository.user.UserRepository;
 import com.ricardo.auth.security.JwtAuthFilter;
 import com.ricardo.auth.service.*;
+import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -30,21 +34,23 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.ComponentScan;
-import org.springframework.context.annotation.Configuration;
-import org.springframework.context.annotation.FilterType;
+import org.springframework.context.ApplicationEventPublisher;
+import org.springframework.context.annotation.*;
+import org.springframework.core.annotation.Order;
 import org.springframework.data.jpa.repository.config.EnableJpaRepositories;
 import org.springframework.data.redis.connection.RedisConnectionFactory;
 import org.springframework.data.redis.connection.RedisStandaloneConfiguration;
 import org.springframework.data.redis.connection.lettuce.LettuceConnectionFactory;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.mail.javamail.JavaMailSender;
+import org.springframework.mail.javamail.JavaMailSenderImpl;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
 import javax.sql.DataSource;
+import java.util.Properties;
 import java.util.UUID;
 
 /**
@@ -69,7 +75,7 @@ public class AuthAutoConfiguration {
             basePackages = "com.ricardo.auth.repository",
             includeFilters = @ComponentScan.Filter(
                     type = FilterType.ASSIGNABLE_TYPE,
-                    classes = {DefaultUserJpaRepository.class, DefaultJpaRefreshTokenRepository.class}
+                    classes = {DefaultUserJpaRepository.class, DefaultJpaRefreshTokenRepository.class, DefaultJpaPasswordResetTokenRepository.class}
             )
     )
     static class JpaConfiguration {
@@ -79,7 +85,7 @@ public class AuthAutoConfiguration {
     // ========== COMMON SERVICES ==========
 
     /**
-     * Jwt service jwt service.
+     * Jwt service.
      *
      * @param authProperties the auth properties
      * @return the jwt service
@@ -91,15 +97,15 @@ public class AuthAutoConfiguration {
     }
 
     /**
-     * User service user service.
+     * User service.
      *
      * @param userRepository the user repository
      * @return the user service
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher) {
-        return new UserServiceImpl<>(userRepository, eventPublisher);
+    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher, PasswordEncoder encoder) {
+        return new UserServiceImpl<>(userRepository, eventPublisher, encoder);
     }
 
     @Bean
@@ -182,8 +188,10 @@ public class AuthAutoConfiguration {
             AuthenticationManager authManager,
             RefreshTokenService<User, AppRole, UUID> refreshTokenService,
             AuthProperties authProperties,
-            TokenBlocklist tokenBlocklist) {
-        return new AuthController<>(jwtService, authManager, refreshTokenService, authProperties, tokenBlocklist);
+            TokenBlocklist tokenBlocklist,
+            EventPublisher publisher,
+            UserService<User, AppRole, UUID> userService) {
+        return new AuthController<>(jwtService, authManager, refreshTokenService, authProperties, tokenBlocklist, publisher, userService);
     }
 
     @Bean
@@ -269,6 +277,8 @@ public class AuthAutoConfiguration {
         }
     }
 
+    @Order(3)
+    @DependsOn("userSchemaInitializer")
     @Component("RefreshTokenSchemaInitializer")
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class RefreshTokenSchemaInitializer {
@@ -330,6 +340,7 @@ public class AuthAutoConfiguration {
     }
 
     @Component("userSchemaInitializer")
+    @Order(1)
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class UserSchemaInitializer {
 
@@ -406,7 +417,7 @@ public class AuthAutoConfiguration {
      * The type Memory rate limiter config.
      */
     @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory")
+    @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory", matchIfMissing = true)
 
     static class MemoryRateLimiterConfig {
         /**
@@ -415,8 +426,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the rate limiter
          */
-        @Bean
-        @ConditionalOnMissingBean
+        @Bean("rateLimiter")
+        @ConditionalOnMissingBean(name = "rateLimiter")
         public RateLimiter memoryRateLimiter(AuthProperties authProperties) {
             return new InMemoryRateLimiter(authProperties);
         }
@@ -437,8 +448,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the rate limiter
          */
-        @Bean
-        @ConditionalOnMissingBean
+        @Bean("rateLimiter")
+        @ConditionalOnMissingBean(name = "rateLimiter")
         public RateLimiter redisRateLimiter(
                 RedisTemplate<String, String> redisTemplate,
                 AuthProperties authProperties
@@ -519,6 +530,77 @@ public class AuthAutoConfiguration {
     }
 
     @Configuration
+    @ConditionalOnMissingBean(EmailSenderService.class)
+    static class EmailSenderServiceConfig {
+        /**
+         * Email sender service email sender service.
+         *
+         * @return the email sender service
+         */
+        @Bean
+        public EmailSenderService emailSenderService(JavaMailSender javaMailSender, AuthProperties properties) {
+            return new EmailSenderServiceImpl(javaMailSender, properties);
+        }
+    }
+
+    @Configuration
+    @ConditionalOnMissingBean(JavaMailSender.class)
+    static class JavaMailSenderConfig {
+        /**
+         * Java mail sender java mail sender.
+         *
+         * @return the java mail sender
+         */
+        @Bean
+        public JavaMailSender javaMailSender(AuthProperties properties) {
+            Dotenv dotenv = Dotenv.load();
+            JavaMailSenderImpl sender = new JavaMailSenderImpl();
+            if (properties.getEmail().getPassword() == null && dotenv.get("MAIL_PASSWORD") == null) {
+                throw new IllegalStateException("Email password must be set in properties or in the env variables (as 'MAIL_PASSWORD') to enable email sending");
+            }
+
+
+            if (dotenv.get("MAIL_USERNAME") == null && properties.getEmail().getFromAddress() == null) {
+                throw new IllegalStateException("Email username must be set in properties or in the env variables (as 'MAIL_USERNAME') to enable email sending");
+            }
+
+            if (dotenv.get("MAIL_USERNAME") != null && !dotenv.get("MAIL_USERNAME").isBlank())
+                properties.getEmail().setFromAddress(dotenv.get("MAIL_USERNAME"));
+
+            if (dotenv.get("MAIL_PASSWORD") != null && !dotenv.get("MAIL_PASSWORD").isBlank())
+                properties.getEmail().setPassword(dotenv.get("MAIL_PASSWORD"));
+
+            sender.setUsername(properties.getEmail().getFromAddress());
+            sender.setPassword(properties.getEmail().getPassword());
+            sender.setPort(properties.getEmail().getPort());
+            sender.setHost(properties.getEmail().getHost());
+
+            Properties props = sender.getJavaMailProperties();
+            props.put("mail.smtp.auth", "true");
+            props.put("mail.smtp.starttls.enable", "true");
+            props.put("mail.smtp.starttls.required", "true");
+            props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+
+            return sender;
+        }
+    }
+
+    @Configuration
+    @ConditionalOnMissingBean(Publisher.class)
+    static class EventPublisherConfig {
+        /**
+         * Event publisher publisher.
+         *
+         * @return the publisher
+         */
+        @Bean
+        public Publisher eventPublisher(ApplicationEventPublisher publisher) {
+            return new EventPublisher(publisher);
+        }
+    }
+
+
+    @Configuration
     @ConditionalOnMissingBean(UserRowMapper.class)
     static class UserRowMapperConfig {
         /**
@@ -545,4 +627,155 @@ public class AuthAutoConfiguration {
             return new UserSqlMapper();
         }
     }
+
+    /**
+     * PostgreSQL Password Reset Token Repository Configuration (EXPLICIT ONLY)
+     */
+    @Configuration
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
+    @ConditionalOnMissingBean(PasswordResetTokenRepository.class)
+    static class PostgreSQLPasswordResetTokenRepositoryConfiguration {
+        /**
+         * Password reset token repository password reset token repository.
+         *
+         * @param dataSource     the data source
+         * @param authProperties the auth properties
+         * @return the password reset token repository
+         */
+        @Bean
+        public PasswordResetTokenRepository passwordResetTokenRepository(
+                DataSource dataSource,
+                AuthProperties authProperties) {
+            logger.info("Creating PostgreSQL Password Reset Token Repository");
+            return new PostgreSqlPasswordResetTokenRepository(dataSource, authProperties);
+        }
+    }
+
+    @Order(2)
+    @DependsOn("userSchemaInitializer")
+    @Component("PasswordResetTokenSchemaInitializer")
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
+    public static class PasswordResetTokenSchemaInitializer {
+
+        private final JdbcTemplate jdbcTemplate;
+        private final AuthProperties authProperties;
+
+        public PasswordResetTokenSchemaInitializer(JdbcTemplate jdbcTemplate, AuthProperties authProperties) {
+            this.jdbcTemplate = jdbcTemplate;
+            this.authProperties = authProperties;
+        }
+
+        @PostConstruct
+        public void initializeSchema() {
+            try {
+                createPasswordResetTokenTableIfNotExists();
+                createPasswordResetTokenIndexes();
+                logger.info("Password Reset Token schema initialization completed successfully");
+            } catch (Exception e) {
+                logger.error("Failed to initialize Password Reset Token schema", e);
+                throw new RuntimeException("Password Reset Token schema initialization failed", e);
+            }
+        }
+
+        private void createPasswordResetTokenTableIfNotExists() {
+            jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
+
+            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+            String createTableSql = String.format("""
+                    CREATE TABLE IF NOT EXISTS %s (
+                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                        token VARCHAR(1000) UNIQUE NOT NULL,
+                        user_id UUID NOT NULL,
+                        expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+                        used BOOLEAN NOT NULL DEFAULT FALSE,
+                        used_at TIMESTAMP WITH TIME ZONE,
+                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+                    )
+                    """, tableName);
+
+            jdbcTemplate.execute(createTableSql);
+            logger.debug("Table '{}' created or already exists", tableName);
+        }
+
+        private void createPasswordResetTokenIndexes() {
+            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+            String[] indexStatements = {
+                    String.format("CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_token ON %s(token)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_user_id ON %s(user_id)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_expiry_date ON %s(expiry_date)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_used ON %s(used)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_used_expiry ON %s(used, expiry_date)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_user_created ON %s(user_id, created_at)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_user_active ON %s(user_id, used, expiry_date)", tableName, tableName)
+            };
+
+            for (String indexSql : indexStatements) {
+                jdbcTemplate.execute(indexSql);
+            }
+
+            logger.debug("All password reset token indexes created or already exist");
+        }
+    }
+
+
+    // ========== PASSWORD RESET RATE LIMITER CONFIGURATION ==========
+
+    /**
+     * Configuration for the Password Reset specific Memory-based Rate Limiter.
+     */
+    @Configuration
+    @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "memory", matchIfMissing = true)
+    static class PasswordResetMemoryRateLimiterConfig {
+
+        /**
+         * Creates the memory-based rate limiter for password reset operations.
+         *
+         * @param authProperties The main authentication properties.
+         * @return The named "passwordResetRateLimiter" bean.
+         */
+        @Bean("passwordResetRateLimiter")
+        @ConditionalOnMissingBean(name = "passwordResetRateLimiter")
+        public RateLimiter passwordResetMemoryRateLimiter(AuthProperties authProperties) {
+            InMemoryRateLimiter limiter = new InMemoryRateLimiter(authProperties);
+
+            int maxAttempts = authProperties.getPasswordReset().getMaxAttempts();
+            long timeWindowMs = authProperties.getPasswordReset().getTimeWindowMs();
+            limiter.changeSettings(maxAttempts, timeWindowMs);
+            logger.debug("Configured Password Reset Memory Rate Limiter: maxAttempts={}, windowMs={}", maxAttempts, timeWindowMs);
+            return limiter;
+        }
+    }
+
+    /**
+     * Configuration for the Password Reset specific Redis-based Rate Limiter.
+     */
+    @Configuration
+    @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
+    @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "redis")
+    static class PasswordResetRedisRateLimiterConfig {
+
+        /**
+         * Creates the Redis-based rate limiter for password reset operations.
+         *
+         * @param redisTemplate  The Redis template for string operations.
+         * @param authProperties The main authentication properties.
+         * @return The named "passwordResetRateLimiter" bean.
+         */
+        @Bean("passwordResetRateLimiter")
+        @ConditionalOnMissingBean(name = "passwordResetRateLimiter")
+        public RateLimiter passwordResetRedisRateLimiter(
+                RedisTemplate<String, String> redisTemplate,
+                AuthProperties authProperties) {
+            RedisRateLimiter limiter = new RedisRateLimiter(redisTemplate, authProperties);
+
+            int maxAttempts = authProperties.getPasswordReset().getMaxAttempts();
+            long timeWindowMs = authProperties.getPasswordReset().getTimeWindowMs();
+            limiter.changeSettings(maxAttempts, timeWindowMs);
+            logger.debug("Configured Password Reset Redis Rate Limiter: maxAttempts={}, windowMs={}", maxAttempts, timeWindowMs);
+            return limiter;
+        }
+    }
 }
+
+

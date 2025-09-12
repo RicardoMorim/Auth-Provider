@@ -67,7 +67,22 @@ public class AuthProperties {
      */
     private Cookies cookies = new Cookies();
 
-    private Repositories repository = new Repositories();
+    private Repository repository = new Repository();
+
+    /**
+     * Password reset configuration
+     */
+    private PasswordReset passwordReset = new PasswordReset();
+
+    /**
+     * Email configuration
+     */
+    private Email email = new Email();
+
+    /**
+     * Role management configuration
+     */
+    private RoleManagement roleManagement = new RoleManagement();
 
     /**
      * Repository types for refresh tokens
@@ -249,7 +264,7 @@ public class AuthProperties {
      */
     @Getter
     @Setter
-    public static class Repositories {
+    public static class Repository {
         /**
          * Repository type for refresh tokens
          */
@@ -268,6 +283,7 @@ public class AuthProperties {
     @Setter
     public static class Database {
         private String refreshTokensTable = "refresh_tokens";
+        private String passwordResetTokensTable = "password_reset_tokens";
         private String schema;
         private String url;
         private String driverClassName;
@@ -339,5 +355,47 @@ public class AuthProperties {
             private SameSitePolicy sameSite = SameSitePolicy.STRICT;
             private String path = "/api/auth/refresh";
         }
+    }
+
+    /**
+     * Password reset configuration properties
+     */
+    @Getter
+    @Setter
+    public static class PasswordReset {
+        private boolean enabled = true;
+        private int tokenExpiryHours = 1;
+        private int maxAttempts = 3;
+        private int timeWindowMs = 3600000;
+        private boolean enableCleanup = true;
+        private int cleanupIntervalHours = 24;
+        private int tokenLength = 32;
+        private boolean requireHttps = true;
+    }
+
+    /**
+     * Email configuration properties
+     */
+    @Getter
+    @Setter
+    public static class Email {
+        private String fromAddress = "noreply@example.com";
+        private String password;
+        private String host = "smtp.gmail.com";
+        private int port = 587;
+        private String fromName = "Auth Service";
+        private String resetSubject = "Password Reset Request";
+        private String resetTemplate = "default";
+    }
+
+    /**
+     * Role management configuration properties
+     */
+    @Getter
+    @Setter
+    public static class RoleManagement {
+        private boolean enableRoleEvents = true;
+        private boolean requireAdminForRoleChanges = true;
+        private boolean allowSelfRoleModification = false;
     }
 }

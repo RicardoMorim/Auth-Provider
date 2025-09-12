@@ -6,6 +6,7 @@ import com.ricardo.auth.ratelimiter.RateLimiterFilter;
 import com.ricardo.auth.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -21,6 +22,13 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.util.AntPathMatcher;
+import org.springframework.web.cors.CorsConfiguration;
+import org.springframework.web.cors.CorsConfigurationSource;
+import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
+
+import java.util.Arrays;
+import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
 
@@ -28,14 +36,22 @@ import static org.springframework.security.config.Customizer.withDefaults;
  * The type Security config.
  */
 @Configuration
-@EnableMethodSecurity(prePostEnabled = true)
+@EnableMethodSecurity
 public class SecurityConfig {
 
-    // Refresh é público para JWT (token pode estar expirado)
-    private final static String[] JWT_PUBLIC_ENDPOINTS = {"/api/auth/refresh", "/api/auth/login", "/api/users/create"};
+    // Refresh token, login, password reset and user creation are public endpoints
+    private final static String[] JWT_PUBLIC_ENDPOINTS = {
+            "/api/auth/refresh",
+            "/api/auth/login",
+            "/api/auth/reset-request",
+            "/api/auth/reset/*/validate",
+            "/api/auth/reset/**",
+            "/api/users/create"
+    };
 
-    // Apenas login e criação ignoram CSRF
-    private final static String[] CSRF_PUBLIC_ENDPOINTS = {"/api/auth/login", "/api/users/create"};
+    // Only login and user creation are public for CSRF (Refresh routes need CSRF protection)
+    private final static String[] CSRF_PUBLIC_ENDPOINTS = {"/api/auth/login", "/api/users/create", "/api/auth/reset-request", "/api/auth/reset/**"};
+    private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     @Autowired
     private JwtAuthFilter jwtAuthFilter;
@@ -49,8 +65,10 @@ public class SecurityConfig {
      * @return the boolean
      */
     public static boolean isPublicEndpoint(String url) {
+        if (url == null) return false;
+        String path = url.toLowerCase();
         for (String endpoint : JWT_PUBLIC_ENDPOINTS) {
-            if (url.toLowerCase().equals(endpoint)) {
+            if (PATH_MATCHER.match(endpoint.toLowerCase(), path)) {
                 return true;
             }
         }
@@ -94,6 +112,41 @@ public class SecurityConfig {
     }
 
     /**
+     * CORS configuration source for cross-origin requests.
+     * Automatically configured to work with cookie authentication.
+     *
+     * @return the cors configuration source
+     */
+    @Bean
+    public CorsConfigurationSource corsConfigurationSource() {
+        CorsConfiguration configuration = new CorsConfiguration();
+
+        // Allow specific origins (configure via application.properties)
+        configuration.setAllowedOriginPatterns(List.of("*"));
+
+        // Allow common HTTP methods
+        configuration.setAllowedMethods(Arrays.asList(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        ));
+
+        // Allow common headers including CSRF token
+        configuration.setAllowedHeaders(Arrays.asList(
+                "Content-Type", "X-Requested-With", "Authorization",
+                "X-XSRF-TOKEN", "Cache-Control", "Accept"
+        ));
+
+        // Allow credentials for cookie authentication
+        configuration.setAllowCredentials(true);
+
+        // Cache preflight requests for 1 hour
+        configuration.setMaxAge(3600L);
+
+        UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
+        source.registerCorsConfiguration("/**", configuration);
+        return source;
+    }
+
+    /**
      * Filter chain security filter chain.
      *
      * @param http        the http
@@ -103,11 +156,12 @@ public class SecurityConfig {
      */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-    public SecurityFilterChain filterChain(HttpSecurity http, RateLimiter rateLimiter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("rateLimiter") RateLimiter rateLimiter) throws Exception {
         if (authProperties.isRedirectHttps()) {
             http.redirectToHttps(withDefaults());
         }
         return http
+                .cors(cors -> cors.configurationSource(corsConfigurationSource()))
                 .csrf(csrf -> csrf
                         .csrfTokenRepository(CookieCsrfTokenRepository.withHttpOnlyFalse())
                         .ignoringRequestMatchers(CSRF_PUBLIC_ENDPOINTS)
