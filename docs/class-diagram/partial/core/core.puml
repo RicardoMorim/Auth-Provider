@@ -8,7 +8,7 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Domain Model (v3.0.0)
+title Ricardo Auth Starter - Domain Model (v4.0.0)
 
 package "User Domain" {
     interface "AuthUser<R>" as AuthUser {
@@ -119,6 +119,97 @@ package "Password Policy" {
     Password --> PasswordPolicyService : validates with
 }
 
+package "Password Reset Domain" {
+    class PasswordResetToken {
+        -id: UUID
+        -token: String
+        -userEmail: String
+        -expiryDate: Instant
+        -createdAt: Instant
+        -used: boolean
+        +PasswordResetToken(token: String, userEmail: String, expiryDate: Instant)
+        +isExpired(): boolean
+        +isUsed(): boolean
+        +markAsUsed(): void
+        +verifyExpiration(): PasswordResetToken
+    }
+    
+    class PasswordResetRequest {
+        -email: String
+        +PasswordResetRequest(email: String)
+        +getEmail(): String
+    }
+    
+    class PasswordResetConfirmation {
+        -token: String
+        -newPassword: String
+        +PasswordResetConfirmation(token: String, newPassword: String)
+        +getToken(): String
+        +getNewPassword(): String
+    }
+    
+    class PasswordResetException {
+        +PasswordResetException(message: String)
+    }
+    
+    PasswordResetToken --> PasswordResetException : throws when expired/used
+}
+
+package "Role Management Domain" {
+    class Role {
+        -id: UUID
+        -name: String
+        -description: String
+        -createdAt: Instant
+        -updatedAt: Instant
+        +Role(name: String, description: String)
+        +canBeDeleted(): boolean
+    }
+    
+    class CreateRoleRequest {
+        -name: String
+        -description: String
+        +CreateRoleRequest(name: String, description: String)
+    }
+    
+    class UpdateRoleRequest {
+        -description: String
+        +UpdateRoleRequest(description: String)
+    }
+    
+    class RoleResponse {
+        -id: UUID
+        -name: String
+        -description: String
+        -createdAt: Instant
+        -updatedAt: Instant
+    }
+    
+    Role --> RoleResponse : maps to
+}
+    interface "UserService<U, R, ID>" as UserService {
+        +createUser(user: U): U
+        +getUserById(id: ID): U
+        +getUserByEmail(email: String): U
+        +updateUser(id: ID, user: U): U
+        +deleteUser(id: ID): void
+    }
+    
+    interface JwtService {
+        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
+        +extractSubject(token: String): String
+        +isTokenValid(token: String): boolean
+        +isTokenValid(token: String, email: String): boolean
+    }
+    
+    interface "RefreshTokenService<U, ID>" as RefreshTokenService {
+        +createRefreshToken(user: U): RefreshToken
+        +findByToken(token: String): Optional<RefreshToken>
+        +verifyExpiration(token: RefreshToken): RefreshToken
+        +deleteByToken(token: String): void
+        +deleteAllByUserEmail(userEmail: String): void
+    }
+    
 package "Core Services" {
     interface "UserService<U, R, ID>" as UserService {
         +createUser(user: U): U
@@ -143,9 +234,27 @@ package "Core Services" {
         +deleteAllByUserEmail(userEmail: String): void
     }
     
+    interface PasswordResetService {
+        +requestPasswordReset(email: String): void
+        +confirmPasswordReset(token: String, newPassword: String): void
+        +isTokenValid(token: String): boolean
+        +cleanupExpiredTokens(): void
+    }
+    
+    interface RoleService {
+        +getAllRoles(): List<Role>
+        +getRoleById(id: UUID): Role
+        +createRole(name: String, description: String): Role
+        +updateRole(id: UUID, description: String): Role
+        +deleteRole(id: UUID): void
+        +isRoleAssignedToUsers(id: UUID): boolean
+    }
+    
     UserService --> User : manages
     RefreshTokenService --> RefreshToken : manages
     JwtService --> User : creates tokens for
+    PasswordResetService --> PasswordResetToken : manages
+    RoleService --> Role : manages
 }
 
 note right of AuthUser #E8F4FD
@@ -169,7 +278,7 @@ note right of RefreshToken #E8F4FD
 end note
 
 note right of PasswordPolicy #E8F4FD
-  **Enhanced Password Policy (v1.2.0)**
+  **Enhanced Password Policy (v1.1.0)**
   Configurable validation rules
   with common password detection
   and secure generation
@@ -180,6 +289,35 @@ note bottom of RefreshTokenService #E8F4FD
   Complete token lifecycle
   management with rotation
   and cleanup capabilities
+end note
+
+note right of PasswordResetToken #E8F4FD
+  **🆕 Password Reset (v4.0.0)**
+  OWASP-compliant password reset
+  with secure token generation,
+  expiration handling, and
+  email integration
+end note
+
+note right of Role #E8F4FD
+  **🆕 Role Management (v4.0.0)**
+  Complete role management with
+  CRUD operations, validation,
+  and assignment tracking
+end note
+
+note bottom of PasswordResetService #E8F4FD
+  **🆕 Password Reset Service (v4.0.0)**
+  Secure password reset flow
+  with email notifications,
+  token validation, and cleanup
+end note
+
+note right of RoleService #E8F4FD
+  **🆕 Role Service (v4.0.0)**
+  Role management with ADMIN
+  authorization and assignment
+  validation
 end note
 
 @enduml

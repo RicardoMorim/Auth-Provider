@@ -14,7 +14,7 @@ skinparam padding 10
 skinparam classFontSize 11
 skinparam packageFontSize 12
 
-title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v3.0.0)
+title Ricardo Auth Spring Boot Starter\nArchitecture Overview (v4.0.0)
 
 !define DIRECTION left to right
 
@@ -96,6 +96,20 @@ package "Domain Layer" <<Rectangle>> {
         +getRefreshToken(): String
     }
     
+    ' NEW in v4.0.0: Password Reset Domain Objects
+    class PasswordResetToken {
+        -id: UUID
+        -token: String
+        -userEmail: String
+        -expiryDate: Instant
+        -createdAt: Instant
+        -used: boolean
+        +PasswordResetToken(token: String, userEmail: String, expiryHours: int)
+        +isExpired(): boolean
+        +isUsed(): boolean
+        +markAsUsed(): void
+    }
+    
     User .up.|> AuthUser
     User *-- Username : contains
     User *-- Email : contains
@@ -141,6 +155,22 @@ package "Core Interfaces" <<Rectangle>> {
         +verifyExpiration(token: RefreshToken): RefreshToken
         +deleteByToken(token: String): void
         +deleteAllByUserEmail(userEmail: String): void
+    }
+    
+    ' NEW in v4.0.0: Password Reset Service
+    interface PasswordResetService {
+        +requestReset(email: String): void
+        +validateToken(token: String): boolean
+        +completeReset(token: String, newPassword: String): void
+        +cleanupExpiredTokens(): void
+    }
+    
+    ' NEW in v4.0.0: Role Management Service  
+    interface "RoleService<U, R, ID>" as RoleService {
+        +getUserRoles(username: String): List<R>
+        +addRoleToUser(username: String, role: R): void
+        +removeRoleFromUser(username: String, role: R): void
+        +bulkUpdateUserRoles(username: String, roles: Set<R>): void
     }
 }
 
@@ -212,6 +242,15 @@ package "Repository Layer" <<Rectangle>> {
         -mapRowToRefreshToken(rs: ResultSet): RefreshToken
     }
     
+    ' NEW in v4.0.0: Password Reset Repository
+    interface PasswordResetTokenRepository {
+        +save(token: PasswordResetToken): PasswordResetToken
+        +findByToken(token: String): Optional<PasswordResetToken>
+        +deleteExpiredTokens(): void
+        +findByUserEmailAndUsedFalse(email: String): List<PasswordResetToken>
+        +markAllAsUsedByUserEmail(email: String): void
+    }
+    
     UserJpaRepository .up.|> UserRepository
     UserJpaRepository .up.|> JpaRepository
     DefaultUserJpaRepository .up.|> UserJpaRepository
@@ -220,6 +259,7 @@ package "Repository Layer" <<Rectangle>> {
     JpaRefreshTokenRepository .up.|> JpaRepository
     DefaultJpaRefreshTokenRepository .up.|> JpaRefreshTokenRepository
     PostgreSQLRefreshTokenRepository .up.|> RefreshTokenRepository
+    PasswordResetTokenRepository .up.|> JpaRepository
 }
 
 package "Controller Layer" <<Rectangle>> {
@@ -247,6 +287,24 @@ package "Controller Layer" <<Rectangle>> {
         +deleteUser(id: ID): ResponseEntity<Void>
     }
     
+    ' NEW in v4.0.0: Password Reset Controller
+    class PasswordResetController {
+        -passwordResetService: PasswordResetService
+        -userService: UserService<U, R, ID>
+        +requestReset(request: PasswordResetRequest): ResponseEntity<Void>
+        +completeReset(token: String, request: PasswordResetCompleteRequest): ResponseEntity<Void>
+        +validateToken(token: String): ResponseEntity<Boolean>
+    }
+    
+    ' NEW in v4.0.0: Role Management Controller
+    class RoleManagementController {
+        -roleService: RoleService<U, R, ID>
+        -userService: UserService<U, R, ID>
+        +getUserRoles(username: String): ResponseEntity<UserRolesResponse>
+        +addRoleToUser(username: String, role: String): ResponseEntity<Void>
+        +removeRoleFromUser(username: String, role: String): ResponseEntity<Void>
+        +bulkUpdateRoles(username: String, roles: Set<String>): ResponseEntity<Void>
+    }
 }
 
 package "Factory Layer" <<Rectangle>> {
@@ -320,7 +378,7 @@ package "DTO Layer" <<Rectangle>> {
         -token: String
     }
     
-    ' NEW: Updated for refresh tokens
+    ' Updated for refresh tokens (v1.2.0)
     class TokenResponse {
         -accessToken: String
         -refreshToken: String
@@ -331,6 +389,25 @@ package "DTO Layer" <<Rectangle>> {
         -name: String
         -roles: List<String>
         +AuthenticatedUserDTO(name: String, authorities: Collection<GrantedAuthority>)
+    }
+    
+    ' NEW in v4.0.0: Password Reset DTOs
+    class PasswordResetRequest {
+        -email: String
+        +PasswordResetRequest(email: String)
+    }
+    
+    class PasswordResetCompleteRequest {
+        -token: String
+        -newPassword: String
+        +PasswordResetCompleteRequest(token: String, newPassword: String)
+    }
+    
+    ' NEW in v4.0.0: Role Management DTOs
+    class UserRolesResponse {
+        -username: String
+        -roles: List<String>
+        +UserRolesResponse(username: String, roles: List<String>)
     }
     
     class UserDTOMapper {
@@ -373,14 +450,32 @@ package "Auto Configuration" <<Rectangle>> {
         +authController(jwtService: JwtService, authManager: AuthenticationManager, refreshTokenService: RefreshTokenService): AuthController
         +userController(userService: UserService<User, Long>, passwordEncoder: PasswordEncoder, passwordPolicyService: PasswordPolicyService): UserController
         +postgresqlRefreshTokenRepository(dataSource: DataSource, authProperties: AuthProperties): PostgreSQLRefreshTokenRepository
+        +passwordResetService(passwordResetRepository: PasswordResetTokenRepository, userService: UserService, authProperties: AuthProperties): PasswordResetService
+        +roleService(userService: UserService, roleMapper: RoleMapper): RoleService
+    }
+    
+    ' NEW in v4.0.0: OpenAPI Configuration
+    class OpenApiConfig {
+        +openAPI(): OpenAPI
+        +customOpenAPI(): OpenAPI
+        +securityScheme(): SecurityScheme
     }
     
     class AuthProperties {
         -enabled: boolean
+        -redirectHttps: boolean
         -jwt: Jwt
-        -refreshTokens: RefreshTokens
-        -passwordPolicy: PasswordPolicy
         -controllers: Controllers
+        -passwordPolicy: PasswordPolicy
+        -refreshTokens: RefreshTokens
+        -rateLimiter: RateLimiter
+        -tokenBlocklist: TokenBlocklist
+        -redis: Redis
+        -cookies: Cookies
+        -repository: Repository
+        -passwordReset: PasswordReset
+        -email: Email
+        -roleManagement: RoleManagement
     }
     
     class "AuthProperties.Jwt" as JwtProps {
@@ -389,19 +484,13 @@ package "Auto Configuration" <<Rectangle>> {
         -refreshTokenExpiration: long
     }
     
-    ' NEW: Refresh Token Configuration
-    class "AuthProperties.RefreshTokens" as RefreshTokensProps {
-        -enabled: boolean
-        -maxTokensPerUser: int
-        -rotateOnRefresh: boolean
-        -cleanupInterval: long
-        -autoCleanup: boolean
-        -repository: Repository
+    class "AuthProperties.Controllers" as ControllersProps {
+        -auth: Controller
+        -user: Controller
     }
     
-    class "AuthProperties.RefreshTokens.Repository" as RepositoryProps {
-        -type: RefreshTokenRepositoryType
-        -database: Database
+    class "AuthProperties.Controllers.Controller" as ControllerProps {
+        -enabled: boolean
     }
     
     class "AuthProperties.PasswordPolicy" as PasswordPolicyProps {
@@ -411,27 +500,134 @@ package "Auto Configuration" <<Rectangle>> {
         -requireLowercase: boolean
         -requireDigits: boolean
         -requireSpecialChars: boolean
-        -specialCharacters: String
+        -allowedSpecialChars: String
         -preventCommonPasswords: boolean
         -commonPasswordsFilePath: String
     }
     
-    class "AuthProperties.Controllers" as ControllersProps {
-        -auth: Controller
-        -user: Controller
+    class "AuthProperties.RefreshTokens" as RefreshTokensProps {
+        -enabled: boolean
+        -maxTokensPerUser: int
+        -rotateOnRefresh: boolean
+        -cleanupInterval: long
+        -autoCleanup: boolean
     }
     
-    enum RefreshTokenRepositoryType {
+    class "AuthProperties.RateLimiter" as RateLimiterProps {
+        -enabled: boolean
+        -type: StorageType
+        -maxRequests: int
+        -timeWindowMs: long
+    }
+    
+    class "AuthProperties.TokenBlocklist" as TokenBlocklistProps {
+        -enabled: boolean
+        -type: StorageType
+    }
+    
+    class "AuthProperties.Redis" as RedisProps {
+        -host: String
+        -port: int
+        -password: String
+        -database: int
+    }
+    
+    class "AuthProperties.Cookies" as CookiesProps {
+        -access: AccessCookie
+        -refresh: RefreshCookie
+    }
+    
+    class "AuthProperties.Cookies.AccessCookie" as AccessCookieProps {
+        -secure: boolean
+        -httpOnly: boolean
+        -sameSite: SameSitePolicy
+        -path: String
+    }
+    
+    class "AuthProperties.Cookies.RefreshCookie" as RefreshCookieProps {
+        -secure: boolean
+        -httpOnly: boolean
+        -sameSite: SameSitePolicy
+        -path: String
+    }
+    
+    class "AuthProperties.Repository" as RepositoryProps {
+        -type: RepositoryType
+        -database: Database
+    }
+    
+    class "AuthProperties.Database" as DatabaseProps {
+        -refreshTokensTable: String
+        -passwordResetTokensTable: String
+        -schema: String
+        -url: String
+        -driverClassName: String
+    }
+    
+    class "AuthProperties.PasswordReset" as PasswordResetProps {
+        -enabled: boolean
+        -tokenExpiryHours: int
+        -maxAttempts: int
+        -timeWindowMs: int
+        -enableCleanup: boolean
+        -cleanupIntervalHours: int
+        -tokenLength: int
+        -requireHttps: boolean
+    }
+    
+    class "AuthProperties.Email" as EmailProps {
+        -fromAddress: String
+        -password: String
+        -host: String
+        -port: int
+        -fromName: String
+        -resetSubject: String
+        -resetTemplate: String
+    }
+    
+    class "AuthProperties.RoleManagement" as RoleManagementProps {
+        -enableRoleEvents: boolean
+        -requireAdminForRoleChanges: boolean
+        -allowSelfRoleModification: boolean
+    }
+    
+    enum RepositoryType {
         JPA
         POSTGRESQL
     }
     
+    enum StorageType {
+        MEMORY
+        REDIS
+    }
+    
+    enum SameSitePolicy {
+        STRICT
+        LAX
+        NONE
+    }
+    
     AuthProperties *-- JwtProps
-    AuthProperties *-- RefreshTokensProps
-    AuthProperties *-- PasswordPolicyProps
     AuthProperties *-- ControllersProps
-    RefreshTokensProps *-- RepositoryProps
-    RepositoryProps --> RefreshTokenRepositoryType
+    AuthProperties *-- PasswordPolicyProps
+    AuthProperties *-- RefreshTokensProps
+    AuthProperties *-- RateLimiterProps
+    AuthProperties *-- TokenBlocklistProps
+    AuthProperties *-- RedisProps
+    AuthProperties *-- CookiesProps
+    AuthProperties *-- RepositoryProps
+    AuthProperties *-- PasswordResetProps
+    AuthProperties *-- EmailProps
+    AuthProperties *-- RoleManagementProps
+    ControllersProps *-- ControllerProps
+    CookiesProps *-- AccessCookieProps
+    CookiesProps *-- RefreshCookieProps
+    RepositoryProps *-- DatabaseProps
+    RepositoryProps --> RepositoryType
+    RateLimiterProps --> StorageType
+    TokenBlocklistProps --> StorageType
+    AccessCookieProps --> SameSitePolicy
+    RefreshCookieProps --> SameSitePolicy
 
 }
 
@@ -512,7 +708,7 @@ package "Service Layer" <<Rectangle>> {
         +loadUserByUsername(email: String): UserDetails
     }
 
-    ' NEW: Refresh Token Service Implementation
+    ' NEW: Refresh Token Service Implementation (v1.2.0)
     class RefreshTokenServiceImpl {
         -refreshTokenRepository: RefreshTokenRepository
         -userService: UserService
@@ -524,12 +720,35 @@ package "Service Layer" <<Rectangle>> {
         +deleteAllByUserEmail(userEmail: String): void
     }
 
-    ' NEW: Refresh Token Cleanup Service
+    ' NEW: Refresh Token Cleanup Service (v1.2.0)
     class RefreshTokenCleanupService {
         -refreshTokenRepository: RefreshTokenRepository
         -authProperties: AuthProperties
         +cleanupExpiredTokens(): void
         +cleanupExpiredTokensForUser(userEmail: String): void
+    }
+    
+    ' NEW in v4.0.0: Password Reset Service Implementation
+    class PasswordResetServiceImpl {
+        -passwordResetRepository: PasswordResetTokenRepository
+        -userService: UserService
+        -emailService: EmailService
+        -authProperties: AuthProperties
+        +requestReset(email: String): void
+        +validateToken(token: String): boolean
+        +completeReset(token: String, newPassword: String): void
+        +cleanupExpiredTokens(): void
+    }
+    
+    ' NEW in v4.0.0: Role Service Implementation
+    class RoleServiceImpl {
+        -userService: UserService
+        -roleMapper: RoleMapper
+        -eventPublisher: ApplicationEventPublisher
+        +getUserRoles(username: String): List<R>
+        +addRoleToUser(username: String, role: R): void
+        +removeRoleFromUser(username: String, role: R): void
+        +bulkUpdateUserRoles(username: String, roles: Set<R>): void
     }
 
     UserServiceImpl .up.|> UserService
@@ -537,6 +756,8 @@ package "Service Layer" <<Rectangle>> {
     PasswordPolicy .up.|> PasswordPolicyService
     UserDetailsServiceImpl .up.|> UserDetailsService
     RefreshTokenServiceImpl .up.|> RefreshTokenService
+    PasswordResetServiceImpl .up.|> PasswordResetService
+    RoleServiceImpl .up.|> RoleService
     UserServiceImpl --> PasswordPolicyService : validates passwords
     RefreshTokenServiceImpl --> UserService : uses
     RefreshTokenCleanupService --> RefreshTokenRepository : cleans up
@@ -550,6 +771,10 @@ AuthController --> JwtService : uses
 AuthController --> RefreshTokenService : uses
 UserController --> UserService : uses
 UserController --> PasswordPolicyService : uses
+RoleManagementController --> RoleService: uses
+RoleManagementController --> UserService : uses
+PasswordResetController --> PasswordResetService : uses
+PasswordResetController --> UserService : uses
 JwtAuthFilter --> JwtService : uses
 SecurityConfig --> JwtAuthFilter : configures
 UserDTOMapper --> User : maps
@@ -558,15 +783,15 @@ RefreshTokenServiceImpl --> RefreshTokenRepository : uses
 
 ' Notes with better styling
 note right of AuthUser #E8F4FD
-  **Enhanced Generic Interface (v3.0.0)**
-  Type-safe role generics with
+  **Enhanced Generic Interface (v1.0.0)**
+  Type-safe role generics (v3.0.0) with
   improved polymorphic behavior
   and better decoupling
 end note
 
 note right of User #E8F4FD
-  **UserDetails Implementation (v3.0.0)**
-  UUID primary keys with enhanced
+  **UserDetails Implementation (v1.0.0)**
+  UUID primary keys (v3.0.0) with enhanced
   Spring Security integration
 end note
 
@@ -580,6 +805,12 @@ note bottom of RefreshToken #E8F4FD
   **🆕 Refresh Token (v1.2.0)**
   Secure token rotation with
   configurable expiration
+end note
+
+note bottom of PasswordResetToken #E8F4FD
+  **🆕 Password Reset (v4.0.0)**
+  OWASP-compliant password reset
+  with email integration
 end note
 
 note bottom of RefreshTokenRepository #E8F4FD
@@ -628,6 +859,13 @@ note right of UUIDConverter #E8F4FD
   Type converters and mappers
   for PostgreSQL integration
   and better type safety
+end note
+
+note right of OpenApiConfig #E8F4FD
+  **🆕 OpenAPI Documentation (v4.0.0)**
+  Complete Swagger/OpenAPI integration
+  with interactive documentation
+  available at /swagger-ui.html
 end note
 
 note right of PostgreSQLRefreshTokenRepository #E8F4FD
@@ -679,6 +917,20 @@ note right of AuthController #E8F4FD
   secure, HttpOnly cookies only.
   Includes /api/auth/revoke endpoint
   for admin token revocation.
+end note
+
+note right of PasswordResetController #E8F4FD
+  **🆕 Password Reset API (v4.0.0)**
+  OWASP-compliant password reset
+  with email integration and
+  secure token validation.
+end note
+
+note right of RoleManagementController #E8F4FD
+  **🆕 Role Management API (v4.0.0)**
+  Full CRUD operations for user
+  roles with proper authorization
+  and audit event publishing.
 end note
 
 note right of TokenBlocklist #E8F4FD

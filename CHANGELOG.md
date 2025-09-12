@@ -5,209 +5,6 @@ All notable changes to the Ricardo Auth Spring Boot Starter will be documented i
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0] - 2025-01-09
-
-### 🔒 Major Security & Authentication Overhaul
-
-**Cookie-Only Authentication System**
-- **BREAKING**: Removed all JWT Bearer token authentication in favor of secure HTTP-only cookies
-- **Enhanced Security**: Cookies are `HttpOnly`, `Secure`, and use `SameSite=Strict` by default
-- **CSRF Protection**: Comprehensive CSRF protection with token-based validation
-- **HTTPS Enforcement**: Production environments require HTTPS for secure cookie operation
-
-**Complete CORS Integration**
-- **Comprehensive CORS**: Full CORS configuration with credentials support
-- **Security Bean**: Dedicated `CorsConfigurationSource` with configurable origins
-- **Preflight Handling**: Proper handling of preflight OPTIONS requests
-- **Credentials Support**: `allowCredentials=true` for cookie-based authentication
-
-**OpenAPI Documentation Integration**
-- **Complete Swagger Integration**: Full OpenAPI 3.0 documentation with security schemes
-- **Interactive Documentation**: Swagger UI available at `/swagger-ui.html`
-- **Cookie Authentication**: OpenAPI configured for cookie-based auth (removed JWT Bearer)
-- **Comprehensive Endpoints**: All endpoints documented with examples and security requirements
-
-### 🔐 New Authentication Features
-
-**Password Reset System**
-- **OWASP Compliant**: Secure password reset with time-limited tokens
-- **Email Integration**: Full email support with customizable templates
-- **Rate Limiting**: Protection against password reset abuse
-- **Secure Tokens**: Cryptographically secure reset tokens with expiration
-
-**Role Management API**
-- **Full CRUD**: Complete role management with proper authorization
-- **Admin Controls**: ADMIN-only role creation, modification, and deletion
-- **Role Validation**: Prevention of role deletion if assigned to users
-- **RESTful Design**: Consistent REST API patterns
-
-### 🛡️ Enhanced Security Measures
-
-**Domain Events System**
-- **Comprehensive Audit Trail**: Domain events for all user and authentication actions
-- **Event Publishing**: Spring Application Events for audit logging
-- **Security Monitoring**: Track authentication attempts, password changes, role modifications
-- **Extensible**: Easy to add custom event listeners for monitoring
-
-**Advanced Input Validation**
-- **Sanitization**: Input sanitization to prevent injection attacks
-- **Enhanced Validation**: Comprehensive validation with detailed error messages
-- **Security Headers**: Additional security headers for XSS and clickjacking protection
-
-### 📚 Complete Documentation Overhaul
-
-**Developer Documentation**
-- **Bean Lifecycle**: Complete documentation of all beans and their dependencies
-- **Configuration Reference**: Comprehensive properties documentation
-- **Architecture Guide**: Domain-driven design patterns and structure
-- **Integration Examples**: Real-world integration patterns
-
-**Enhanced API Documentation**
-- **OpenAPI Integration**: Complete API documentation with interactive examples
-- **Security Schemes**: Detailed authentication and authorization documentation
-- **Error Responses**: Comprehensive error code and message documentation
-
-### ⚙️ New Configuration Options
-
-```yaml
-ricardo:
-  auth:
-    # CORS Configuration
-    cors:
-      allowed-origins: ["http://localhost:3000", "https://yourdomain.com"]
-      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-      allowed-headers: ["*"]
-      allow-credentials: true
-      max-age: 3600
-    
-    # Email Configuration
-    email:
-      enabled: true
-      from: "noreply@yourdomain.com"
-      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
-    
-    # Password Reset
-    password-reset:
-      enabled: true
-      token-expiration: 3600000 # 1 hour
-      max-attempts: 3
-      cleanup-interval: 3600000
-    
-    # Enhanced Cookie Configuration
-    cookies:
-      access:
-        secure: true
-        http-only: true
-        same-site: Strict
-        path: /
-        max-age: 900 # 15 minutes
-      refresh:
-        secure: true
-        http-only: true
-        same-site: Strict
-        path: /api/auth/refresh
-        max-age: 604800 # 7 days
-```
-
-### 🔄 New API Endpoints
-
-**Password Reset**
-- `POST /api/auth/password-reset/request` - Request password reset via email
-- `POST /api/auth/password-reset/confirm` - Confirm password reset with token
-
-**Role Management** (ADMIN only)
-- `GET /api/roles` - List all roles
-- `POST /api/roles` - Create new role
-- `PUT /api/roles/{id}` - Update existing role
-- `DELETE /api/roles/{id}` - Delete role (if not assigned)
-
-**Enhanced Authentication**
-- `GET /api/auth/me` - Get current user with enhanced information
-- All endpoints now use cookie-based authentication exclusively
-
-### 🏗️ Breaking Changes
-
-**Authentication Method**
-- **REMOVED**: JWT Bearer token authentication via Authorization header
-- **NEW**: Exclusive use of secure HTTP-only cookies for all authentication
-- **REQUIRED**: CORS configuration for frontend applications
-- **REQUIRED**: HTTPS in production environments
-
-**Configuration Changes**
-- **REMOVED**: JWT Bearer token configuration options
-- **ADDED**: Comprehensive CORS configuration requirements
-- **ENHANCED**: Cookie configuration with security flags
-
-**Frontend Integration**
-- **BREAKING**: Frontend must be updated to work with cookies instead of Authorization headers
-- **REQUIRED**: CORS configuration to allow credentials from frontend domains
-- **ENHANCED**: Automatic cookie handling instead of manual token management
-
-### 🔄 Migration Guide
-
-**From 3.x to 4.0**
-1. **Remove Authorization Headers**: Update frontend to remove Authorization header handling
-2. **Configure CORS**: Add CORS configuration for your frontend domains
-3. **Enable HTTPS**: Ensure HTTPS is configured for production environments
-4. **Update API Calls**: Ensure cookies are sent automatically with API requests
-5. **Email Setup**: Configure email settings for password reset functionality
-
-**Frontend Changes Required**
-```javascript
-// OLD (3.x): Manual token management
-const response = await fetch('/api/auth/login', {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
-
-// NEW (4.0): Automatic cookie handling
-const response = await fetch('/api/auth/login', {
-  credentials: 'include' // Ensures cookies are sent
-});
-```
-
-### 🧪 Testing Enhancements
-
-**Comprehensive Test Suite**
-- **Integration Tests**: Complete end-to-end testing of cookie-based authentication
-- **Security Tests**: CORS, CSRF, and cookie security validation
-- **Domain Events**: Complete testing of event publishing and handling
-- **Password Reset**: Full testing of email and token-based reset flow
-
-### 📊 Monitoring and Observability
-
-**Enhanced Logging**
-- **Domain Events**: Comprehensive audit logging via domain events
-- **Security Events**: Enhanced security event logging and monitoring
-- **Performance Metrics**: Cookie-based authentication performance tracking
-
-### 🌟 Production Ready Features
-
-**Security Hardening**
-- **Cookie Security**: Production-ready cookie configuration
-- **HTTPS Enforcement**: Automatic HTTPS redirection in production
-- **CORS Security**: Secure CORS configuration with credential support
-- **Rate Limiting**: Enhanced rate limiting for password reset and authentication
-
-**Performance Optimizations**
-- **Cookie Efficiency**: Optimized cookie size and transmission
-- **Database Performance**: Enhanced queries for role and user management
-- **Caching Ready**: Prepared for Redis integration improvements
-
-### 📖 Documentation Updates
-
-**Complete Documentation Refresh**
-- **Migration Guides**: Detailed 3.x to 4.0 migration instructions
-- **Security Guide**: Updated security best practices for cookie authentication
-- **CORS Configuration**: Comprehensive CORS setup documentation
-- **Email Integration**: Complete email configuration and template documentation
-
-### 🔒 Security Improvements
-
-**Enhanced Protection**
-- **XSS Protection**: HTTP-only cookies prevent XSS token theft
-- **CSRF Protection**: Comprehensive CSRF token validation
-- **Secure Transmission**: HTTPS enforcement for cookie security
-- **Domain Events**: Complete audit trail for security monitoring
 
 
 ## [1.0.0] - 2025-06-24
@@ -652,6 +449,190 @@ ricardo:
 > Anyone who liked this project and wants to contribute is more than welcome to implement any of these features.
 > Simply code them, test them, and sumbit a PR to the `dev` branch. For more information check out [contributing] (
 > CONTRIBUTING.md).
+
+
+## [4.0.0] - 2025-09-12
+
+### � New Authentication Features
+
+**Password Reset System**
+- **OWASP Compliant**: Secure password reset with time-limited tokens
+- **Email Integration**: Full email support with customizable templates
+- **Rate Limiting**: Protection against password reset abuse
+- **Secure Tokens**: Cryptographically secure reset tokens with expiration
+
+**Role Management API**
+- **Full CRUD**: Complete role management with proper authorization
+- **Admin Controls**: ADMIN-only role creation, modification, and deletion
+- **Role Validation**: Prevention of role deletion if assigned to users
+- **RESTful Design**: Consistent REST API patterns
+
+### Domain Event System
+
+- **Event Publising**: Spring application events for audit logging and for you to use as you wish!
+- **Estensible**: Easy to add custom even listeners for monitoring.
+
+**OpenAPI Documentation Integration**
+- **Complete Swagger Integration**: Full OpenAPI 3.0 documentation with security schemes
+- **Interactive Documentation**: Swagger UI available at `/swagger-ui.html`
+- **Cookie Authentication**: OpenAPI configured for cookie-based auth (consistent with v2.0.0 authentication system)
+- **Comprehensive Endpoints**: All endpoints documented with examples and security requirements
+
+### �️ Enhanced Security Measures
+
+**Enhanced Input Validation**
+- **Sanitization**: Input sanitization to prevent injection attacks
+- **Enhanced Validation**: Comprehensive validation with detailed error messages
+- **Security Headers**: Additional security headers for XSS and clickjacking protection
+
+**Better Exception Handling**
+- **Comprehensive Error Responses**: Improved error handling with detailed, user-friendly messages
+- **Security-Aware Errors**: Exception responses that don't leak sensitive information
+- **Standardized Error Format**: Consistent error response structure across all endpoints
+
+### 📚 Complete Documentation Overhaul
+
+**Developer Documentation**
+- **Bean Lifecycle**: Complete documentation of all beans and their dependencies
+- **Configuration Reference**: Comprehensive properties documentation
+- **Architecture Guide**: Domain-driven design patterns and structure
+- **Integration Examples**: Real-world integration patterns
+
+**Enhanced API Documentation**
+- **OpenAPI Integration**: Complete API documentation with interactive examples
+- **Security Schemes**: Detailed authentication and authorization documentation
+- **Error Responses**: Comprehensive error code and message documentation
+
+### ⚙️ New Configuration Options
+
+```yaml
+ricardo:
+  auth:
+    # Email Configuration (NEW in v4.0.0)
+    email:
+      enabled: true
+      from: "noreply@yourdomain.com"
+      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
+    
+    # Password Reset (NEW in v4.0.0)
+    password-reset:
+      enabled: true
+      token-expiration: 3600000 # 1 hour
+      max-attempts: 3
+      cleanup-interval: 3600000
+    
+    # OpenAPI Documentation (NEW in v4.0.0)
+    openapi:
+      enabled: true
+      title: "Your API"
+      description: "API documentation with Ricardo Auth"
+      version: "1.0.0"
+      contact:
+        name: "Your Team"
+        email: "support@yourdomain.com"
+```
+
+### 🔄 New API Endpoints
+
+**Password Reset** (NEW in v4.0.0)
+- `POST /api/auth/password-reset/request` - Request password reset via email
+- `POST /api/auth/password-reset/confirm` - Confirm password reset with token
+
+**Role Management** (NEW in v4.0.0) - ADMIN only
+- `GET /api/roles` - List all roles
+- `POST /api/roles` - Create new role
+- `PUT /api/roles/{id}` - Update existing role
+- `DELETE /api/roles/{id}` - Delete role (if not assigned)
+
+**Enhanced Authentication**
+- `GET /api/auth/me` - Get current user with enhanced information (improved in v4.0.0)
+- All endpoints continue to use cookie-based authentication from v2.0.0
+
+### 🏗️ Breaking Changes
+
+**Role Management Requirements**
+- **NEW**: ADMIN role required for all role management operations
+- **ENHANCED**: Role validation prevents deletion of roles assigned to users
+
+**Email Configuration Requirements** (for Password Reset)
+- **REQUIRED**: Email configuration must be provided for password reset functionality
+- **NEW**: Email templates can be customized via configuration properties
+
+**OpenAPI Integration**
+- **NEW**: OpenAPI endpoints are publicly accessible by default
+- **CONFIGURABLE**: Can be disabled via `ricardo.auth.openapi.enabled: false`
+
+### 🔄 Migration Guide
+
+**From 3.x to 4.0**
+1. **Configure Email Settings**: Set up email configuration for password reset functionality
+2. **Review Role Assignments**: Ensure proper ADMIN roles are assigned for role management
+3. **Update API Documentation**: Integrate with new OpenAPI/Swagger endpoints if needed
+4. **Test Password Reset**: Verify email configuration and password reset flow
+5. **Update Dependencies**: Ensure OpenAPI dependencies are included if using documentation features
+
+**New Features Integration**
+```yaml
+# Add to your application.yml
+ricardo:
+  auth:
+    email:
+      enabled: true
+      from: "noreply@yourdomain.com"
+    password-reset:
+      enabled: true
+    openapi:
+      enabled: true # Set to false if you don't want API documentation
+```
+
+### 🧪 Testing Enhancements
+
+**Comprehensive Test Suite**
+- **Password Reset Tests**: Complete end-to-end testing of email and token-based reset flow
+- **Role Management Tests**: Full testing of CRUD operations and authorization
+- **OpenAPI Tests**: Validation of API documentation generation and accuracy
+- **Input Validation Tests**: Enhanced testing of sanitization and validation logic
+- **Exception Handling Tests**: Comprehensive testing of new error handling patterns
+
+### 📊 Monitoring and Observability
+
+**Enhanced Logging**
+- **Password Reset Events**: Comprehensive audit logging for password reset attempts
+- **Role Management Events**: Enhanced logging for role creation, modification, and deletion
+- **Input Validation Events**: Security event logging for validation failures and potential attacks
+- **OpenAPI Metrics**: API documentation access and usage tracking
+
+### 🌟 Production Ready Features
+
+**Security Hardening**
+- **Input Sanitization**: Production-ready input sanitization and validation
+- **Exception Handling**: Enhanced error handling that doesn't leak sensitive information
+- **Password Reset Security**: OWASP-compliant password reset implementation
+- **Role-Based Security**: Enhanced authorization controls for administrative functions
+
+**Performance Optimizations**
+- **OpenAPI Caching**: Optimized API documentation generation and caching
+- **Email Performance**: Efficient email queuing and delivery for password resets
+- **Database Optimization**: Enhanced queries for role and password reset operations
+- **Validation Performance**: Optimized input validation and sanitization performance
+
+### 📖 Documentation Updates
+
+**Complete Documentation Refresh**
+- **Password Reset Guide**: Comprehensive password reset implementation and configuration guide
+- **Role Management Guide**: Detailed role management API documentation and best practices
+- **OpenAPI Integration**: Complete OpenAPI configuration and customization documentation
+- **Security Guide**: Updated security best practices including new validation and exception handling
+- **Migration Guide**: Detailed 3.x to 4.0 migration instructions focusing on new features
+
+### 🔒 Security Improvements
+
+**Enhanced Protection**
+- **Input Sanitization**: Comprehensive input sanitization to prevent injection attacks
+- **Exception Security**: Improved exception handling that doesn't expose sensitive system information
+- **Password Reset Security**: OWASP-compliant password reset tokens with proper expiration and cleanup
+- **Role-Based Authorization**: Enhanced authorization controls ensuring only ADMIN users can manage roles
+
 
 ### Contributing
 

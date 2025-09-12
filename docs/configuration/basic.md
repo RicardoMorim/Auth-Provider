@@ -306,29 +306,85 @@ spring:
 
 ## Environment Variables
 
+### Using .env Files
+
+Ricardo Auth supports `.env` files for **only 3 specific properties**. Create a `.env` file in your project root:
+
+```env
+# .env file - Only these 3 properties support .env override
+RICARDO_AUTH_JWT_SECRET=your-256-bit-secret-key-here-make-it-long-and-secure
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
+```
+
+**Note:** Other properties must be configured in `application.yml` - they are **not** supported in `.env` files.
+
+### Complete YAML Configuration
+
+All other configuration must be done in `application.yml`:
+
+```yaml
+ricardo:
+  auth:
+    jwt:
+      secret: ${RICARDO_AUTH_JWT_SECRET:your-256-bit-secret-key-here}
+      access-token-expiration: 900000     # 15 minutes (default)
+      refresh-token-expiration: 604800000 # 7 days (default)
+    
+    email:
+      from-address: "noreply@yourapp.com"
+      from-name: "Your App Name"
+      host: "smtp.gmail.com"
+      port: 587
+      password: ${MAIL_PASSWORD:your_smtp_password}
+    
+    cookies:
+      access:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: "/"
+      refresh:
+        secure: true
+        http-only: true
+        same-site: Strict
+        path: "/api/auth/refresh"
+    
+    password-policy:
+      min-length: 8
+      max-length: 128
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: false
+      allowed-special-chars: "!@#$%^&*()_+-=[]{}|;:,.<>?"
+      prevent-common-passwords: true
+      common-passwords-file-path: "/commonpasswords.txt"
+
+spring:
+  mail:
+    host: "smtp.gmail.com"
+    port: 587
+    username: ${MAIL_USERNAME:your_smtp_username}
+    password: ${MAIL_PASSWORD:your_smtp_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+```
+
 ### Required Environment Variables
 
 ```bash
-# JWT Secret (Required)
+# Only these 3 properties support environment variable override
 export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
+export MAIL_USERNAME="your_smtp_username"
+export MAIL_PASSWORD="your_smtp_password"
 ```
 
-### Optional Environment Variables
-
-```bash
-# JWT Token Expiration (Optional, default: 7 days)
-export RICARDO_AUTH_JWT_EXPIRATION="86400000"  # 1 day
-
-# Enable/Disable Features (Optional, default: true)
-export RICARDO_AUTH_ENABLED="true"
-export RICARDO_AUTH_CONTROLLERS_AUTH_ENABLED="true"
-export RICARDO_AUTH_CONTROLLERS_USER_ENABLED="true"
-
-# Database Configuration (Optional)
-export SPRING_DATASOURCE_URL="jdbc:h2:mem:myapp"
-export SPRING_DATASOURCE_USERNAME="sa"
-export SPRING_DATASOURCE_PASSWORD="password"
-```
+**Note:** All other configuration must be set in `application.yml` - they do **not** support environment variable override.
 
 ### Setting Environment Variables
 
@@ -336,14 +392,16 @@ export SPRING_DATASOURCE_PASSWORD="password"
 
 ```bash
 export RICARDO_AUTH_JWT_SECRET="your-secret-key"
-export RICARDO_AUTH_JWT_EXPIRATION="86400000"
+export MAIL_USERNAME="your_smtp_username"
+export MAIL_PASSWORD="your_smtp_password"
 ```
 
 **Windows:**
 
 ```cmd
 set RICARDO_AUTH_JWT_SECRET=your-secret-key
-set RICARDO_AUTH_JWT_EXPIRATION=86400000
+set MAIL_USERNAME=your_smtp_username
+set MAIL_PASSWORD=your_smtp_password
 ```
 
 **IDE (IntelliJ IDEA):**
@@ -351,26 +409,37 @@ set RICARDO_AUTH_JWT_EXPIRATION=86400000
 ```
 Run Configuration → Environment Variables:
 RICARDO_AUTH_JWT_SECRET=your-secret-key
-RICARDO_AUTH_JWT_EXPIRATION=86400000
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
 ```
 
 ## Configuration Properties Reference
 
-### Complete Basic Configuration
+### Complete v4.0.0 Configuration
+
+Based on `AuthProperties.java`, here are all available configuration properties:
 
 ```yaml
 ricardo:
   auth:
+    # Global Settings
     enabled: true                         # Enable/disable auth module
+    redirect-https: true                  # Redirect HTTP to HTTPS in production
+    
+    # JWT Configuration (REQUIRED)
     jwt:
-      secret: "your-secret-key"           # JWT signing secret (REQUIRED)
-      access-token-expiration: 604800000   # Access token expiration (ms)
-      refresh-token-expiration: 604800000  # Refresh token expiration (ms)
+      secret: "your-256-bit-secret-key-here"       # JWT signing secret (REQUIRED)
+      access-token-expiration: 900000              # Access token expiration (ms) - 15 minutes
+      refresh-token-expiration: 604800000          # Refresh token expiration (ms) - 7 days
+    
+    # Controller Configuration
     controllers:
       auth:
         enabled: true                     # Enable /api/auth endpoints
       user:
         enabled: true                     # Enable /api/users endpoints
+    
+    # Password Policy Configuration
     password-policy:
       min-length: 8                       # Minimum password length
       max-length: 128                     # Maximum password length
@@ -378,30 +447,210 @@ ricardo:
       require-lowercase: true             # Require lowercase letters
       require-digits: true                # Require digits
       require-special-chars: false        # Require special characters
-      special-characters: "!@#$%^&*()"   # Allowed special characters
+      allowed-special-chars: "!@#$%^&*()_+-=[]{}|;:,.<>?"  # Allowed special characters
       prevent-common-passwords: true      # Prevent common passwords
-    # --- NEW: Blocklist and Rate Limiter ---
-    token-blocklist:
-      enabled: true
-      type: memory   # or 'redis' for distributed blocklist
+      common-passwords-file-path: "/commonpasswords.txt"   # Path to common passwords file
+    
+    # Refresh Token Configuration
+    refresh-tokens:
+      enabled: true                       # Enable refresh token functionality
+      max-tokens-per-user: 5              # Maximum tokens per user (0 = unlimited)
+      rotate-on-refresh: true             # Generate new refresh token on use
+      cleanup-interval: 3600000           # Cleanup interval in ms (1 hour)
+      auto-cleanup: true                  # Enable automatic cleanup
+    
+    # Repository Configuration
+    repository:
+      type: JPA                           # Options: JPA, POSTGRESQL
+      database:
+        refresh-tokens-table: "refresh_tokens"           # Refresh tokens table name
+        password-reset-tokens-table: "password_reset_tokens"  # Password reset tokens table
+        schema: ""                        # Database schema (optional)
+        url: ""                          # Database URL (optional)
+        driver-class-name: ""            # Database driver (optional)
+    
+    # Rate Limiter Configuration
     rate-limiter:
-      enabled: true
-      type: memory   # or 'redis' for distributed rate limiting
-      max-requests: 100
-      time-window-ms: 60000
-    # --- NEW: Cookie Security ---
+      enabled: true                       # Enable rate limiting
+      type: MEMORY                        # Options: MEMORY, REDIS
+      max-requests: 150                   # Max requests per time window
+      time-window-ms: 60000               # Time window in milliseconds
+    
+    # Token Blocklist Configuration
+    token-blocklist:
+      enabled: true                       # Enable token revocation
+      type: MEMORY                        # Options: MEMORY, REDIS
+    
+    # Redis Configuration (when using REDIS type)
+    redis:
+      host: "localhost"                   # Redis host
+      port: 6379                          # Redis port
+      password: ""                        # Redis password (optional)
+      database: 0                         # Redis database number
+    
+    # Cookie Security Configuration
     cookies:
       access:
-        secure: true      # Set to false for local dev only
-        http-only: true
-        same-site: Strict # Strict/Lax/None
-        path: /
+        secure: true                      # Secure flag (HTTPS only)
+        http-only: true                   # Prevent JavaScript access
+        same-site: STRICT                 # Options: STRICT, LAX, NONE
+        path: "/"                         # Cookie path
       refresh:
-        secure: true
-        http-only: true
+        secure: true                      # Secure flag (HTTPS only)
+        http-only: true                   # Prevent JavaScript access
+        same-site: STRICT                 # Options: STRICT, LAX, NONE
+        path: "/api/auth/refresh"         # Cookie path
+    
+    # Password Reset Configuration
+    password-reset:
+      enabled: true                       # Enable password reset functionality
+      token-expiry-hours: 1               # Reset token expiry time (hours)
+      max-attempts: 3                     # Max reset attempts
+      time-window-ms: 3600000             # Time window for attempts (ms)
+      enable-cleanup: true                # Enable automatic token cleanup
+      cleanup-interval-hours: 24         # Cleanup interval (hours)
+      token-length: 32                    # Reset token length
+      require-https: true                 # Require HTTPS for reset URLs
+    
+    # Email Configuration
+    email:
+      from-address: "noreply@example.com" # Sender email address
+      password: ""                        # Email password (use MAIL_PASSWORD env var)
+      host: "smtp.gmail.com"              # SMTP host
+      port: 587                           # SMTP port
+      from-name: "Auth Service"           # Sender display name
+      reset-subject: "Password Reset Request"  # Subject for password reset emails
+      reset-template: "default"          # Email template name
+    
+    # Role Management Configuration
+    role-management:
+      enable-role-events: true            # Enable role change events
+      require-admin-for-role-changes: true        # Require admin for role changes
+      allow-self-role-modification: false          # Allow users to modify their own roles
+
+# Spring Configuration (Required)
+spring:
+  datasource:
+    url: jdbc:h2:mem:testdb              # Database URL
+    username: sa                         # Database username
+    password: password                   # Database password
+    driver-class-name: org.h2.Driver     # Database driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: create-drop              # Schema management: create-drop, update, validate
+    show-sql: false                      # Show SQL queries in logs
+  
+  mail:
+    host: "smtp.gmail.com"               # SMTP host
+    port: 587                            # SMTP port
+    username: ${MAIL_USERNAME:your_username}      # SMTP username (from env var)
+    password: ${MAIL_PASSWORD:your_password}      # SMTP password (from env var)
+    properties:
+      mail:
+        smtp:
+          auth: true                     # Enable SMTP authentication
+          starttls:
+            enable: true                 # Enable STARTTLS
+  
+  data:
+    redis:                               # Redis configuration (if using REDIS type)
+      host: "localhost"                  # Redis host
+      port: 6379                         # Redis port
+      password: ""                       # Redis password (optional)
+```
+
+### Production Environment Configuration
+
+```yaml
+# application-prod.yml
+ricardo:
+  auth:
+    jwt:
+      secret: "${RICARDO_AUTH_JWT_SECRET}"
+      access-token-expiration: 3600000    # 1 hour for production
+      refresh-token-expiration: 604800000 # 7 days
+    
+    email:
+      from-address: "${RICARDO_AUTH_EMAIL_FROM_ADDRESS:noreply@yourdomain.com}"
+      from-name: "${RICARDO_AUTH_EMAIL_FROM_NAME:Your App}"
+    
+    cors:
+      allowed-origins: "${RICARDO_AUTH_CORS_ALLOWED_ORIGINS}"
+      allow-credentials: true
+    
+    rate-limiter:
+      type: redis                         # Use Redis for distributed systems
+      enabled: true
+      max-requests: 50                    # Lower limit for production
+      time-window-ms: 60000
+    
+    token-blocklist:
+      type: redis                         # Use Redis for distributed systems
+      enabled: true
+    
+    cookies:
+      access:
+        secure: true                      # Always true in production
         same-site: Strict
-        path: /api/auth/refresh
-  redirect-https: true   # Enforce HTTPS (recommended for production)
+      refresh:
+        secure: true                      # Always true in production
+        same-site: Strict
+    
+    redirect-https: true                  # Enforce HTTPS
+
+# Spring Configuration
+spring:
+  datasource:
+    url: "${SPRING_DATASOURCE_URL}"
+    username: "${SPRING_DATASOURCE_USERNAME}"
+    password: "${SPRING_DATASOURCE_PASSWORD}"
+    driver-class-name: org.postgresql.Driver
+  
+  jpa:
+    hibernate:
+      ddl-auto: validate                  # Don't modify schema in production
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: false
+    show-sql: false
+  
+  # Redis Configuration (if using Redis for rate limiting/blocklist)
+  data:
+    redis:
+      host: "${SPRING_DATA_REDIS_HOST:localhost}"
+      port: "${SPRING_DATA_REDIS_PORT:6379}"
+      password: "${SPRING_DATA_REDIS_PASSWORD:}"
+  
+  # Email Configuration (if using SMTP)
+  mail:
+    host: "${SPRING_MAIL_HOST}"
+    port: "${SPRING_MAIL_PORT:587}"
+    username: "${SPRING_MAIL_USERNAME}"
+    password: "${SPRING_MAIL_PASSWORD}"
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+
+# Server Configuration
+server:
+  port: "${SERVER_PORT:8080}"
+  servlet:
+    context-path: "${SERVER_SERVLET_CONTEXT_PATH:}"
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.ricardo.auth: INFO
+    org.springframework.security: WARN
+  pattern:
+    file: "%d{ISO8601} [%thread] %-5level %logger{36} - %msg%n"
+    console: "%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n"
 ```
 
 ### Spring Boot Integration

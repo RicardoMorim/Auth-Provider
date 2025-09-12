@@ -29,6 +29,63 @@ The Ricardo Auth Starter implements comprehensive security mechanisms:
 - **Token Blocklist**: Instant token revocation capabilities
 - **HTTPS Enforcement**: Automatic HTTPS redirection in production
 
+## Want to make the value of a property not exposed in the properties?
+
+### Option 1: Create a environment variable
+
+1. Open the terminal
+2. Set the variable
+    - On Linux/macOS:
+      ```bash
+      export RICARDO_AUTH_POSTGRESQL_PASS=your_secure_password
+      ```
+    - On Windows: 
+      ```cmd
+      set RICARDO_AUTH_POSTGRESQL_PASS=your_secure_password
+      ```
+3. Reference it in your application.yml:
+```yml
+auth:
+  password:
+    password: ${POSTGRE_SQL_PASS}
+```
+
+
+### Option 2: Use Dotenv
+
+1. Create a `.env` file in your project root
+2. Add your sensitive properties:
+   ```
+   RICARDO_AUTH_POSTGRESQL_PASS=your_secure_password
+   ```
+3. Load the `.env` file in a bean that starts before the other beans:
+   ```java
+   @Configuration
+  public class EarlyPropertyInjectionConfig {
+
+      @Bean
+      public static BeanFactoryPostProcessor injectPostgreSqlPassword() {
+          return beanFactory -> {
+              // Get the AuthProperties bean definition
+              var beanDefinition = beanFactory.getBeanDefinition("authProperties");
+
+              // Add a custom initializer to inject the password
+              beanDefinition.setInstanceSupplier(() -> {
+                  AuthProperties props = new AuthProperties();
+
+                  // Inject the password from environment variable
+                  String envPassword = System.getenv("POSTGRE_SQL_PASS");
+                  if (envPassword != null) {
+                      props.getPassword().setPassword(envPassword);
+                  }
+
+                  return props;
+              });
+          };
+      }
+  }
+```
+
 ## Cookie-Based Authentication Security
 
 ### Overview

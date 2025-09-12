@@ -8,13 +8,15 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Service Architecture (v3.0.0)
+title Ricardo Auth Starter - Service Architecture (v4.0.0)
 
 package "Core Service Interfaces" {
     interface "UserService<U, R, ID>" as UserService
     interface JwtService
     interface PasswordPolicyService
     interface "RefreshTokenService<U, ID>" as RefreshTokenService
+    interface PasswordResetService
+    interface RoleService
 }
 
 package "Service Implementations" {
@@ -48,6 +50,37 @@ package "Service Implementations" {
         -commonPasswords: Set<String>
         +validatePassword(password: String): boolean
         +generateSecurePassword(): String
+    }
+    
+    class PasswordResetServiceImpl {
+        -passwordResetRepository: PasswordResetRepository
+        -userService: UserService
+        -emailService: EmailService
+        -authProperties: AuthProperties
+        +requestPasswordReset(email: String): void
+        +confirmPasswordReset(token: String, newPassword: String): void
+        +isTokenValid(token: String): boolean
+        +cleanupExpiredTokens(): void
+        -generateSecureToken(): String
+        -sendPasswordResetEmail(email: String, token: String): void
+    }
+    
+    class RoleServiceImpl {
+        -roleRepository: RoleRepository
+        -userService: UserService
+        +getAllRoles(): List<Role>
+        +getRoleById(id: UUID): Role
+        +createRole(name: String, description: String): Role
+        +updateRole(id: UUID, description: String): Role
+        +deleteRole(id: UUID): void
+        +isRoleAssignedToUsers(id: UUID): boolean
+    }
+    
+    class EmailService {
+        -mailSender: JavaMailSender
+        -authProperties: AuthProperties
+        +sendPasswordResetEmail(email: String, resetUrl: String): void
+        +sendEmail(to: String, subject: String, content: String): void
     }
     
     class RefreshTokenServiceImpl {
@@ -99,6 +132,23 @@ package "Repository Layer" {
         -update(token: RefreshToken): RefreshToken
     }
     
+    interface PasswordResetRepository {
+        +save(passwordResetToken: PasswordResetToken): PasswordResetToken
+        +findByToken(token: String): Optional<PasswordResetToken>
+        +deleteExpiredTokens(): void
+        +deleteByUserEmail(userEmail: String): void
+        +countByUserEmail(userEmail: String): long
+    }
+    
+    interface RoleRepository {
+        +findAll(): List<Role>
+        +findById(id: UUID): Optional<Role>
+        +save(role: Role): Role
+        +deleteById(id: UUID): void
+        +existsByName(name: String): boolean
+        +isRoleAssignedToUsers(roleId: UUID): boolean
+    }
+    
     interface "UserRepository<U, ID>" as UserRepository
 }
 
@@ -111,6 +161,18 @@ package "Auto Configuration" {
         +refreshTokenCleanupService(refreshTokenRepository: RefreshTokenRepository, authProperties: AuthProperties): RefreshTokenCleanupService
         +userDetailsService(userService: UserService): UserDetailsServiceImpl
         +postgresqlRefreshTokenRepository(dataSource: DataSource, authProperties: AuthProperties): PostgreSQLRefreshTokenRepository
+        +passwordResetService(passwordResetRepository: PasswordResetRepository, userService: UserService, emailService: EmailService, authProperties: AuthProperties): PasswordResetService
+        +roleService(roleRepository: RoleRepository, userService: UserService): RoleService
+        +emailService(mailSender: JavaMailSender, authProperties: AuthProperties): EmailService
+    }
+    
+    class OpenApiConfig {
+        -authProperties: AuthProperties
+        +openApi(): OpenAPI
+        +securityScheme(): SecurityScheme
+        +securityRequirement(): SecurityRequirement
+        +info(): Info
+        +contact(): Contact
     }
     
     class AuthProperties {
@@ -118,6 +180,9 @@ package "Auto Configuration" {
         -jwt: Jwt
         -refreshTokens: RefreshTokens
         -passwordPolicy: PasswordPolicy
+        -passwordReset: PasswordReset
+        -email: Email
+        -openapi: OpenApi
         -controllers: Controllers
     }
 }
@@ -127,6 +192,8 @@ UserServiceImpl .up.|> UserService
 JwtServiceImpl .up.|> JwtService
 PasswordPolicy .up.|> PasswordPolicyService
 RefreshTokenServiceImpl .up.|> RefreshTokenService
+PasswordResetServiceImpl .up.|> PasswordResetService
+RoleServiceImpl .up.|> RoleService
 UserDetailsServiceImpl .up.|> UserDetailsService
 JpaRefreshTokenRepository .up.|> RefreshTokenRepository
 PostgreSQLRefreshTokenRepository .up.|> RefreshTokenRepository
@@ -139,18 +206,28 @@ AuthAutoConfiguration --> RefreshTokenService : creates
 AuthAutoConfiguration --> RefreshTokenCleanupService : creates
 AuthAutoConfiguration --> UserDetailsService : creates
 AuthAutoConfiguration --> RefreshTokenRepository : creates (conditional)
+AuthAutoConfiguration --> PasswordResetService : creates
+AuthAutoConfiguration --> RoleService : creates
+AuthAutoConfiguration --> EmailService : creates
+AuthAutoConfiguration --> OpenApiConfig : creates (conditional)
 
 UserServiceImpl --> UserRepository : uses
 RefreshTokenServiceImpl --> RefreshTokenRepository : uses
 RefreshTokenServiceImpl --> UserService : uses
 RefreshTokenCleanupService --> RefreshTokenRepository : uses
 UserDetailsServiceImpl --> UserService : uses
+PasswordResetServiceImpl --> PasswordResetRepository : uses
+PasswordResetServiceImpl --> UserService : uses
+PasswordResetServiceImpl --> EmailService : uses
+RoleServiceImpl --> RoleRepository : uses
+RoleServiceImpl --> UserService : uses
 
 note top of AuthAutoConfiguration #E8F4FD
   **Spring Boot Auto-Configuration**
   Conditionally creates beans based on
   configuration properties and available
-  implementations
+  implementations. Enhanced in v4.0.0 with
+  password reset, role management, and OpenAPI
 end note
 
 note right of RefreshTokenServiceImpl #E8F4FD
@@ -179,6 +256,34 @@ note left of JpaRefreshTokenRepository #E8F4FD
   Standard JPA implementation
   with resolved interface
   conflicts
+end note
+
+note right of PasswordResetServiceImpl #E8F4FD
+  **🆕 Password Reset Service (v4.0.0)**
+  OWASP-compliant password reset
+  with email integration, secure
+  token generation, and cleanup
+end note
+
+note right of RoleServiceImpl #E8F4FD
+  **🆕 Role Management Service (v4.0.0)**
+  Complete CRUD operations with
+  ADMIN authorization and user
+  assignment validation
+end note
+
+note left of EmailService #E8F4FD
+  **🆕 Email Service (v4.0.0)**
+  Email integration for password
+  reset notifications with
+  customizable templates
+end note
+
+note bottom of OpenApiConfig #E8F4FD
+  **🆕 OpenAPI Configuration (v4.0.0)**
+  Complete Swagger/OpenAPI 3.0
+  integration with security schemes
+  and interactive documentation
 end note
 
 @enduml

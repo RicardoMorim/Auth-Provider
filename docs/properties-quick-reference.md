@@ -90,13 +90,13 @@ ricardo:
       access:
         secure: true                # HTTPS-only (auto-detected)
         http-only: true             # Prevent JavaScript access
-        same-site: Strict           # CSRF protection (Strict/Lax/None)
-        path: /                     # Cookie path
+        same-site: STRICT           # CSRF protection (STRICT/LAX/NONE)
+        path: "/"                   # Cookie path
       refresh:
         secure: true
         http-only: true
-        same-site: Strict
-        path: /api/auth/refresh     # Restricted to refresh endpoint
+        same-site: STRICT
+        path: "/api/auth/refresh"   # Restricted to refresh endpoint
 ```
 
 ### Password Policy
@@ -136,7 +136,7 @@ ricardo:
   auth:
     rate-limiter:
       enabled: true                # Enable rate limiting
-      type: memory                # memory or redis
+      type: MEMORY                # MEMORY or REDIS
       max-requests: 150           # Maximum requests per time window
       time-window-ms: 60000       # Time window (1 minute in ms)
 ```
@@ -148,7 +148,7 @@ ricardo:
   auth:
     token-blocklist:
       enabled: true               # Enable token revocation
-      type: memory               # memory or redis
+      type: MEMORY               # MEMORY or REDIS
 ```
 
 ### Repository Configuration
@@ -184,8 +184,8 @@ ricardo:
     password-reset:
       enabled: true                          # Enable password reset
       token-expiry-hours: 1                  # Reset token expiration
-      max-attempts-per-hour: 3               # Per-user rate limit
-      max-attempts-per-ip-per-hour: 10       # Per-IP rate limit
+      max-attempts: 3                        # Max attempts per email
+      time-window-ms: 3600000               # Time window for attempts
       enable-cleanup: true                   # Auto-cleanup expired tokens
       cleanup-interval-hours: 24             # Cleanup interval
       token-length: 32                       # Reset token length
@@ -199,6 +199,9 @@ ricardo:
   auth:
     email:
       from-address: "noreply@example.com"    # Sender email address
+      password: ""                           # Email password (use MAIL_PASSWORD env var)
+      host: "smtp.gmail.com"                 # SMTP host
+      port: 587                              # SMTP port
       from-name: "Auth Service"              # Sender display name
       reset-subject: "Password Reset Request" # Reset email subject
       reset-template: "default"              # Email template name

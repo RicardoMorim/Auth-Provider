@@ -60,45 +60,104 @@ minimal configuration required.
 
 ## 📦 Installation
 
-### From Maven Central
+## ⚙️ Quick Setup
 
-Add the following dependency to your `pom.xml`:
+### 1. Add Dependency
 
 ```xml
-
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>{Latest version release}</version>
+    <version>4.0.0</version>
 </dependency>
 ```
 
-### From GitHub Packages
+### 2. Configure with .env File (Recommended)
 
-1. Add the GitHub Packages repository to your `pom.xml`:
+Create a `.env` file in your project root (optional - only these 3 properties support .env override):
 
-```xml
+```env
+# Required Configuration
+RICARDO_AUTH_JWT_SECRET=your-256-bit-secret-key-here-make-it-long-and-secure
 
-<repositories>
-    <repository>
-        <id>github</id>
-        <url>https://maven.pkg.github.com/RicardoMorim/Auth-Provider</url>
-    </repository>
-</repositories>
+# Email Configuration (for password reset)
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
 ```
 
-2. Configure authentication in your `~/.m2/settings.xml`:
+Add to your `application.yml`:
 
-```xml
+```yaml
+ricardo:
+  auth:
+    jwt:
+      secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
+    email:
+      from-address: "noreply@yourapp.com"
+      from-name: "Your App Name"
+      host: "smtp.gmail.com"
+      port: 587
 
-<servers>
-    <server>
-        <id>github</id>
-        <username>YOUR_GITHUB_USERNAME</username>
-        <password>YOUR_GITHUB_TOKEN</password>
-    </server>
-</servers>
+# Standard Spring configuration for database and email
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/yourdb
+    username: your_db_user
+    password: your_db_password
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${MAIL_USERNAME:your_smtp_username}
+    password: ${MAIL_PASSWORD:your_smtp_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 ```
+
+### 3. Alternative: Direct YAML Configuration
+
+```yaml
+ricardo:
+  auth:
+    jwt:
+      secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
+    email:
+      from-address: "noreply@yourapp.com"
+      from-name: "Your App Name"
+      host: "smtp.gmail.com"
+      port: 587
+
+# Standard Spring configuration
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:5432/yourdb
+    username: your_db_user
+    password: your_db_password
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: your_smtp_username
+    password: your_smtp_password
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+```
+
+### 4. That's It! 🎉
+
+Your application now has:
+- ✅ JWT authentication with secure cookies
+- ✅ User registration and management
+- ✅ Password reset with email
+- ✅ Role-based access control
+- ✅ CORS support for frontends
+- ✅ OpenAPI documentation at `/swagger-ui.html`
 
 3. Add the dependency:
 
@@ -113,24 +172,26 @@ Add the following dependency to your `pom.xml`:
 
 ## 🚨 Breaking Changes in v4.0.0
 
-**Cookie-Only Authentication:** Authentication now exclusively uses secure HTTP-only cookies instead of Bearer tokens.
+**New Features in v4.0.0:**
 
-**What Changed:**
-- **Cookie Authentication:** All endpoints now use secure HTTP-only cookies (`access_token`, `refresh_token`)
-- **No More Bearer Tokens:** Authorization header authentication has been removed for security
-- **HTTPS Required:** Secure cookies require HTTPS in production environments
-- **Enhanced CORS:** Comprehensive CORS configuration with credentials support
-- **OpenAPI Documentation:** Complete Swagger/OpenAPI integration with cookie authentication
+**What's New:**
 - **Password Reset System:** OWASP-compliant password reset with email integration
-- **Role Management API:** Full CRUD operations for roles with proper authorization
+- **Role Management API:** Full CRUD operations for roles with proper authorization  
+- **OpenAPI Documentation:** Complete Swagger/OpenAPI integration with interactive documentation
+- **Enhanced Input Sanitization:** Improved validation and sanitization for security
+- **Better Exception Handling:** Enhanced error responses and exception management
 - **Domain Events:** Comprehensive audit trail with domain event publishing
-- **Enhanced Security:** Rate limiting, input validation, and sanitization improvements
 
-**What You Need to Update:**
-- **Frontend:** Remove Authorization headers, ensure cookies are sent with requests
-- **Configuration:** Add CORS configuration for your frontend domains
-- **HTTPS:** Configure SSL/TLS for production environments
-- **Email:** Configure email settings for password reset functionality
+**Previous Breaking Changes (Cookie Authentication):**
+- **Cookie Authentication (v2.0.0):** All endpoints use secure HTTP-only cookies (`access_token`, `refresh_token`)
+- **HTTPS Required (v2.0.0):** Secure cookies require HTTPS in production environments
+- **UUID Primary Keys (v3.0.0):** All entities now use UUID instead of Long for primary keys
+- **CSRF Protection (v3.0.0):** CSRF protection enabled by default for enhanced security
+
+**What You Need to Update for v4.0.0:**
+- **Email Configuration:** Configure SMTP settings for password reset functionality
+- **Role Management:** Update any custom role management code to use new API
+- **OpenAPI:** Interactive API documentation now available at `/swagger-ui.html`
 
 **Migration Guide:** See [Security Guide](docs/security-guide.md) and [Configuration Guide](docs/configuration/) for detailed migration steps.
 
@@ -772,7 +833,171 @@ logging:
     org.springframework.security: DEBUG
 ```
 
-## 📊 Monitoring and Health
+## � Production Deployment
+
+### Environment Configuration
+
+Create production environment files:
+
+**`.env.production`:**
+```env
+# Only these 3 properties support .env override
+RICARDO_AUTH_JWT_SECRET=generate-a-secure-256-bit-secret-key-for-production-use
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
+```
+
+**`application-prod.yml`:**
+```yaml
+spring:
+  profiles:
+    active: prod
+  
+  datasource:
+    url: "jdbc:postgresql://your-db-host:5432/your_production_db"
+    username: "your_db_user"
+    password: "your_secure_db_password"
+    driver-class-name: org.postgresql.Driver
+    
+  jpa:
+    hibernate:
+      ddl-auto: validate  # Don't auto-create tables in production
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+    show-sql: false
+    
+  mail:
+    host: "smtp.yourprovider.com"
+    port: 587
+    username: ${MAIL_USERNAME:your_smtp_username}
+    password: ${MAIL_PASSWORD:your_smtp_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+  
+  data:
+    redis:
+      host: your-redis-host
+      port: 6379
+      password: your_redis_password
+
+ricardo:
+  auth:
+    jwt:
+      secret: ${RICARDO_AUTH_JWT_SECRET:generate-a-secure-256-bit-secret-key-for-production-use}
+      access-token-expiration: 3600000    # 1 hour for production
+      refresh-token-expiration: 604800000 # 7 days
+    
+    email:
+      from-address: "noreply@yourapp.com"
+      from-name: "Your Application"
+      host: "smtp.yourprovider.com"
+      port: 587
+      
+    rate-limiter:
+      type: redis
+      enabled: true
+      max-requests: 50      # Lower for production
+      time-window-ms: 60000
+      
+    token-blocklist:
+      type: redis
+      enabled: true
+      
+    cookies:
+      access:
+        secure: true        # Always true in production
+        same-site: Strict
+      refresh:
+        secure: true
+        same-site: Strict
+        
+    redirect-https: true    # Enforce HTTPS
+
+# Logging
+logging:
+  level:
+    root: INFO
+    com.ricardo.auth: INFO
+  file:
+    name: logs/auth-provider.log
+```
+
+### Docker Deployment
+
+**`Dockerfile`:**
+```dockerfile
+FROM openjdk:17-jdk-slim
+
+WORKDIR /app
+
+COPY target/your-app.jar app.jar
+COPY .env.production .env
+
+EXPOSE 8080
+
+ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=prod", "app.jar"]
+```
+
+**`docker-compose.yml`:**
+```yaml
+version: '3.8'
+
+services:
+  app:
+    build: .
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
+    depends_on:
+      - postgres
+      - redis
+    volumes:
+      - ./logs:/app/logs
+
+  postgres:
+    image: postgres:15
+    environment:
+      POSTGRES_DB: your_production_db
+      POSTGRES_USER: your_db_user
+      POSTGRES_PASSWORD: your_secure_db_password
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5432:5432"
+
+  redis:
+    image: redis:7-alpine
+    command: redis-server --requirepass your_redis_password
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+
+volumes:
+  postgres_data:
+  redis_data:
+```
+
+### Production Checklist
+
+- [ ] **Security**: Generate secure JWT secret (256+ bit)
+- [ ] **HTTPS**: Configure SSL/TLS certificates  
+- [ ] **CORS**: Configure allowed origins for your frontend
+- [ ] **Database**: Use PostgreSQL or MySQL (not H2)
+- [ ] **Redis**: Configure Redis for distributed rate limiting/blocklist
+- [ ] **Email**: Configure SMTP for password reset functionality
+- [ ] **Monitoring**: Set up health checks and logging
+- [ ] **Backup**: Configure database backups
+- [ ] **Firewall**: Restrict database/Redis access
+- [ ] **Environment**: Use environment variables for secrets
+
+## �📊 Monitoring and Health
 
 The starter exposes actuator endpoints for monitoring:
 

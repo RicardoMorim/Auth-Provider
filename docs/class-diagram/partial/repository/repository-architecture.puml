@@ -8,7 +8,7 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Repository Architecture (v3.0.0)
+title Ricardo Auth Starter - Repository Architecture (v4.0.0)
 
 package "Spring Data JPA" {
     interface "JpaRepository<T, ID>" as JpaRepository {
@@ -100,6 +100,60 @@ package "Refresh Token Repository Architecture" {
     PostgreSQLRefreshTokenRepository --|> RefreshTokenRepository
 }
 
+package "Password Reset Repository Architecture" {
+    interface PasswordResetRepository {
+        +save(passwordResetToken: PasswordResetToken): PasswordResetToken
+        +findByToken(token: String): Optional<PasswordResetToken>
+        +findByUserEmail(userEmail: String): List<PasswordResetToken>
+        +deleteExpiredTokens(): void
+        +deleteByUserEmail(userEmail: String): void
+        +markTokenAsUsed(token: String): void
+        +countByUserEmail(userEmail: String): long
+    }
+    
+    interface JpaPasswordResetRepository {
+        +findByToken(token: String): Optional<PasswordResetToken>
+        +findByUserEmailOrderByCreatedAtDesc(userEmail: String): List<PasswordResetToken>
+        +deleteByExpiryDateBefore(date: Instant): void
+        +deleteByUserEmail(userEmail: String): void
+        +countByUserEmail(userEmail: String): long
+    }
+    
+    interface DefaultJpaPasswordResetRepository {
+        ' Default JPA implementation for PasswordResetToken
+    }
+    
+    JpaPasswordResetRepository --|> PasswordResetRepository
+    JpaPasswordResetRepository --|> JpaRepository
+    DefaultJpaPasswordResetRepository --|> JpaPasswordResetRepository
+}
+
+package "Role Management Repository Architecture" {
+    interface RoleRepository {
+        +findAll(): List<Role>
+        +findById(id: UUID): Optional<Role>
+        +save(role: Role): Role
+        +deleteById(id: UUID): void
+        +existsByName(name: String): boolean
+        +isRoleAssignedToUsers(roleId: UUID): boolean
+        +findByName(name: String): Optional<Role>
+    }
+    
+    interface JpaRoleRepository {
+        +findByName(name: String): Optional<Role>
+        +existsByName(name: String): boolean
+        +isRoleAssignedToUsers(roleId: UUID): boolean
+    }
+    
+    interface DefaultJpaRoleRepository {
+        ' Default JPA implementation for Role
+    }
+    
+    JpaRoleRepository --|> RoleRepository
+    JpaRoleRepository --|> JpaRepository
+    DefaultJpaRoleRepository --|> JpaRoleRepository
+}
+
 package "Helper Classes" {
     ' PostgreSQL Helper Classes
     interface "UserRowMapper<U>" as UserRowMapper {
@@ -155,10 +209,14 @@ package "Configuration" {
         +defaultUserJpaRepository(): DefaultUserJpaRepository
         +defaultJpaRefreshTokenRepository(): DefaultJpaRefreshTokenRepository
         +postgresqlRefreshTokenRepository(dataSource: DataSource): PostgreSQLRefreshTokenRepository
+        +defaultJpaPasswordResetRepository(): DefaultJpaPasswordResetRepository
+        +defaultJpaRoleRepository(): DefaultJpaRoleRepository
     }
     
     class AuthProperties {
         -refreshTokens: RefreshTokens
+        -passwordReset: PasswordReset
+        -openapi: OpenApi
     }
     
     class "AuthProperties.RefreshTokens" as RefreshTokens {
@@ -197,6 +255,8 @@ package "Conditional Bean Creation" {
     DefaultJpaRefreshTokenRepository ..> ConditionalOnMissingBean : @ConditionalOnMissingBean(RefreshTokenRepository.class)
     DefaultJpaRefreshTokenRepository ..> ConditionalOnProperty : @ConditionalOnProperty(name = "type", havingValue = "jpa")
     PostgreSQLRefreshTokenRepository ..> ConditionalOnProperty : @ConditionalOnProperty(name = "type", havingValue = "postgresql")
+    DefaultJpaPasswordResetRepository ..> ConditionalOnMissingBean : @ConditionalOnMissingBean(PasswordResetRepository.class)
+    DefaultJpaRoleRepository ..> ConditionalOnMissingBean : @ConditionalOnMissingBean(RoleRepository.class)
 }
 
 note right of RefreshTokenRepository #E8F4FD
@@ -230,9 +290,9 @@ end note
 note top of AuthAutoConfiguration #E8F4FD
   **Conditional Bean Creation**
   Creates appropriate repository
-  implementation based on configuration:
-  - JPA: DefaultJpaRefreshTokenRepository
-  - PostgreSQL: PostgreSQLRefreshTokenRepository
+  implementation based on configuration.
+  Enhanced in v4.0.0 with password reset
+  and role management repositories.
 end note
 
 note right of ConditionalOnProperty #E8F4FD
@@ -266,6 +326,24 @@ note right of UserFactory #E8F4FD
   Decoupled user creation with
   type-safe generics for enhanced
   architecture flexibility and testability
+end note
+
+note right of PasswordResetRepository #E8F4FD
+  **🆕 Password Reset Repository (v4.0.0)**
+  Repository for secure password reset tokens:
+  - Time-based expiration handling
+  - One-time use token management
+  - User-based token cleanup
+  - OWASP-compliant implementation
+end note
+
+note bottom of RoleRepository #E8F4FD
+  **🆕 Role Management Repository (v4.0.0)**
+  Repository for role management:
+  - CRUD operations for roles
+  - Role assignment validation
+  - Name uniqueness enforcement
+  - User role relationship tracking
 end note
 
 @enduml

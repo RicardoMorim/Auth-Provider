@@ -2,27 +2,26 @@
 
 Complete API reference for the Ricardo Auth Spring Boot Starter endpoints.
 
-## ⚠️ Breaking Changes in v4.0.0
+## ⚠️ What's New in v4.0.0
 
-**Cookie-Only Authentication System**
-- **BREAKING**: Authentication now exclusively uses secure HTTP-only cookies
-- **No Authorization Headers**: All `Authorization: Bearer` authentication removed
-- **HTTPS Required**: Secure cookies require HTTPS in production environments
-- **CORS Configuration**: Frontend applications must configure CORS with credentials support
-
-**New Security Features**
-- **Enhanced CORS**: Comprehensive CORS configuration with credentials support
-- **Password Reset**: OWASP-compliant password reset with email integration
-- **Role Management**: Full CRUD API for role management with proper authorization
+**New Features in v4.0.0:**
+- **Password Reset System**: OWASP-compliant password reset with email integration
+- **Role Management API**: Full CRUD API for role management with proper authorization
 - **OpenAPI Integration**: Complete Swagger/OpenAPI documentation at `/swagger-ui.html`
+- **Enhanced Input Sanitization**: Advanced input validation and sanitization
+- **Better Exception Handling**: Improved error responses and exception management
 - **Domain Events**: Comprehensive audit trail with event publishing
-- **Enhanced Security**: Advanced input validation, sanitization, and security headers
 
-**API Changes**
-- All endpoints now use cookie-based authentication exclusively
-- New password reset endpoints: `/api/auth/password-reset/*`
-- New role management endpoints: `/api/roles/*`
-- Enhanced user management with improved validation
+**Previous Major Changes:**
+- **Cookie Authentication (v2.0.0)**: All authentication uses secure HTTP-only cookies exclusively
+- **Rate Limiting & Token Blocklist (v2.0.0)**: Built-in protection against abuse
+- **UUID Primary Keys (v3.0.0)**: All entities now use UUID instead of Long for IDs
+- **CSRF Protection (v3.0.0)**: Enhanced security with CSRF tokens for state-changing operations
+
+**New API Endpoints in v4.0.0:**
+- New password reset endpoints: `/api/auth/reset-request`, `/api/auth/reset/{token}`
+- New role management endpoints: `/api/users/{username}/roles`
+- Enhanced user management with username-based operations
 - Complete OpenAPI documentation with interactive testing
 
 ## Base URL
@@ -39,11 +38,11 @@ https://yourdomain.com # Production
 All endpoints require authentication via secure HTTP-only cookies (`access_token`, `refresh_token`). 
 
 **Key Authentication Features:**
-- **Cookie-Only**: All authentication uses secure HTTP-only cookies exclusively
-- **No Authorization Headers**: Authorization header authentication has been completely removed
-- **HTTPS Required**: Secure cookies require HTTPS in production environments
-- **CORS Support**: Comprehensive CORS configuration with credentials support
-- **Interactive Documentation**: Complete OpenAPI documentation available at `/swagger-ui.html`
+- **Cookie-Only (since v2.0.0)**: All authentication uses secure HTTP-only cookies exclusively  
+- **No Authorization Headers (since v2.0.0)**: Authorization header authentication removed for security
+- **HTTPS Required (since v2.0.0)**: Secure cookies require HTTPS in production environments
+- **CSRF Protection (since v3.0.0)**: Enhanced security with CSRF tokens
+- **Interactive Documentation (NEW in v4.0.0)**: Complete OpenAPI documentation available at `/swagger-ui.html`
 
 ### Frontend Integration Requirements
 
@@ -51,9 +50,36 @@ All endpoints require authentication via secure HTTP-only cookies (`access_token
 ```yaml
 ricardo:
   auth:
-    cors:
-      allowed-origins: ["http://localhost:3000", "https://yourdomain.com"]
-      allow-credentials: true
+    email:
+      from-address: "noreply@yourdomain.com"
+      from-name: "Your App"
+      host: "smtp.gmail.com"
+      port: 587
+
+# Standard Spring configuration
+spring:
+  datasource:
+    url: "jdbc:postgresql://localhost:5432/yourdb"
+    username: "your_db_user"
+    password: "your_db_password"
+  mail:
+    host: "smtp.gmail.com"
+    port: 587
+    username: ${MAIL_USERNAME:your_smtp_username}
+    password: ${MAIL_PASSWORD:your_smtp_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+```
+
+**Optional .env File (only 3 properties supported):**
+```env
+RICARDO_AUTH_JWT_SECRET=your-256-bit-secret-key-here
+MAIL_USERNAME=your_smtp_username
+MAIL_PASSWORD=your_smtp_password
 ```
 
 **Frontend API Calls:**
@@ -101,30 +127,38 @@ All other authenticated endpoints require CSRF tokens:
 |--------|----------|-------------|---------------|------|
 | POST | `/api/auth/login` | User authentication | No | No |
 | POST | `/api/auth/refresh` | Refresh access token | Cookies | Yes |
-| POST | `/api/auth/revoke` | Revoke tokens (ADMIN) | Cookies | Yes |
-| POST | `/api/auth/password-reset/request` | Request password reset | No | No |
-| POST | `/api/auth/password-reset/confirm` | Confirm password reset | No | No |
+| POST | `/api/auth/logout` | User logout | Cookies | Yes |
 | GET | `/api/auth/me` | Get current user info | Cookies | No |
+| POST | `/api/auth/revoke` | Revoke tokens (ADMIN) | Cookies | Yes |
+
+### Password Reset Endpoints
+
+| Method | Endpoint | Description | Auth Required | CSRF |
+|--------|----------|-------------|---------------|------|
+| POST | `/api/auth/reset-request` | Request password reset | No | No |
+| POST | `/api/auth/reset/{token}` | Complete password reset | No | No |
+| GET | `/api/auth/reset/{token}/validate` | Validate reset token | No | No |
 
 ### User Management Endpoints
 
 | Method | Endpoint | Description | Auth Required | CSRF |
 |--------|----------|-------------|---------------|------|
-| POST | `/api/users/create` | Create new user | No | No |
-| GET | `/api/users/{id}` | Get user by ID | Cookies | No |
-| GET | `/api/users/email/{email}` | Get user by email | Cookies | No |
-| GET | `/api/users/exists/{email}` | Check if user exists | Cookies | No |
-| PUT | `/api/users/update/{id}` | Update user | Cookies | Yes |
-| DELETE | `/api/users/delete/{id}` | Delete user | Cookies | Yes |
+| POST | `/api/users/create` | Create new user | Admin | Yes |
+| GET | `/api/users/{username}` | Get user by username | Owner/Admin | No |
+| GET | `/api/users/email/{email}` | Get user by email | Admin | No |
+| GET | `/api/users/exists/{email}` | Check if user exists | Admin | No |
+| GET | `/api/users` | Get all users | Admin | No |
+| PUT | `/api/users/update/{username}` | Update user | Owner/Admin | Yes |
+| DELETE | `/api/users/delete/{username}` | Delete user | Owner/Admin | Yes |
 
 ### Role Management Endpoints (ADMIN Only)
 
 | Method | Endpoint | Description | Auth Required | CSRF |
 |--------|----------|-------------|---------------|------|
-| GET | `/api/roles` | List all roles | Cookies (ADMIN) | No |
-| POST | `/api/roles` | Create new role | Cookies (ADMIN) | Yes |
-| PUT | `/api/roles/{id}` | Update role | Cookies (ADMIN) | Yes |
-| DELETE | `/api/roles/{id}` | Delete role | Cookies (ADMIN) | Yes |
+| GET | `/api/users/{username}/roles` | Get user roles | Admin | No |
+| POST | `/api/users/{username}/roles` | Add role to user | Admin | Yes |
+| DELETE | `/api/users/{username}/roles` | Remove role from user | Admin | Yes |
+| PUT | `/api/users/{username}/roles/bulk` | Bulk update user roles | Admin | Yes |
 
 ### Documentation Endpoints
 
@@ -349,7 +383,7 @@ Cookie: access_token=...;
 }
 ```
 
-### POST /api/auth/password-reset/request
+### POST /api/auth/reset-request
 
 Request a password reset via email. Sends a secure reset token to the user's email address.
 
@@ -365,7 +399,7 @@ Content-Type: application/json
 
 ```json
 {
-  "email": "string"
+  "email": "user@example.com"
 }
 ```
 
@@ -375,29 +409,7 @@ Content-Type: application/json
 
 ```json
 {
-  "message": "Password reset email sent successfully"
-}
-```
-
-**Error (400 Bad Request) - Invalid Email:**
-
-```json
-{
-  "error": "Bad Request",
-  "message": "Invalid email format",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/auth/password-reset/request"
-}
-```
-
-**Error (404 Not Found) - User Not Found:**
-
-```json
-{
-  "error": "Not Found",
-  "message": "User not found with email: user@example.com",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/auth/password-reset/request"
+  "message": "If an account with that email exists, you will receive password reset instructions."
 }
 ```
 
@@ -405,26 +417,31 @@ Content-Type: application/json
 
 ```json
 {
-  "error": "Too Many Requests",
-  "message": "Too many password reset attempts. Please try again later.",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/auth/password-reset/request"
+  "message": "Too many requests. Please try again later."
+}
+```
+
+**Error (400 Bad Request) - Invalid Email:**
+
+```json
+{
+  "error": "Invalid email format"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/password-reset/request \
+curl -X POST http://localhost:8080/api/auth/reset-request \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com"
   }'
 ```
 
-### POST /api/auth/password-reset/confirm
+### POST /api/auth/reset/{token}
 
-Confirm password reset using the token received via email and set a new password.
+Complete password reset using the token received via email and set a new password.
 
 #### Request
 
@@ -434,12 +451,16 @@ Confirm password reset using the token received via email and set a new password
 Content-Type: application/json
 ```
 
+**Path Parameters:**
+
+- `token` (string): Password reset token from email
+
 **Body:**
 
 ```json
 {
-  "token": "string",
-  "newPassword": "string"
+  "password": "NewSecurePassword123!",
+  "confirmPassword": "NewSecurePassword123!"
 }
 ```
 
@@ -449,7 +470,7 @@ Content-Type: application/json
 
 ```json
 {
-  "message": "Password reset successfully"
+  "message": "Password has been reset successfully."
 }
 ```
 
@@ -457,33 +478,71 @@ Content-Type: application/json
 
 ```json
 {
-  "error": "Bad Request",
-  "message": "Invalid or expired reset token",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/auth/password-reset/confirm"
+  "error": "Invalid or expired token."
 }
 ```
 
-**Error (400 Bad Request) - Password Policy Violation:**
+**Error (400 Bad Request) - Password Confirmation:**
 
 ```json
 {
-  "error": "Bad Request",
-  "message": "Password must contain at least one uppercase letter",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/auth/password-reset/confirm"
+  "error": "Password confirmation does not match."
+}
+```
+
+**Error (429 Too Many Requests) - Rate Limited:**
+
+```json
+{
+  "error": "Too many requests. Please try again later."
 }
 ```
 
 #### Example
 
 ```bash
-curl -X POST http://localhost:8080/api/auth/password-reset/confirm \
+curl -X POST http://localhost:8080/api/auth/reset/abc123-def456-ghi789 \
   -H "Content-Type: application/json" \
   -d '{
-    "token": "reset-token-from-email",
-    "newPassword": "NewSecurePass@123!"
+    "password": "NewSecurePassword123!",
+    "confirmPassword": "NewSecurePassword123!"
   }'
+```
+
+### GET /api/auth/reset/{token}/validate
+
+Check if a password reset token is valid and not expired (optional endpoint for UI validation).
+
+#### Request
+
+**Path Parameters:**
+
+- `token` (string): Password reset token to validate
+
+#### Response
+
+**Success (200 OK) - Valid Token:**
+
+```json
+{
+  "valid": true,
+  "message": "Token is valid."
+}
+```
+
+**Success (200 OK) - Invalid Token:**
+
+```json
+{
+  "valid": false,
+  "message": "Token is invalid or expired."
+}
+```
+
+#### Example
+
+```bash
+curl -X GET http://localhost:8080/api/auth/reset/abc123-def456-ghi789/validate
 ```
 
 ### GET /api/auth/me
@@ -891,142 +950,21 @@ curl -X DELETE http://localhost:8080/api/users/delete/550e8400-e29b-41d4-a716-44
 
 **Note:** All role management endpoints require ADMIN role and authentication via cookies.
 
-### GET /api/roles
+### GET /api/users/{username}/roles
 
-Get all available roles in the system.
-
-#### Request
-
-**Headers:**
-
-```
-Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
-```
-
-#### Response
-
-**Success (200 OK):**
-
-```json
-[
-  {
-    "id": 1,
-    "name": "ROLE_USER",
-    "description": "Standard user role with basic permissions"
-  },
-  {
-    "id": 2,
-    "name": "ROLE_ADMIN",
-    "description": "Administrator role with full system access"
-  },
-  {
-    "id": 3,
-    "name": "ROLE_MODERATOR",
-    "description": "Moderator role with limited admin privileges"
-  }
-]
-```
-
-#### Example
-
-```bash
-curl -X GET http://localhost:8080/api/roles \
-  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE"
-```
-
-### POST /api/roles (ADMIN only)
-
-Create a new role in the system.
+Get all roles assigned to a specific user by username.
 
 #### Request
 
 **Headers:**
 
 ```
-Content-Type: application/json
-Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
-```
-
-**Body:**
-
-```json
-{
-  "name": "string",
-  "description": "string"
-}
-```
-
-#### Response
-
-**Success (201 Created):**
-
-```json
-{
-  "id": 4,
-  "name": "ROLE_MODERATOR",
-  "description": "Moderator role with limited admin privileges"
-}
-```
-
-**Error (400 Bad Request) - Role Already Exists:**
-
-```json
-{
-  "error": "Bad Request",
-  "message": "Role with name ROLE_MODERATOR already exists",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/roles"
-}
-```
-
-**Error (403 Forbidden) - Insufficient Permissions:**
-
-```json
-{
-  "error": "Forbidden",
-  "message": "Access denied: ADMIN role required",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/roles"
-}
-```
-
-#### Example
-
-```bash
-curl -X POST http://localhost:8080/api/roles \
-  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "ROLE_MODERATOR",
-    "description": "Moderator role with limited admin privileges"
-  }'
-```
-
-### PUT /api/roles/{id} (ADMIN only)
-
-Update an existing role.
-
-#### Request
-
-**Headers:**
-
-```
-Content-Type: application/json
 Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 ```
 
 **Path Parameters:**
 
-- `id` (Long): Role ID to update
-
-**Body:**
-
-```json
-{
-  "name": "string",
-  "description": "string"
-}
-```
+- `username` (string): Username (not user ID)
 
 #### Response
 
@@ -1034,9 +972,10 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 
 ```json
 {
-  "id": 3,
-  "name": "ROLE_MODERATOR",
-  "description": "Updated moderator role with enhanced privileges"
+  "userId": "550e8400-e29b-41d4-a716-446655440000",
+  "username": "johndoe",
+  "email": "john@example.com",
+  "roles": ["USER", "MODERATOR"]
 }
 ```
 
@@ -1044,76 +983,208 @@ Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 
 ```json
 {
-  "error": "Not Found",
-  "message": "Role not found with id: 999",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/roles/999"
+  "error": "User not found"
+}
+```
+
+**Error (403 Forbidden):**
+
+```json
+{
+  "error": "Access denied - Admin role required"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X PUT http://localhost:8080/api/roles/3 \
-  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "name": "ROLE_MODERATOR",
-    "description": "Updated moderator role with enhanced privileges"
-  }'
+curl -X GET http://localhost:8080/api/users/johndoe/roles \
+  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE"
 ```
 
-### DELETE /api/roles/{id} (ADMIN only)
+### POST /api/users/{username}/roles
 
-Delete a role from the system. The role cannot be deleted if it's assigned to any users.
+Add a role to a specific user by username.
 
 #### Request
 
 **Headers:**
 
 ```
+Content-Type: application/json
 Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
 ```
 
 **Path Parameters:**
 
-- `id` (Long): Role ID to delete
+- `username` (string): Username (not user ID)
 
-#### Response
-
-**Success (204 No Content):**
-
-```
-(Empty response body)
-```
-
-**Error (400 Bad Request) - Role Still in Use:**
+**Body:**
 
 ```json
 {
-  "error": "Bad Request",
-  "message": "Cannot delete role: Role is assigned to 5 users",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/roles/3"
+  "roleName": "MODERATOR",
+  "reason": "Promoted to moderator for excellent community management"
 }
 ```
 
-**Error (403 Forbidden) - Cannot Delete System Roles:**
+#### Response
+
+**Success (200 OK):**
 
 ```json
 {
-  "error": "Forbidden",
-  "message": "Cannot delete system role: ROLE_USER",
-  "timestamp": "2024-01-15T10:30:00Z",
-  "path": "/api/roles/1"
+  "message": "Role added successfully.",
+  "username": "johndoe",
+  "role": "MODERATOR"
+}
+```
+
+**Error (400 Bad Request) - Role Already Assigned:**
+
+```json
+{
+  "error": "User already has role: MODERATOR"
+}
+```
+
+**Error (404 Not Found) - User Not Found:**
+
+```json
+{
+  "error": "User not found: johndoe"
+}
+```
+
+**Error (404 Not Found) - Role Not Found:**
+
+```json
+{
+  "error": "Role not found: MODERATOR"
 }
 ```
 
 #### Example
 
 ```bash
-curl -X DELETE http://localhost:8080/api/roles/4 \
-  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE"
+curl -X POST http://localhost:8080/api/users/johndoe/roles \
+  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roleName": "MODERATOR",
+    "reason": "Promoted for excellent community management"
+  }'
+```
+
+### DELETE /api/users/{username}/roles
+
+Remove a role from a specific user by username.
+
+#### Request
+
+**Headers:**
+
+```
+Content-Type: application/json
+Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
+```
+
+**Path Parameters:**
+
+- `username` (string): Username (not user ID)
+
+**Body:**
+
+```json
+{
+  "roleName": "MODERATOR",
+  "reason": "Role no longer needed"
+}
+```
+
+#### Response
+
+**Success (200 OK):**
+
+```json
+{
+  "message": "Role removed successfully.",
+  "username": "johndoe",
+  "role": "MODERATOR"
+}
+```
+
+**Error (400 Bad Request) - Role Not Assigned:**
+
+```json
+{
+  "error": "User does not have role: MODERATOR"
+}
+```
+
+#### Example
+
+```bash
+curl -X DELETE http://localhost:8080/api/users/johndoe/roles \
+  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "roleName": "MODERATOR",
+    "reason": "Role no longer needed"
+  }'
+```
+
+### PUT /api/users/{username}/roles/bulk
+
+Update multiple role assignments for a user in a single operation.
+
+#### Request
+
+**Headers:**
+
+```
+Content-Type: application/json
+Cookie: access_token=YOUR_ACCESS_TOKEN_HERE;
+```
+
+**Path Parameters:**
+
+- `username` (string): Username (not user ID)
+
+**Body:**
+
+```json
+{
+  "rolesToAdd": ["MODERATOR", "PREMIUM"],
+  "rolesToRemove": ["BASIC"],
+  "reason": "User upgrade and promotion"
+}
+```
+
+#### Response
+
+**Success (200 OK):**
+
+```json
+{
+  "message": "Roles updated successfully.",
+  "username": "johndoe",
+  "addedRoles": "MODERATOR, PREMIUM",
+  "removedRoles": "BASIC"
+}
+```
+
+#### Example
+
+```bash
+curl -X PUT http://localhost:8080/api/users/johndoe/roles/bulk \
+  --cookie "access_token=YOUR_ADMIN_ACCESS_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "rolesToAdd": ["MODERATOR", "PREMIUM"],
+    "rolesToRemove": ["BASIC"],
+    "reason": "User upgrade and promotion"
+  }'
 ```
 
 ## Error Responses
@@ -1209,106 +1280,642 @@ The API implements rate limiting (in-memory or Redis). When rate limited, you'll
 
 ## Postman Collection
 
-You can import the following Postman collection to test the API:
+You can import the following comprehensive Postman collection to test all API endpoints:
 
 ```json
 {
   "info": {
-    "name": "Ricardo Auth API",
-    "description": "API collection for Ricardo Auth Spring Boot Starter"
+    "name": "Ricardo Auth Provider API v4.0.0",
+    "description": "Complete API collection for Ricardo Auth Spring Boot Starter with cookie authentication",
+    "version": "4.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
+  "auth": {
+    "type": "noauth"
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-extract CSRF token from cookies if available",
+          "const cookies = pm.request.getHeaders()['cookie'] || '';",
+          "const csrfMatch = cookies.match(/XSRF-TOKEN=([^;]+)/);",
+          "if (csrfMatch) {",
+          "    pm.globals.set('csrfToken', decodeURIComponent(csrfMatch[1]));",
+          "}"
+        ]
+      }
+    }
+  ],
   "item": [
     {
-      "name": "Login",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
-          }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n    \"email\": \"user@example.com\",\n    \"password\": \"password\"\n}"
-        },
-        "url": {
-          "raw": "{{baseUrl}}/api/auth/login",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "login"
-          ]
-        }
-      }
-    },
-    {
-      "name": "Get Current User",
-      "request": {
-        "method": "GET",
-        "header": [],
-        "url": {
-          "raw": "{{baseUrl}}/api/auth/me",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "auth",
-            "me"
-          ]
-        }
-      },
-      "cookie": [
+      "name": "Authentication",
+      "item": [
         {
-          "key": "access_token",
-          "value": "{{token}}"
+          "name": "Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Extract cookies from response",
+                  "const cookies = pm.response.headers.all()",
+                  "    .filter(h => h.key.toLowerCase() === 'set-cookie')",
+                  "    .map(h => h.value);",
+                  "",
+                  "// Store access_token for future requests",
+                  "cookies.forEach(cookie => {",
+                  "    if (cookie.includes('access_token=')) {",
+                  "        const token = cookie.split('access_token=')[1].split(';')[0];",
+                  "        pm.globals.set('access_token', token);",
+                  "    }",
+                  "    if (cookie.includes('refresh_token=')) {",
+                  "        const token = cookie.split('refresh_token=')[1].split(';')[0];",
+                  "        pm.globals.set('refresh_token', token);",
+                  "    }",
+                  "    if (cookie.includes('XSRF-TOKEN=')) {",
+                  "        const token = cookie.split('XSRF-TOKEN=')[1].split(';')[0];",
+                  "        pm.globals.set('csrfToken', decodeURIComponent(token));",
+                  "    }",
+                  "});",
+                  "",
+                  "pm.test('Status code is 200', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test('Access token cookie is set', function () {",
+                  "    const hasAccessToken = cookies.some(cookie => cookie.includes('access_token='));",
+                  "    pm.expect(hasAccessToken).to.be.true;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"email\\\": \\\"{{userEmail}}\\\",\\n    \\\"password\\\": \\\"{{userPassword}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/login",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "login"]
+            }
+          }
+        },
+        {
+          "name": "Get Current User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "// Set cookies from stored tokens",
+                  "const accessToken = pm.globals.get('access_token');",
+                  "const refreshToken = pm.globals.get('refresh_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}; refresh_token=${refreshToken || ''}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/me",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "me"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const refreshToken = pm.globals.get('refresh_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (refreshToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `refresh_token=${refreshToken}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}",
+                  "",
+                  "if (csrfToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'X-XSRF-TOKEN',",
+                  "        value: csrfToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/refresh",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "const refreshToken = pm.globals.get('refresh_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}; refresh_token=${refreshToken || ''}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}",
+                  "",
+                  "if (csrfToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'X-XSRF-TOKEN',",
+                  "        value: csrfToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            },
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "// Clear stored tokens on successful logout",
+                  "if (pm.response.code === 200) {",
+                  "    pm.globals.clear();",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/logout",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "logout"]
+            }
+          }
         }
       ]
     },
     {
-      "name": "Create User",
-      "request": {
-        "method": "POST",
-        "header": [
-          {
-            "key": "Content-Type",
-            "value": "application/json"
+      "name": "Password Reset",
+      "item": [
+        {
+          "name": "Request Password Reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"email\\\": \\\"{{userEmail}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset-request",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset-request"]
+            }
           }
-        ],
-        "body": {
-          "mode": "raw",
-          "raw": "{\n    \"username\": \"johndoe\",\n    \"email\": \"john@example.com\",\n    \"password\": \"securepassword123\"\n}"
         },
-        "url": {
-          "raw": "{{baseUrl}}/api/users/create",
-          "host": [
-            "{{baseUrl}}"
-          ],
-          "path": [
-            "api",
-            "users",
-            "create"
-          ]
+        {
+          "name": "Validate Reset Token",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset/{{resetToken}}/validate",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset", "{{resetToken}}", "validate"]
+            }
+          }
+        },
+        {
+          "name": "Complete Password Reset",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"password\\\": \\\"{{newPassword}}\\\",\\n    \\\"confirmPassword\\\": \\\"{{newPassword}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/auth/reset/{{resetToken}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "auth", "reset", "{{resetToken}}"]
+            }
+          }
         }
-      }
+      ]
+    },
+    {
+      "name": "User Management",
+      "item": [
+        {
+          "name": "Create User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}",
+                  "",
+                  "if (csrfToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'X-XSRF-TOKEN',",
+                  "        value: csrfToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"username\\\": \\\"{{newUsername}}\\\",\\n    \\\"email\\\": \\\"{{newUserEmail}}\\\",\\n    \\\"password\\\": \\\"{{newUserPassword}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/create",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "create"]
+            }
+          }
+        },
+        {
+          "name": "Get User by Username",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}`",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{username}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{username}}"]
+            }
+          }
+        },
+        {
+          "name": "Get All Users (Admin)",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}`",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Role Management",
+      "item": [
+        {
+          "name": "Get User Roles",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}`",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{username}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{username}}", "roles"]
+            }
+          }
+        },
+        {
+          "name": "Add Role to User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}",
+                  "",
+                  "if (csrfToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'X-XSRF-TOKEN',",
+                  "        value: csrfToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"roleName\\\": \\\"{{roleName}}\\\",\\n    \\\"reason\\\": \\\"{{roleReason}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{username}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{username}}", "roles"]
+            }
+          }
+        },
+        {
+          "name": "Remove Role from User",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}",
+                  "",
+                  "if (csrfToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'X-XSRF-TOKEN',",
+                  "        value: csrfToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"roleName\\\": \\\"{{roleName}}\\\",\\n    \\\"reason\\\": \\\"{{roleReason}}\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{username}}/roles",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{username}}", "roles"]
+            }
+          }
+        },
+        {
+          "name": "Bulk Update User Roles",
+          "event": [
+            {
+              "listen": "prerequest",
+              "script": {
+                "exec": [
+                  "const accessToken = pm.globals.get('access_token');",
+                  "const csrfToken = pm.globals.get('csrfToken');",
+                  "",
+                  "if (accessToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'Cookie',",
+                  "        value: `access_token=${accessToken}; XSRF-TOKEN=${csrfToken || ''}`",
+                  "    });",
+                  "}",
+                  "",
+                  "if (csrfToken) {",
+                  "    pm.request.headers.add({",
+                  "        key: 'X-XSRF-TOKEN',",
+                  "        value: csrfToken",
+                  "    });",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\\n    \\\"rolesToAdd\\\": [\\\"MODERATOR\\\", \\\"PREMIUM\\\"],\\n    \\\"rolesToRemove\\\": [\\\"BASIC\\\"],\\n    \\\"reason\\\": \\\"User promotion and upgrade\\\"\\n}"
+            },
+            "url": {
+              "raw": "{{baseUrl}}/api/users/{{username}}/roles/bulk",
+              "host": ["{{baseUrl}}"],
+              "path": ["api", "users", "{{username}}", "roles", "bulk"]
+            }
+          }
+        }
+      ]
     }
   ],
   "variable": [
     {
       "key": "baseUrl",
-      "value": "http://localhost:8080"
+      "value": "http://localhost:8080",
+      "type": "string"
     },
     {
-      "key": "token",
-      "value": ""
+      "key": "userEmail",
+      "value": "admin@example.com",
+      "type": "string"
+    },
+    {
+      "key": "userPassword",
+      "value": "AdminPass123!",
+      "type": "string"
+    },
+    {
+      "key": "newUsername",
+      "value": "johndoe",
+      "type": "string"
+    },
+    {
+      "key": "newUserEmail",
+      "value": "john@example.com",
+      "type": "string"
+    },
+    {
+      "key": "newUserPassword",
+      "value": "SecurePass123!",
+      "type": "string"
+    },
+    {
+      "key": "username",
+      "value": "johndoe",
+      "type": "string"
+    },
+    {
+      "key": "roleName",
+      "value": "MODERATOR",
+      "type": "string"
+    },
+    {
+      "key": "roleReason",
+      "value": "User promotion for excellent community management",
+      "type": "string"
+    },
+    {
+      "key": "resetToken",
+      "value": "your-reset-token-here",
+      "type": "string"
+    },
+    {
+      "key": "newPassword",
+      "value": "NewSecurePass123!",
+      "type": "string"
     }
   ]
 }
 ```
+
+### Postman Setup Instructions
+
+1. **Import Collection**: Copy the JSON above and import it into Postman
+2. **Environment Setup**: The collection includes all necessary variables
+3. **Update Variables**: 
+   - Set `baseUrl` to your server URL (default: `http://localhost:8080`)
+   - Update `userEmail` and `userPassword` with valid credentials
+4. **Login First**: Always run the "Login" request first to authenticate
+5. **Automatic Cookie Handling**: The collection automatically handles cookies and CSRF tokens
+6. **Admin Operations**: Role management requires admin credentials
+
+### Key Features
+
+- **Automatic Cookie Management**: Cookies are automatically extracted and stored from login
+- **CSRF Token Handling**: CSRF tokens are automatically extracted and included in requests
+- **Environment Variables**: All requests use configurable variables
+- **Pre-request Scripts**: Automatic cookie and CSRF token injection
+- **Test Scripts**: Automatic response validation and token extraction
 
 ## SDK Examples
 

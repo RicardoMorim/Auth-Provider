@@ -6,7 +6,7 @@ skinparam noteBackgroundColor #E8F4FD
 skinparam noteBorderColor #2C5282
 skinparam noteFontColor #1A202C
 
-title Ricardo Auth Starter - Refresh Token Flow (v1.2.0)
+title Ricardo Auth Starter - Authentication Flows (v4.0.0)
 
 actor User
 participant "Frontend" as FE
@@ -71,9 +71,10 @@ FE --> User: Login successful
 deactivate FE
 
 note right of FE #E8F4FD
-  **Token Storage**
-  Frontend stores both tokens
-  securely (localStorage, httpOnly cookies)
+  **Cookie Storage (v2.0.0)**
+  Frontend uses secure HTTP-only cookies
+  instead of localStorage for enhanced security.
+  Cookies sent automatically with requests.
 end note
 
 == Token Refresh Flow ==
@@ -197,10 +198,184 @@ note right of RTS #E8F4FD
   When rotation is enabled:
   1. New refresh token is created
   2. Old refresh token is deleted
-  3. Both tokens returned to client
+  3. Both tokens returned via cookies (v2.0.0)
   
   This prevents token replay attacks
 end note
+
+== Password Reset Flow (v4.0.0) ==
+participant "PasswordResetService" as PRS
+participant "EmailService" as ES
+participant "PasswordResetRepository" as PRR
+
+User -> FE: Request password reset
+activate FE
+
+FE -> AC: POST /api/auth/password-reset/request
+activate AC
+
+AC -> PRS: requestPasswordReset(email)
+activate PRS
+
+PRS -> US: getUserByEmail(email)
+activate US
+
+alt User exists
+    US -> DB: findByEmail()
+    activate DB
+    DB --> US: User found
+    deactivate DB
+    
+    US --> PRS: User
+    deactivate US
+    
+    PRS -> PRS: generateSecureToken()
+    PRS -> PRS: createPasswordResetToken()
+    
+    PRS -> PRR: save(passwordResetToken)
+    activate PRR
+    
+    PRR -> DB: INSERT password_reset_tokens
+    activate DB
+    DB --> PRR: Token saved
+    deactivate DB
+    
+    PRR --> PRS: PasswordResetToken
+    deactivate PRR
+    
+    PRS -> ES: sendPasswordResetEmail(email, token)
+    activate ES
+    
+    ES -> ES: generateResetUrl(token)
+    ES -> ES: sendEmail()
+    
+    ES --> PRS: Email sent
+    deactivate ES
+    
+    PRS --> AC: Password reset requested
+    deactivate PRS
+    
+    AC --> FE: 200 OK - "Reset email sent"
+    deactivate AC
+    
+    FE --> User: "Check your email for reset instructions"
+    deactivate FE
+
+else User not found
+    US --> PRS: UserNotFoundException
+    deactivate US
+    
+    ' Security: Don't reveal if user exists
+    PRS --> AC: Password reset requested (same response)
+    deactivate PRS
+    
+    AC --> FE: 200 OK - "Reset email sent"
+    deactivate AC
+    
+    FE --> User: "Check your email for reset instructions"
+    deactivate FE
+end
+
+== Password Reset Confirmation ==
+User -> FE: Click reset link with token
+activate FE
+
+FE -> FE: Extract token from URL
+FE -> FE: Show password reset form
+
+User -> FE: Enter new password
+FE -> AC: POST /api/auth/password-reset/confirm
+activate AC
+note right of FE
+  Request: { 
+    "token": "...", 
+    "newPassword": "..." 
+  }
+end note
+
+AC -> PRS: confirmPasswordReset(token, newPassword)
+activate PRS
+
+PRS -> PRR: findByToken(token)
+activate PRR
+
+PRR -> DB: SELECT * FROM password_reset_tokens WHERE token = ?
+activate DB
+DB --> PRR: PasswordResetToken or empty
+deactivate DB
+
+PRR --> PRS: Optional<PasswordResetToken>
+deactivate PRR
+
+alt Token found and valid
+    PRS -> PRS: verifyExpiration(token)
+    PRS -> PRS: checkIfNotUsed(token)
+    
+    alt Token valid
+        PRS -> US: getUserByEmail(token.userEmail)
+        activate US
+        
+        US -> DB: findByEmail()
+        activate DB
+        DB --> US: User
+        deactivate DB
+        
+        US --> PRS: User
+        deactivate US
+        
+        PRS -> US: updateUserPassword(user, newPassword)
+        activate US
+        
+        US -> DB: UPDATE users SET password = ?
+        activate DB
+        DB --> US: Password updated
+        deactivate DB
+        
+        US --> PRS: User updated
+        deactivate US
+        
+        PRS -> PRR: markTokenAsUsed(token)
+        activate PRR
+        
+        PRR -> DB: UPDATE password_reset_tokens SET used = true
+        activate DB
+        DB --> PRR: Token marked as used
+        deactivate DB
+        
+        PRR --> PRS: Token updated
+        deactivate PRR
+        
+        PRS --> AC: Password reset successful
+        deactivate PRS
+        
+        AC --> FE: 200 OK - "Password reset successful"
+        deactivate AC
+        
+        FE --> User: "Password reset successful, please log in"
+        deactivate FE
+        
+    else Token expired or used
+        PRS -> PRS: PasswordResetException
+        PRS --> AC: PasswordResetException
+        deactivate PRS
+        
+        AC --> FE: 400 Bad Request - "Invalid or expired token"
+        deactivate AC
+        
+        FE --> User: "Reset link expired, request a new one"
+        deactivate FE
+    end
+    
+else Token not found
+    PRS --> AC: PasswordResetException
+    deactivate PRS
+    
+    AC --> FE: 400 Bad Request - "Invalid token"
+    deactivate AC
+    
+    FE --> User: "Invalid reset link"
+    deactivate FE
+end
 
 == Cleanup Process ==
 participant "RefreshTokenCleanupService" as RTCS
@@ -289,12 +464,13 @@ alt Token limit exceeded
     deactivate RTS
 end
 
-note left of RTR #E8F4FD
-  **🆕 Multi-Repository Support (v1.2.0)**
-  - JPA: Standard Spring Data JPA
-  - PostgreSQL: Native JDBC with optimizations
-  - Configurable via properties
-  - Proper timestamp handling for both
+note left of PRR #E8F4FD
+  **🆕 Password Reset Security (v4.0.0)**
+  - OWASP-compliant implementation
+  - Secure token generation
+  - Time-based expiration
+  - One-time use tokens
+  - No user enumeration via timing attacks
 end note
 
 @enduml

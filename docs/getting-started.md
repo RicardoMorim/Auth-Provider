@@ -53,6 +53,17 @@ spring:
   jpa:
     hibernate:
       ddl-auto: create-drop
+  mail:
+    host: "smtp.gmail.com"
+    port: 587
+    username: ${MAIL_USERNAME:your_smtp_username}
+    password: ${MAIL_PASSWORD:your_smtp_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 
 # Required: JWT Secret
 ricardo:
@@ -68,47 +79,44 @@ ricardo:
     # Enable blocklist and rate limiting (recommended)
     token-blocklist:
       enabled: true
-      type: memory # or redis
+      type: MEMORY # or REDIS
     rate-limiter:
       enabled: true
-      type: memory # or redis
-      max-requests: 100
+      type: MEMORY # or REDIS
+      max-requests: 150
       time-window-ms: 60000
     # Secure cookies for tokens (REQUIRED)
     cookies:
       access:
         secure: true
         http-only: true
-        same-site: Strict
-        path: /
+        same-site: STRICT
+        path: "/"
       refresh:
         secure: true
         http-only: true
-        same-site: Strict
-        path: /api/auth/refresh
+        same-site: STRICT
+        path: "/api/auth/refresh"
     # Force HTTPS in production (REQUIRED for cookies)
     redirect-https: true
-    # CORS configuration (REQUIRED for frontend apps)
-    cors:
-      allowed-origins: ["http://localhost:3000", "https://yourdomain.com"]
-      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-      allowed-headers: ["*"]
-      allow-credentials: true
-      max-age: 3600
     # Email configuration for password reset
     email:
-      enabled: true
-      from: "noreply@yourdomain.com"
-      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
+      from-address: "noreply@yourdomain.com"
+      from-name: "Your App Name"
+      host: "smtp.gmail.com"
+      port: 587
+      reset-subject: "Password Reset Request"
+      reset-template: "default"
     # Password reset configuration
     password-reset:
       enabled: true
-      token-expiration: 3600000 # 1 hour
+      token-expiry-hours: 1   # 1 hour
       max-attempts: 3
-      cleanup-interval: 3600000
-    # Redis config (if using redis for blocklist/rate-limiter)
+      enable-cleanup: true
+      cleanup-interval-hours: 24
+    # Redis config (if using REDIS for blocklist/rate-limiter)
     redis:
-      host: localhost
+      host: "localhost"
       port: 6379
       password: ""
       database: 0
@@ -206,61 +214,73 @@ Visit `http://localhost:8080/swagger-ui.html` for interactive API documentation.
 - ✅ Rate limiting and token blocklist for security
 - ✅ Complete REST API with interactive documentation
 
-## 🚨 Breaking Changes in v4.0.0
+## 🚨 What's New in v4.0.0
 
-**Cookie-Only Authentication System**
-- **BREAKING**: Authentication now exclusively uses secure HTTP-only cookies
-- **No More Bearer Tokens**: Authorization header authentication completely removed
-- **HTTPS Required**: Secure cookies require HTTPS in production environments
-- **CORS Required**: Frontend applications must configure CORS with credentials
-
-**New Security Features**
-- **Enhanced CORS**: Comprehensive CORS configuration with credentials support
-- **Password Reset**: OWASP-compliant password reset with email integration
-- **Role Management**: Full CRUD API for role management with proper authorization
-- **OpenAPI Integration**: Complete Swagger/OpenAPI documentation
+**New Features in v4.0.0:**
+- **Password Reset System**: OWASP-compliant password reset with email integration
+- **Role Management API**: Full CRUD API for role management with proper authorization
+- **OpenAPI Integration**: Complete Swagger/OpenAPI documentation at `/swagger-ui.html`
+- **Enhanced Input Sanitization**: Advanced input validation and sanitization
+- **Better Exception Handling**: Improved error responses and exception management
 - **Domain Events**: Comprehensive audit trail with event publishing
 
-### Migration from v3.x to v4.0.0
+**Previous Major Changes (Still Required):**
+- **Cookie Authentication (v2.0.0)**: Authentication uses secure HTTP-only cookies exclusively
+- **HTTPS Required (v2.0.0)**: Secure cookies require HTTPS in production environments
+- **UUID Primary Keys (v3.0.0)**: All entities use UUID instead of Long for IDs
+- **CSRF Protection (v3.0.0)**: Enhanced security with CSRF tokens
 
-**⚠️ Critical**: This is a major version with breaking authentication changes.
+### Migration to v4.0.0
 
-**Key Changes:**
-- Remove all `Authorization: Bearer` headers from frontend code
-- Add CORS configuration for your frontend domains
-- Ensure HTTPS is configured for production
-- Update API calls to use `credentials: 'include'` for automatic cookie handling
+**New Configuration Required:**
 - Configure email settings for password reset functionality
+- Update any custom role management code to use new API
+- Access interactive API documentation at `/swagger-ui.html`
 
-**Frontend Update Required:**
-```javascript
-// OLD (3.x): Manual Authorization headers
-fetch('/api/auth/me', {
-  headers: { 'Authorization': `Bearer ${token}` }
-});
+**Email Configuration (New in v4.0.0):**
+```yaml
+ricardo:
+  auth:
+    email:
+      from-address: "noreply@yourdomain.com"
+      from-name: "Your App Name"
+      host: "smtp.gmail.com"
+      port: 587
+    password-reset:
+      enabled: true
+      token-expiry-hours: 1
+      max-attempts: 3
 
-// NEW (4.0): Automatic cookie handling
-fetch('/api/auth/me', {
-  credentials: 'include' // Ensures cookies are sent automatically
-});
+spring:
+  mail:
+    host: "smtp.gmail.com"
+    port: 587
+    username: ${MAIL_USERNAME:your_username}
+    password: ${MAIL_PASSWORD:your_password}
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
 ```
 
-## 🚨 Breaking Changes & Security Notes
-
-- **Cookie-only authentication**: All authentication now uses secure HTTP-only cookies exclusively
-- **No Authorization headers**: Authorization header authentication has been completely removed
-- **HTTPS required**: Production environments require HTTPS for secure cookie operation
-- **CORS configuration required**: Frontend applications must configure CORS with credentials support
-- **Email integration**: Password reset requires email configuration
-- **Enhanced security**: Rate limiting, CSRF protection, and input validation enabled by default
-
-## 🎯 What's Next?
+## 📚 Documentation & Next Steps
 
 ### For Development
 
 - **[Examples](docs/examples.md)** - See complete project examples
 - **[API Reference](docs/api-reference.md)** - Explore all endpoints
 - **[Configuration Guide](docs/configuration.md)** - Customize settings
+- **[OpenAPI Documentation](http://localhost:8080/swagger-ui.html)** - Interactive API testing (NEW in v4.0.0)
+
+### Authentication Architecture (Established in v2.0.0)
+
+- **Cookie-only authentication**: All authentication uses secure HTTP-only cookies exclusively
+- **No Authorization headers**: Authorization header authentication removed for security
+- **HTTPS required**: Production environments require HTTPS for secure cookie operation
+- **Rate limiting & token blocklist**: Built-in protection against abuse (v2.0.0)
+- **CSRF protection**: Enhanced security with CSRF tokens (v3.0.0)
 
 ### For Production
 
