@@ -1,4 +1,4 @@
-package com.ricardo.auth.domain.user.domainevents;
+package com.ricardo.auth.domain.domainevents;
 
 import com.ricardo.auth.core.Role;
 

@@ -1,4 +1,4 @@
-package com.ricardo.auth.domain.user.domainevents.enums;
+package com.ricardo.auth.domain.domainevents.enums;
 
 public enum AccessDeniedReason {
     MISSING_TOKEN,
