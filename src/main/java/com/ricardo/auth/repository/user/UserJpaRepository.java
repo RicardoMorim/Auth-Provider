@@ -72,4 +72,16 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
     default <S extends U> S saveUser(S entity) {
         return save(entity);
     }
+
+    @Override
+    default int countUsers() {
+        return (int) count();
+    }
+
+    long countByRoles(String role);
+
+    // Now your default method can call it
+    default int countUsersByRole(String role) {
+        return (int) countByRoles(role);
+    }
 }

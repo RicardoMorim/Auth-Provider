@@ -319,6 +319,28 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         jdbcTemplate.update(sql);
     }
 
+
+    @Override
+    public int countUsers(){
+        String countSql = "SELECT COUNT(*) FROM users";
+        Integer count = jdbcTemplate.queryForObject(countSql, Integer.class);
+        return count != null ? count : 0;
+    }
+
+
+    @Override
+    public int countUsersByRole(String Role){
+        String countSql = """
+            SELECT COUNT(DISTINCT u.id) 
+            FROM users u 
+            JOIN user_roles ur ON u.id = ur.user_id 
+            WHERE ur.role = ?
+            """;
+        Integer count = jdbcTemplate.queryForObject(countSql, Integer.class, Role);
+        return count != null ? count : 0;
+    }
+
+
     // Helper methods to aggregate roles
     @SuppressWarnings("unchecked")
     private Optional<T> findUserWithRoles(String sql, Object... params) {

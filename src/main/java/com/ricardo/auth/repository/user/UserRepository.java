@@ -48,5 +48,7 @@ public interface UserRepository<U extends AuthUser<ID, R>, R extends Role, ID> {
     void deleteAll(Iterable<? extends U> entities);
 
     void deleteAll();
-    // Optionally add pagination and sorting signatures if needed, but not required for JdbcTemplate
+
+    int countUsersByRole(String Role);
+    int countUsers();
 }
