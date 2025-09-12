@@ -190,7 +190,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (expectedPath != null && !"/".equals(expectedPath)) {
             String requestPath = request.getRequestURI();
             if (!requestPath.startsWith(expectedPath)) {
-                logger.warn("Cookie path mismatch. Expected: {}, Request path: {}", expectedPath, requestPath);
+                logger.warn("Cookie path mismatch. Expected: {}, Request path: {}", expectedPath, sanitizeForLog(requestPath));
                 // This might be too strict, so we'll log but not fail
                 // return false;
             }
@@ -245,5 +245,15 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private void sendUnauthorizedError(HttpServletResponse response, String logMessage) throws IOException {
         logger.debug("Authentication failed: {}", logMessage);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, UNAUTHORIZED_MESSAGE);
+    }
+    /**
+     * Sanitize a string for log output by removing CR and LF characters to prevent log injection.
+     */
+    private String sanitizeForLog(String input) {
+        if (input == null) {
+            return null;
+        }
+        // Remove CR and LF characters
+        return input.replace("\n", "").replace("\r", "");
     }
 }
