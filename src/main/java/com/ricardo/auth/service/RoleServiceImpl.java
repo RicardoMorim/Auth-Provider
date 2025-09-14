@@ -113,7 +113,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             }
 
             // Prevent removing the last admin role
-            if (roleName.equals("ADMIN") && isLastAdminRole(user, role)) {
+            R adminRole = roleMapper.mapRole("ADMIN");
+            if (role.equals(adminRole) && isLastAdminRole(user, role)) {
                 throw new SecurityException("Cannot remove the last admin role");
             }
 
@@ -145,9 +146,12 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             U user = userService.getUserById(userId);
             R role = roleMapper.mapRole(roleName.trim().toUpperCase());
             return user.getRoles().contains(role);
-        } catch (Exception e) {
+        } catch (RoleMapper.RoleMappingException e) {
+            log.error("Invalid role name: {}", roleName);
+            throw new IllegalArgumentException("Invalid role: " + roleName, e);
+        } catch (RuntimeException e) {
             log.error("Error checking role {} for user {}: {}", roleName, userId, e.getMessage());
-            return false;
+            throw e;
         }
     }
 
@@ -180,9 +184,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
                     roleNames
             );
 
-        } catch (ClassCastException e) {
-            log.error("UUID to ID casting failed for user: {}", userId);
-            throw new IllegalArgumentException("Invalid user ID type", e);
+        } catch (Exception e) {
+            throw e;
         }
     }
 
@@ -207,24 +210,14 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         // Add roles
         if (rolesToAdd != null && !rolesToAdd.isEmpty()) {
             for (String roleName : rolesToAdd) {
-                try {
-                    addRoleToUser(userId, roleName, reason);
-                } catch (Exception e) {
-                    log.error("Failed to add role {} to user {}: {}", roleName, userId, e.getMessage());
-                    // Continue with other operations
-                }
+                addRoleToUser(userId, roleName, reason);
             }
         }
 
         // Remove roles
         if (rolesToRemove != null && !rolesToRemove.isEmpty()) {
             for (String roleName : rolesToRemove) {
-                try {
-                    removeRoleFromUser(userId, roleName, reason);
-                } catch (Exception e) {
-                    log.error("Failed to remove role {} from user {}: {}", roleName, userId, e.getMessage());
-                    // Continue with other operations
-                }
+                removeRoleFromUser(userId, roleName, reason);
             }
         }
 
@@ -243,25 +236,22 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         // Additional validation: prevent self-modification if not allowed
         if (!authProperties.getRoleManagement().isAllowSelfRoleModification()) {
             String currentUserId = getCurrentUserId();
-            if (currentUserId != null && currentUserId.equals(userId.toString())) {
+            if (currentUserId != null && currentUserId.equals(idConverter.toString(userId))) {
                 throw new SecurityException("Self role modification is not allowed");
             }
         }
     }
 
     private boolean isLastAdminRole(U user, R roleToRemove) {
-        // This is a simplified check - in a real system, you'd check if this is the last admin in the system
         try {
             R adminRole = roleMapper.mapRole("ADMIN");
-            if (roleToRemove.equals(adminRole) && user.getRoles().contains(adminRole) && userService.countAdmins() <= 1) {
-                throw new SecurityException("Can not remove the last admin from the system");
-            }
-
-            return true;
+            return roleToRemove.equals(adminRole) &&
+                    user.getRoles().contains(adminRole) &&
+                    userService.countAdmins() <= 1;
         } catch (Exception e) {
             log.warn("Could not check for admin role: {}", e.getMessage());
+            return false;
         }
-        return false;
     }
 
     private String getCurrentUsername() {

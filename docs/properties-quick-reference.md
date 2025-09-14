@@ -207,18 +207,6 @@ ricardo:
       reset-template: "default"              # Email template name
 ```
 
-### Role Management
-
-```yaml
-ricardo:
-  auth:
-    role-management:
-      enable-role-events: true                    # Publish role change events
-      require-admin-for-role-changes: true        # Admin-only role changes
-      allow-self-role-modification: false         # Users can modify own roles
-```
-
----
 
 ## 🔧 Environment-Specific Examples
 

@@ -26,6 +26,13 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Create .env file from secrets
+        run: |
+          echo MAIL_USERNAME=${{ secrets.MAIL_USERNAME }} >> .env
+          echo MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} >> .env
+          echo RICARDO_AUTH_JWT_SECRET=${{ secrets.RICARDO_AUTH_JWT_SECRET }} >> .env
+
+
       - name: Set up JDK 21
         uses: actions/setup-java@v4
         with:

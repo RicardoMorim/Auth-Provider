@@ -10,11 +10,9 @@ public interface PasswordResetTokenRepository {
 
     Optional<PasswordResetToken> findByTokenAndNotUsed(String token);
 
-    void invalidateTokensForUser(UUID userId, Instant now);
+    void invalidateTokensForUser(String email, Instant now);
 
     int countResetAttemptsForEmailSince(String email, Instant since);
-
-    int countResetAttemptsForIpSince(String ipAddress, Instant since);
 
     PasswordResetToken saveToken(PasswordResetToken token);
 

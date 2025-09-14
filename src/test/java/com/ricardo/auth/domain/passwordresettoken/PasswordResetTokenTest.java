@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 /**
  * Tests for PasswordResetToken domain entity.
  * Tests business logic and validation methods.
- * 
+ *
  * @since 3.1.0
  */
 class PasswordResetTokenTest {
@@ -23,11 +23,11 @@ class PasswordResetTokenTest {
         Instant expiryDate = Instant.now().plusSeconds(3600);
 
         // When
-        PasswordResetToken resetToken = new PasswordResetToken(token, userId, expiryDate);
+        PasswordResetToken resetToken = new PasswordResetToken(token, "random-email@email.com", expiryDate);
 
         // Then
         assertThat(resetToken.getToken()).isEqualTo(token);
-        assertThat(resetToken.getUserId()).isEqualTo(userId);
+        assertThat(resetToken.getEmail()).isEqualTo("random-email@email.com");
         assertThat(resetToken.getExpiryDate()).isEqualTo(expiryDate);
         assertThat(resetToken.isUsed()).isFalse();
         assertThat(resetToken.getUsedAt()).isNull();
@@ -38,9 +38,9 @@ class PasswordResetTokenTest {
     void isExpired_WithFutureExpiryDate_ShouldReturnFalse() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().plusSeconds(3600) // 1 hour in future
+                "test-token",
+                "email@email.com",
+                Instant.now().plusSeconds(3600) // 1 hour in future
         );
 
         // When
@@ -54,9 +54,9 @@ class PasswordResetTokenTest {
     void isExpired_WithPastExpiryDate_ShouldReturnTrue() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().minusSeconds(3600) // 1 hour in past
+                "test-token",
+                "email@email.com",
+                Instant.now().minusSeconds(3600) // 1 hour in past
         );
 
         // When
@@ -70,9 +70,9 @@ class PasswordResetTokenTest {
     void isValid_WithValidUnusedToken_ShouldReturnTrue() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().plusSeconds(3600)
+                "test-token",
+                "email@email.com",
+                Instant.now().plusSeconds(3600)
         );
 
         // When
@@ -86,9 +86,9 @@ class PasswordResetTokenTest {
     void isValid_WithUsedToken_ShouldReturnFalse() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().plusSeconds(3600)
+                "test-token",
+                "email@email.com",
+                Instant.now().plusSeconds(3600)
         );
         token.setUsed(true);
         token.setUsedAt(Instant.now());
@@ -104,9 +104,9 @@ class PasswordResetTokenTest {
     void isValid_WithExpiredToken_ShouldReturnFalse() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().minusSeconds(3600)
+                "test-token",
+                "email@email.com",
+                Instant.now().minusSeconds(3600)
         );
 
         // When
@@ -120,9 +120,9 @@ class PasswordResetTokenTest {
     void isValid_WithUsedAndExpiredToken_ShouldReturnFalse() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().minusSeconds(3600)
+                "test-token",
+                "email@email.com",
+                Instant.now().minusSeconds(3600)
         );
         token.setUsed(true);
         token.setUsedAt(Instant.now());
@@ -138,9 +138,9 @@ class PasswordResetTokenTest {
     void setUsed_ShouldUpdateUsedStatus() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().plusSeconds(3600)
+                "test-token",
+                "email@email.com",
+                Instant.now().plusSeconds(3600)
         );
 
         // When
@@ -160,9 +160,9 @@ class PasswordResetTokenTest {
 
         // When
         PasswordResetToken token = new PasswordResetToken(
-            "test-token",
-            UUID.randomUUID(),
-            Instant.now().plusSeconds(3600)
+                "test-token",
+                "email@email.com",
+                Instant.now().plusSeconds(3600)
         );
 
         // Then
@@ -174,9 +174,9 @@ class PasswordResetTokenTest {
     void toString_ShouldNotExposeToken() {
         // Given
         PasswordResetToken token = new PasswordResetToken(
-            "secret-token",
-            UUID.randomUUID(),
-            Instant.now().plusSeconds(3600)
+                "secret-token",
+                "email@email.com",
+                Instant.now().plusSeconds(3600)
         );
 
         // When
@@ -192,10 +192,10 @@ class PasswordResetTokenTest {
     void equals_WithSameId_ShouldReturnTrue() {
         // Given
         UUID commonId = UUID.randomUUID();
-        PasswordResetToken token1 = new PasswordResetToken("test-token", UUID.randomUUID(), Instant.now().plusSeconds(3600));
+        PasswordResetToken token1 = new PasswordResetToken("test-token", "email@email.com", Instant.now().plusSeconds(3600));
         token1.setId(commonId);
-        
-        PasswordResetToken token2 = new PasswordResetToken("test-token", UUID.randomUUID(), Instant.now().plusSeconds(3600));
+
+        PasswordResetToken token2 = new PasswordResetToken("test-token", "email@email.com", Instant.now().plusSeconds(3600));
         token2.setId(commonId);
 
         // When & Then
@@ -206,9 +206,9 @@ class PasswordResetTokenTest {
     @Test
     void equals_WithDifferentId_ShouldReturnFalse() {
         // Given
-        PasswordResetToken token1 = new PasswordResetToken("token", UUID.randomUUID(), Instant.now().plusSeconds(3600));
+        PasswordResetToken token1 = new PasswordResetToken("token", "email@email.com", Instant.now().plusSeconds(3600));
 
-        PasswordResetToken token2 = new PasswordResetToken("token", UUID.randomUUID(), Instant.now().plusSeconds(3600));
+        PasswordResetToken token2 = new PasswordResetToken("token", "email@email.com", Instant.now().plusSeconds(3600));
 
         token1.setId(UUID.randomUUID());
         token2.setId(UUID.randomUUID());

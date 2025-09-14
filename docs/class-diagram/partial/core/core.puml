@@ -187,28 +187,6 @@ package "Role Management Domain" {
     
     Role --> RoleResponse : maps to
 }
-    interface "UserService<U, R, ID>" as UserService {
-        +createUser(user: U): U
-        +getUserById(id: ID): U
-        +getUserByEmail(email: String): U
-        +updateUser(id: ID, user: U): U
-        +deleteUser(id: ID): void
-    }
-    
-    interface JwtService {
-        +generateAccessToken(subject: String, authorities: Collection<GrantedAuthority>): String
-        +extractSubject(token: String): String
-        +isTokenValid(token: String): boolean
-        +isTokenValid(token: String, email: String): boolean
-    }
-    
-    interface "RefreshTokenService<U, ID>" as RefreshTokenService {
-        +createRefreshToken(user: U): RefreshToken
-        +findByToken(token: String): Optional<RefreshToken>
-        +verifyExpiration(token: RefreshToken): RefreshToken
-        +deleteByToken(token: String): void
-        +deleteAllByUserEmail(userEmail: String): void
-    }
     
 package "Core Services" {
     interface "UserService<U, R, ID>" as UserService {

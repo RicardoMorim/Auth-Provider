@@ -35,7 +35,7 @@ https://yourdomain.com # Production
 
 ## Authentication
 
-All endpoints require authentication via secure HTTP-only cookies (`access_token`, `refresh_token`). 
+Most endpoints are authenticated via secure HTTP-only cookies (`access_token`, `refresh_token`). Public endpoints (e.g., login, password reset, token validation, create) do not require authentication.
 
 **Key Authentication Features:**
 - **Cookie-Only (since v2.0.0)**: All authentication uses secure HTTP-only cookies exclusively  
@@ -43,10 +43,9 @@ All endpoints require authentication via secure HTTP-only cookies (`access_token
 - **HTTPS Required (since v2.0.0)**: Secure cookies require HTTPS in production environments
 - **CSRF Protection (since v3.0.0)**: Enhanced security with CSRF tokens
 - **Interactive Documentation (NEW in v4.0.0)**: Complete OpenAPI documentation available at `/swagger-ui.html`
-
 ### Frontend Integration Requirements
 
-**CORS Configuration Required:**
+**Email Configuration Required:**
 ```yaml
 ricardo:
   auth:

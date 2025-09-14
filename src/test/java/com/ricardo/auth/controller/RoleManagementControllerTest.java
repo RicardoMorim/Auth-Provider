@@ -9,7 +9,6 @@ import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.AddRoleRequest;
 import com.ricardo.auth.dto.BulkRoleUpdateRequest;
 import com.ricardo.auth.dto.RemoveRoleRequest;
-import com.ricardo.auth.dto.UserRolesResponse;
 import com.ricardo.auth.repository.user.UserRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -115,7 +114,6 @@ class RoleManagementControllerTest {
                 .andExpect(jsonPath("$.email").value("testuser@example.com"))
                 .andExpect(jsonPath("$.roles[0]").value("USER"));
     }
-
 
 
     @Test
