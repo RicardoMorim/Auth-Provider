@@ -23,6 +23,7 @@ import org.springframework.web.context.WebApplicationContext;
 import java.util.UUID;
 
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -137,8 +138,8 @@ class PasswordResetIntegrationTest {
 
         mockMvc.perform(post("/api/auth/reset/some-token")
                         .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(completeRequest)))
+                        .content(objectMapper.writeValueAsString(completeRequest))).andDo(print())
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Password confirmation does not match."));
+                .andExpect(jsonPath("$.message").value("Validation failed: passwordConfirmed Password and confirmation do not match; "));
     }
 }

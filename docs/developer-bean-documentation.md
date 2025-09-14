@@ -415,7 +415,7 @@ ricardo:
 spring:
   web:
     cors:
-      allowed-origins: "*"      # Customize via CorsConfigurationSource bean
+      allowed-origin-patterns: "https://app.example.com,https://admin.example.com"
       allow-credentials: true
 ```
 

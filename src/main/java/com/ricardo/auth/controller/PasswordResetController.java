@@ -1,12 +1,14 @@
 package com.ricardo.auth.controller;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
+import com.ricardo.auth.core.IpResolver;
 import com.ricardo.auth.core.PasswordResetService;
 import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.domain.domainevents.TooManyAuthRequestsEvent;
 import com.ricardo.auth.dto.PasswordResetCompleteRequest;
 import com.ricardo.auth.dto.PasswordResetRequest;
 import com.ricardo.auth.service.EventPublisher;
+import com.ricardo.auth.service.PasswordResetServiceImpl;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -36,11 +38,13 @@ public class PasswordResetController {
     private final PasswordResetService passwordResetService;
     private final RateLimiter rateLimiter;
     private final EventPublisher eventPublisher;
+    private final IpResolver ipResolver;
 
-    public PasswordResetController(PasswordResetService passwordResetService, @Qualifier("passwordResetRateLimiter") RateLimiter rateLimiter, EventPublisher eventPublisher, AuthProperties authProperties) {
+    public PasswordResetController(PasswordResetService passwordResetService, @Qualifier("passwordResetRateLimiter") RateLimiter rateLimiter, EventPublisher eventPublisher, AuthProperties authProperties, IpResolver ipResolver) {
         this.passwordResetService = passwordResetService;
         this.rateLimiter = rateLimiter;
         this.eventPublisher = eventPublisher;
+        this.ipResolver = ipResolver;
     }
 
     /**
@@ -75,10 +79,11 @@ public class PasswordResetController {
             @Parameter(hidden = true) HttpServletRequest httpRequest) {
 
         String clientIp = getClientIp(httpRequest);
-        String rateLimitKey = "password_reset:" + clientIp;
 
         // Apply rate limiting per IP using existing infrastructure
-        if (rateLimiter.isEnabled() && !rateLimiter.allowRequest(rateLimitKey)) {
+        final String RATE_LIMIT_KEY_FOR_RESET_REQUEST = PasswordResetServiceImpl.PASSWORD_RESET_KEY_PREFIX;
+
+        if (rateLimiter.isEnabled() && !rateLimiter.allowRequest(RATE_LIMIT_KEY_FOR_RESET_REQUEST + clientIp)) {
             log.warn("Rate limit exceeded for password reset request from IP: {}", clientIp);
             
             // Publish rate limit exceeded event (only email, no IP for privacy)
@@ -159,9 +164,9 @@ public class PasswordResetController {
         // Additional rate limiting for reset completion
         String clientIp = getClientIp(httpRequest);
 
-        String RATE_LIMIT_KEY_HEADER = "password_reset_complete:";
+        final String RATE_LIMIT_KEY_HEADER_FOR_RESET_COMPLETE = PasswordResetServiceImpl.PASSWORD_RESET_COMPLETE_KEY_PREFIX;
 
-        String rateLimitKey = RATE_LIMIT_KEY_HEADER + clientIp;
+        String rateLimitKey = RATE_LIMIT_KEY_HEADER_FOR_RESET_COMPLETE + clientIp;
 
         if (rateLimiter.isEnabled() && !rateLimiter.allowRequest(rateLimitKey)) {
             log.warn("Rate limit exceeded for password reset completion from IP: {}", clientIp);
@@ -226,10 +231,9 @@ public class PasswordResetController {
 
         try {
             boolean isValid = passwordResetService.validatePasswordResetToken(token);
-
             return ResponseEntity.ok(Map.of(
-                    "valid", true,
-                    "message", "Token is valid."
+                    "valid", isValid,
+                    "message", isValid ? "Token is valid." : "Token is invalid or expired."
             ));
 
         } catch (SecurityException e) {
@@ -240,28 +244,13 @@ public class PasswordResetController {
         }
     }
 
+
     /**
-     * Extract client IP from request headers, considering proxy headers.
-     * Validates and sanitizes IP addresses to prevent header injection.
+     * Extract client IP address.
+     * Delegate to IpResolver, to allow for bean customization (e.g. behind proxies).
      */
     private String getClientIp(HttpServletRequest request) {
-        // Check X-Forwarded-For header (most common proxy header)
-        String xForwardedFor = request.getHeader("X-Forwarded-For");
-        if (xForwardedFor != null && !xForwardedFor.isEmpty()) {
-            String firstIp = xForwardedFor.split(",")[0].trim();
-            if (isValidIpAddress(firstIp)) {
-                return firstIp;
-            }
-        }
-
-        // Check X-Real-IP header (nginx proxy)
-        String xRealIp = request.getHeader("X-Real-IP");
-        if (xRealIp != null && !xRealIp.isEmpty() && isValidIpAddress(xRealIp)) {
-            return xRealIp;
-        }
-
-        // Fallback to remote address
-        return request.getRemoteAddr();
+        return ipResolver.resolveIp(request);
     }
 
     /**

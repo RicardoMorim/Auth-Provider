@@ -61,8 +61,7 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
      */
     @Operation(
             summary = "Create new user",
-            description = "Create a new user. Only accessible by administrators.",
-            security = @SecurityRequirement(name = "CookieAuth")
+            description = "Create a new user. Publicly accessible endpoint."
     )
     @ApiResponses(value = {
             @ApiResponse(
@@ -76,11 +75,6 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
             @ApiResponse(
                     responseCode = "400",
                     description = "Invalid request or validation error",
-                    content = @Content(mediaType = "application/json")
-            ),
-            @ApiResponse(
-                    responseCode = "403",
-                    description = "Access denied - admin role required",
                     content = @Content(mediaType = "application/json")
             ),
             @ApiResponse(
@@ -180,13 +174,16 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
     @PutMapping("/update/{username}")
     @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwnerUsername(authentication.name, #username)")
     public ResponseEntity<UserDTO> updateUser(@Valid @RequestBody CreateUserRequestDTO request, @PathVariable("username") String username, Authentication authentication) {
-        ID id = userService.getUserByUserName(username).getId();
+        U existingUser = userService.getUserByUserName(username);
+        if (existingUser == null) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
+        ID id = existingUser.getId();
         U userDetails = userBuilder.create(request);
         U updatedUser = userService.updateUser(id, userDetails);
 
         return ResponseEntity.ok(UserDTOMapper.toDTO(updatedUser));
     }
-
     /**
      * Delete user response entity.
      *

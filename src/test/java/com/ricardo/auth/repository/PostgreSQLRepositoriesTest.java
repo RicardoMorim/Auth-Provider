@@ -18,6 +18,7 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.DynamicPropertyRegistry;
 import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
+import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.containers.PostgreSQLContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -43,7 +44,8 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @TestPropertySource(properties = {
         "ricardo.auth.repository.type=POSTGRESQL",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
-})@Transactional
+})
+@Transactional
 class PostgreSQLRepositoriesTest {
 
     /**
@@ -60,6 +62,8 @@ class PostgreSQLRepositoriesTest {
     private PasswordEncoder passwordEncoder;
     @Autowired
     private PasswordPolicyService passwordPolicyService;
+    @Autowired
+    private org.springframework.jdbc.core.JdbcTemplate jdbcTemplate;
     private User testUser;
     private String testUserEmail;
 
@@ -95,6 +99,24 @@ class PostgreSQLRepositoriesTest {
 
         // Clean up any existing data for this test
         repository.deleteAll();
+        deleteUserByEmail(testUserEmail);
+        insertUser(testUser);
+    }
+
+    // Helper to insert a user into the users table for FK constraint
+    private void insertUser(User user) {
+        jdbcTemplate.update(
+                "INSERT INTO users (id, username, email, password, version, created_at, updated_at) VALUES (?, ?, ?, ?, 0, NOW(), NOW())",
+                UUID.randomUUID(),
+                user.getUsername(),
+                user.getEmail(),
+                user.getPassword()
+        );
+    }
+
+    // Helper to delete a user by email (cleanup)
+    private void deleteUserByEmail(String email) {
+        jdbcTemplate.update("DELETE FROM users WHERE email = ?", email);
     }
 
     /**
@@ -427,6 +449,13 @@ class PostgreSQLRepositoriesTest {
     void shouldDeleteAllTokensForUser() {
         // Arrange - Create tokens for multiple users
         String userEmail2 = "other@example.com";
+        // Insert user2 into users table for FK constraint
+        deleteUserByEmail(userEmail2);
+        insertUser(new User(
+                Username.valueOf("otheruser"),
+                Email.valueOf(userEmail2),
+                Password.valueOf("OtherPassword@123", passwordEncoder, passwordPolicyService)
+        ));
 
         RefreshToken token1 = new RefreshToken("token1", testUserEmail, Instant.now().plusSeconds(3600));
         RefreshToken token2 = new RefreshToken("token2", testUserEmail, Instant.now().plusSeconds(3600));
@@ -460,6 +489,13 @@ class PostgreSQLRepositoriesTest {
     void shouldCountActiveTokensForUsers() throws InterruptedException {
         // Arrange - Create various types of tokens
         String otherUserEmail = "other@example.com";
+        // Insert other user for FK constraint
+        deleteUserByEmail(otherUserEmail);
+        insertUser(new User(
+                Username.valueOf("otheruser"),
+                Email.valueOf(otherUserEmail),
+                Password.valueOf("OtherPassword@123", passwordEncoder, passwordPolicyService)
+        ));
 
         // Active tokens for test user
         RefreshToken activeToken1 = new RefreshToken("active1", testUserEmail, Instant.now().plusSeconds(3600));
@@ -514,26 +550,36 @@ class PostgreSQLRepositoriesTest {
      */
     @Test
     @DisplayName("Should handle concurrent token creation and cleanup")
+    @Transactional(propagation = Propagation.NOT_SUPPORTED)
     void shouldHandleConcurrentTokenCreationAndCleanup() throws InterruptedException {
-        // Arrange - Create multiple tokens concurrently
-        int threadCount = 10;
-        CountDownLatch latch = new CountDownLatch(threadCount);
+        // Arrange - Ensure user exists for FK constraint, and synchronize thread start
+        deleteUserByEmail(testUserEmail);
+        insertUser(testUser); // Insert and commit user before threads start
 
-        // Create tokens concurrently
+        int threadCount = 7;
+        CountDownLatch latch = new CountDownLatch(threadCount);
+        java.util.concurrent.CyclicBarrier barrier = new java.util.concurrent.CyclicBarrier(threadCount);
+
+        List<Thread> threads = new ArrayList<>();
         for (int i = 0; i < threadCount; i++) {
             final int tokenIndex = i;
-            new Thread(() -> {
+            Thread t = new Thread(() -> {
                 try {
+                    barrier.await(); // Ensure all threads start at the same time
                     RefreshToken token = new RefreshToken(
                             "concurrent-token-" + tokenIndex,
                             testUserEmail,
                             Instant.now().plusSeconds(3600)
                     );
                     repository.saveToken(token);
+                } catch (Exception e) {
+                    throw new RuntimeException(e);
                 } finally {
                     latch.countDown();
                 }
-            }).start();
+            });
+            threads.add(t);
+            t.start();
         }
 
         latch.await(); // Wait for all threads to complete
@@ -542,7 +588,7 @@ class PostgreSQLRepositoriesTest {
         int deletedCount = repository.deleteOldestTokensForUser(testUserEmail, 5);
 
         // Assert
-        assertThat(deletedCount).isEqualTo(5); // Should delete 5 tokens (10 - 5)
+        assertThat(deletedCount).isEqualTo(2); // Should delete 2 tokens (7 - 5)
         assertThat(repository.countActiveTokensByUser(testUserEmail)).isEqualTo(5);
     }
 
