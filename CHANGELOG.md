@@ -453,7 +453,7 @@ ricardo:
 
 ## [4.0.0] - 2025-09-12
 
-### � New Authentication Features
+### 🔐 New Authentication Features
 
 **Password Reset System**
 - **OWASP Compliant**: Secure password reset with time-limited tokens
@@ -469,8 +469,8 @@ ricardo:
 
 ### Domain Event System
 
-- **Event Publising**: Spring application events for audit logging and for you to use as you wish!
-- **Estensible**: Easy to add custom even listeners for monitoring.
+- **Event Publishing**: Spring application events for audit logging and for you to use as you wish!
+- **Extensible**: Easy to add custom event listeners for monitoring.
 
 **OpenAPI Documentation Integration**
 - **Complete Swagger Integration**: Full OpenAPI 3.0 documentation with security schemes
@@ -478,8 +478,7 @@ ricardo:
 - **Cookie Authentication**: OpenAPI configured for cookie-based auth (consistent with v2.0.0 authentication system)
 - **Comprehensive Endpoints**: All endpoints documented with examples and security requirements
 
-### �️ Enhanced Security Measures
-
+### 🛡️ Enhanced Security Measures
 **Enhanced Input Validation**
 - **Sanitization**: Input sanitization to prevent injection attacks
 - **Enhanced Validation**: Comprehensive validation with detailed error messages
