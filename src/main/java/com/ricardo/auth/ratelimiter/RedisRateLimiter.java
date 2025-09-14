@@ -2,10 +2,12 @@ package com.ricardo.auth.ratelimiter;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.RateLimiter;
+import com.ricardo.auth.service.PasswordResetServiceImpl;
 import lombok.Getter;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnClass;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisCallback;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
@@ -19,6 +21,9 @@ import java.util.concurrent.atomic.AtomicLong;
 @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "redis")
 @Slf4j
 public class RedisRateLimiter implements RateLimiter {
+
+    private static final String RATE_LIMIT_KEY_PREFIX = "ricardo:auth:rate-limit:";
+
 
     private final RedisTemplate<String, String> redisTemplate;
     @Getter
@@ -55,6 +60,16 @@ public class RedisRateLimiter implements RateLimiter {
         return (int) Math.ceil(windowMillis / 1000.0);
     }
 
+    /**
+     * Creates a Redis key with the rate limiting prefix
+     *
+     * @param key the original key
+     * @return the prefixed key for Redis storage
+     */
+    private String createRedisKey(String key) {
+        return RATE_LIMIT_KEY_PREFIX + key;
+    }
+
     @Override
     public boolean isEnabled() {
         return enabled;
@@ -66,39 +81,29 @@ public class RedisRateLimiter implements RateLimiter {
             throw new IllegalArgumentException("Key cannot be null or empty");
         }
 
-        log.info("RateLimiter settings - enabled: {}, maxRequests: {}, windowMillis: {}, ttlSeconds: {}",
-                enabled, maxRequests.get(), windowMillis.get(), ttlSeconds.get());
-
         if (!enabled) {
             return true; // short-circuit when disabled
         }
-        log.info("Checking rate limit for key '{}'", key);
 
         try {
             Long currentCount = redisTemplate.execute((RedisCallback<Long>) connection -> {
-                byte[] redisKey = key.getBytes();
+                String redisKey = createRedisKey(key);
+                byte[] redisKeyBytes = redisKey.getBytes();
 
                 // Atomic increment
-                Long count = connection.incr(redisKey);
+                Long count = connection.incr(redisKeyBytes);
 
                 // Set TTL only on first request to avoid resetting the window
                 if (count == 1) {
-                    connection.expire(redisKey, ttlSeconds.get());
+                    connection.expire(redisKeyBytes, ttlSeconds.get());
                 }
-                log.info("Current count for key '{}': {}", key, count);
                 return count;
             });
 
             boolean allowed = currentCount != null && currentCount <= maxRequests.get();
 
-            if (!log.isDebugEnabled()){
+            if (!log.isDebugEnabled()) {
                 return allowed;
-            }
-
-            if (allowed) {
-                log.info("Request allowed for key '{}'. Current count: {}", key, currentCount);
-            } else {
-                log.warn("Rate limit exceeded for key '{}'. Current count: {}", key, currentCount);
             }
 
             return allowed;
@@ -115,12 +120,25 @@ public class RedisRateLimiter implements RateLimiter {
     public void clearAll() {
         try {
             redisTemplate.execute((RedisCallback<Void>) connection -> {
-                connection.flushDb();
+                // Limpa chaves com prefixo completo (incluindo RATE_LIMIT_KEY_PREFIX)
+                clearPattern(connection, (RATE_LIMIT_KEY_PREFIX + "*").getBytes());
                 return null;
             });
-            log.info("Cleared all rate limiting data from Redis");
         } catch (Exception e) {
             log.error("Error clearing rate limiting data from Redis: {}", e.getMessage());
+        }
+    }
+
+
+    private void clearPattern(RedisConnection connection, byte[] pattern) {
+        var passwordResetCompleteKeys = connection.keys(pattern);
+
+        if (!passwordResetCompleteKeys.isEmpty()) {
+            connection.del(passwordResetCompleteKeys.toArray(new byte[0][]));
+            log.info("Cleared {} password reset keys from Redis with prefix '{}'",
+                    passwordResetCompleteKeys.size(), PasswordResetServiceImpl.PASSWORD_RESET_KEY_PREFIX);
+        } else {
+            log.info("No rate limiting keys found with prefix '{}'", PasswordResetServiceImpl.PASSWORD_RESET_KEY_PREFIX);
         }
     }
 }

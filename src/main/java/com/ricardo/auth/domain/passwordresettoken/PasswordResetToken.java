@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.Objects;
 import java.util.UUID;
 
+
 @Entity
 @Table(name = "password_reset_tokens")
 public class PasswordResetToken {
@@ -18,8 +19,8 @@ public class PasswordResetToken {
     @Column(unique = true, nullable = false, length = 1000)
     private String token;
 
-    @Column(name = "user_id", nullable = false)
-    private UUID userId;
+    @Column(name = "email", nullable = false)
+    private String email;
 
     @Column(name = "expiry_date", nullable = false)
     private Instant expiryDate;
@@ -37,9 +38,9 @@ public class PasswordResetToken {
     protected PasswordResetToken() {
     }
 
-    public PasswordResetToken(String token, UUID userId, Instant expiryDate) {
+    public PasswordResetToken(String token, String email, Instant expiryDate) {
         this.token = token;
-        this.userId = userId;
+        this.email = email;
         this.expiryDate = expiryDate;
         this.createdAt = Instant.now();
     }
@@ -61,13 +62,14 @@ public class PasswordResetToken {
         this.token = token;
     }
 
-    public UUID getUserId() {
-        return userId;
+    public String getEmail() {
+        return email;
     }
 
-    public void setUserId(UUID userId) {
-        this.userId = userId;
+    public void setEmail(String email) {
+        this.email = email;
     }
+
 
     public Instant getExpiryDate() {
         return expiryDate;
@@ -113,13 +115,13 @@ public class PasswordResetToken {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (!(o instanceof PasswordResetToken that)) return false;
-
-        return Objects.equals(this.id, that.id);
+        if (o == null || getClass() != o.getClass()) return false;
+        PasswordResetToken that = (PasswordResetToken) o;
+        return id != null && id.equals(that.id);
     }
 
     @Override
     public int hashCode() {
-        return token.hashCode();
+        return Objects.hashCode(id);
     }
 }

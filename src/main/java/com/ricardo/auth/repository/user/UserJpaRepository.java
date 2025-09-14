@@ -75,12 +75,19 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
 
     @Override
     default int countUsers() {
-        return (int) count();
+        return Math.toIntExact(count());
     }
 
-    long countByRoles(String role);
 
-    // Now your default method can call it
+    // For enums mapped as string, use this for exact match
+    long countByRoles(String roleName);
+
+    // If case-insensitive is needed, use a custom query
+    @org.springframework.data.jpa.repository.Query(
+        "select count(u) from #{#entityName} u join u.roles r where lower(cast(r as string)) = lower(:roleName)"
+    )
+    long countByRolesIgnoreCase(@org.springframework.data.repository.query.Param("roleName") String roleName);
+
     default int countUsersByRole(String role) {
         return (int) countByRoles(role);
     }

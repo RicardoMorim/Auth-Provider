@@ -17,8 +17,8 @@ After starting your Spring Boot application, you can access the Swagger UI at:
 - JWT tokens are stored as secure HTTP-only cookies
 - Cookies are automatically sent by the browser with each request
 - Tokens are protected with `httpOnly=true`, `secure=true`, and `sameSite=Strict`
-- **Immune to XSS attacks** since cookies are not accessible via JavaScript
-- **CORS is properly configured** for cross-origin requests
+- Mitigates token theft via XSS (httpOnly). XSS can still trigger actions—use CSP, rigorous input/output encoding, and CSRF protections.
+- CORS enables cross-origin access patterns but is not a security control by itself.
 
 **Configuration:**
 - Access token cookie: `access_token` (path: `/`)
@@ -48,10 +48,8 @@ All authentication cookies include:
 
 - **httpOnly=true** - Prevents JavaScript access (XSS protection)
 - **secure=true** - Only sent over HTTPS (when HTTPS is enabled)
-- **sameSite=Strict** - CSRF protection
-- **Path restrictions** - Access token for all paths, refresh token only for refresh endpoint
-
-### Auto-Configuration
+- **sameSite=Strict** - Helps mitigate CSRF by blocking third‑party requests. If your frontend runs on a different origin, use **SameSite=None; Secure** and add a CSRF token.
+- **Path restrictions** - Access token for all paths, refresh token only for refresh endpoint### Auto-Configuration
 
 The system automatically configures cookie security based on your settings:
 
@@ -79,7 +77,6 @@ CORS is automatically configured to work with cookie authentication:
 # CORS is handled automatically by Spring Security
 # Supports:
 - Cross-origin requests with credentials
-- Automatic CSRF token handling  
 - Preflight request support
 - Custom origin patterns
 ```
@@ -190,11 +187,6 @@ You can also import the OpenAPI specification into Postman:
 - **404 Not Found**: Confirm endpoint URL and method
 - **400 Bad Request**: Check request body format and required fields
 
-### Token Format
-Ensure your Authorization header follows this format:
-```
-Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
-```
 
 ## Support
 

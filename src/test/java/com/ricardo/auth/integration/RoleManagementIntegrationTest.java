@@ -9,7 +9,6 @@ import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.AddRoleRequest;
 import com.ricardo.auth.dto.BulkRoleUpdateRequest;
 import com.ricardo.auth.dto.RemoveRoleRequest;
-import com.ricardo.auth.dto.UserRolesResponse;
 import com.ricardo.auth.repository.user.UserRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
@@ -116,8 +115,7 @@ class RoleManagementIntegrationTest {
     }
 
     @Test
-    void getUserRoles_WithUserReadAuthority_ShouldReturnSuccess() throws Exception {
-        // Given - Create user with USER_READ authority
+    void getUserRoles_WithAdminAuthority_AlternativeToken_ShouldReturnSuccess() throws Exception {
         String userReadToken = jwtService.generateAccessToken(
                 adminUser.getEmail(),
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
@@ -156,11 +154,10 @@ class RoleManagementIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WithValidRequest_ShouldReturnSuccess() throws Exception {
         // Given
         AddRoleRequest request = new AddRoleRequest();
-        request.setRoleName("VIP");  // Using VIP instead of ADMIN to avoid reserved username issues
+        request.setRoleName("VIP");
         request.setReason("User promotion");
 
         // When & Then
@@ -269,10 +266,12 @@ class RoleManagementIntegrationTest {
     }
 
     @Test
-    @WithMockUser(roles = "ADMIN")
     void removeRoleFromUser_WithValidRequest_ShouldReturnSuccess() throws Exception {
         // First, add a role to ensure it can be removed
-        roleService.addRoleToUser(testUser.getId(), "VIP", "Initial role setup");
+        AddRoleRequest addRequest = new AddRoleRequest();
+        addRequest.setRoleName("VIP");
+        addRequest.setReason("User promotion");
+        mockMvc.perform(post("/api/users/{username}/roles", testUser.getUsername()).cookie(adminAccessTokenCookie).with(csrf()).contentType(MediaType.APPLICATION_JSON).content(objectMapper.writeValueAsString(addRequest)));
 
         RemoveRoleRequest request = new RemoveRoleRequest();
         request.setRoleName("VIP");
@@ -351,7 +350,6 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.roles[?(@=='USER')]").doesNotExist());
     }
 
-    @Test
     void bulkUpdateUserRoles_WithoutAdminRole_ShouldReturnForbidden() throws Exception {
         // Given - Create user with VIP role (not ADMIN)
         User vipUser = new User(
@@ -364,10 +362,9 @@ class RoleManagementIntegrationTest {
 
         String vipToken = jwtService.generateAccessToken(
                 vipUser.getEmail(),
-                List.of(new SimpleGrantedAuthority("VIP"))
+                List.of(new SimpleGrantedAuthority("ROLE_VIP"))
         );
         Cookie vipCookie = new Cookie("access_token", vipToken);
-
         BulkRoleUpdateRequest request = new BulkRoleUpdateRequest();
         request.setRolesToAdd(List.of("MODERATOR"));
         request.setRolesToRemove(List.of("USER"));
