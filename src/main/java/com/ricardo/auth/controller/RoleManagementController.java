@@ -150,10 +150,10 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
 
     /**
      * Add a role to a user.
-     * Requires ADMIN role or USER_WRITE permission.
+     * Requires ADMIN role.
      */
     @PostMapping("/{username}/roles")
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('USER_WRITE')")
+    @PreAuthorize("hasRole('ADMIN')")
     @Operation(
             summary = "Add role to user",
             description = "Assign a role to a specific user by username"
@@ -179,7 +179,7 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             ),
             @ApiResponse(
                     responseCode = "403",
-                    description = "Access denied - Admin role or USER_WRITE permission required",
+                    description = "Access denied - Admin role required",
                     content = @Content(mediaType = "application/json")
             )
     })
