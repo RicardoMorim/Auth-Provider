@@ -441,17 +441,9 @@ ricardo:
 ### Added
 - Added a findByUsername method to the UserService interface for better user lookup by username.
 
-### Future Considerations
-
-> **Note**: The following features are planned for future development as the project evolves and based on community
-> feedback. They are not actively being developed at this time.
-
-> Anyone who liked this project and wants to contribute is more than welcome to implement any of these features.
-> Simply code them, test them, and sumbit a PR to the `dev` branch. For more information check out [contributing] (
-> CONTRIBUTING.md).
 
 
-## [4.0.0] - 2025-09-12
+## [4.0.0] - 2025-09-14
 
 ### 🔐 New Authentication Features
 
@@ -543,9 +535,6 @@ ricardo:
 - `PUT /api/roles/{id}` - Update existing role
 - `DELETE /api/roles/{id}` - Delete role (if not assigned)
 
-**Enhanced Authentication**
-- `GET /api/auth/me` - Get current user with enhanced information (improved in v4.0.0)
-- All endpoints continue to use cookie-based authentication from v2.0.0
 
 ### 🏗️ Breaking Changes
 
@@ -632,6 +621,14 @@ ricardo:
 - **Password Reset Security**: OWASP-compliant password reset tokens with proper expiration and cleanup
 - **Role-Based Authorization**: Enhanced authorization controls ensuring only ADMIN users can manage roles
 
+### Future Considerations
+
+> **Note**: The following features are planned for future development as the project evolves and based on community
+> feedback. They are not actively being developed at this time.
+
+> Anyone who liked this project and wants to contribute is more than welcome to implement any of these features.
+> Simply code them, test them, and sumbit a PR to the `dev` branch. For more information check out [contributing] (
+> CONTRIBUTING.md).
 
 ### Contributing
 
