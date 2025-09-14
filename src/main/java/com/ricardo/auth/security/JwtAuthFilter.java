@@ -71,7 +71,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         // Validate cookie security configuration
         if (!validateCookieSecurity(request)) {
-            logger.warn("Access token cookie security validation failed for request: {}", request.getRequestURI());
+            logger.warn("Access token cookie security validation failed for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid cookie security configuration");
             return;
         }
@@ -84,7 +84,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         // Check if token is blacklisted
         if (tokenBlocklist.isRevoked(token)) {
-            logger.debug("Blocked revoked token for request: {}", request.getRequestURI());
+            logger.debug("Blocked revoked token for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Token no longer valid");
             return;
         }
@@ -95,7 +95,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         try {
             if (!jwtService.isTokenValid(token)) {
-                logger.debug("Invalid JWT token for request: {}", request.getRequestURI());
+                logger.debug("Invalid JWT token for request: {}", sanitizeForLog(request.getRequestURI()));
                 sendUnauthorizedError(response, "Invalid authentication");
                 return;
             }
@@ -104,32 +104,32 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             roles = jwtService.extractRoles(token);
 
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            logger.debug("Expired JWT token for request: {}", request.getRequestURI());
+            logger.debug("Expired JWT token for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Authentication expired");
             return;
         } catch (io.jsonwebtoken.security.SignatureException e) {
-            logger.warn("JWT signature validation failed for request: {}", request.getRequestURI());
+            logger.warn("JWT signature validation failed for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         } catch (io.jsonwebtoken.MalformedJwtException e) {
-            logger.debug("Malformed JWT token for request: {}", request.getRequestURI());
+            logger.debug("Malformed JWT token for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         } catch (Exception e) {
-            logger.error("Unexpected error during JWT validation for request: {}", request.getRequestURI(), e);
+            logger.error("Unexpected error during JWT validation for request: {}", sanitizeForLog(request.getRequestURI()), e);
             sendUnauthorizedError(response, "Authentication error");
             return;
         }
 
         // Validate extracted data
         if (subject == null || subject.trim().isEmpty()) {
-            logger.debug("JWT token missing subject for request: {}", request.getRequestURI());
+            logger.debug("JWT token missing subject for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         }
 
         if (roles == null) {
-            logger.debug("JWT token missing roles for request: {}", request.getRequestURI());
+            logger.debug("JWT token missing roles for request: {}", sanitizeForLog(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         }
@@ -180,7 +180,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     "https".equalsIgnoreCase(forwardedScheme);
 
             if (!isSecureConnection) {
-                logger.warn("Secure cookie expected but connection is not HTTPS. Request: {}", request.getRequestURI());
+                logger.warn("Secure cookie expected but connection is not HTTPS. Request: {}", sanitizeForLog(request.getRequestURI()));
                 return false;
             }
         }
