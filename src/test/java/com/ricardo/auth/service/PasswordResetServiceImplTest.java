@@ -37,7 +37,6 @@ import static org.mockito.Mockito.*;
  * Comprehensive tests for PasswordResetServiceImpl.
  * Tests OWASP security measures and business logic.
  *
- * @since 3.1.0
  */
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceImplTest {
@@ -77,7 +76,7 @@ class PasswordResetServiceImplTest {
                 passwordPolicyService,
                 authProperties,
                 eventPublisher,
-                idConverter
+                idConverter, new AuthProperties()
         );
     }
 
@@ -93,8 +92,7 @@ class PasswordResetServiceImplTest {
         passwordResetService.requestPasswordReset(email);
 
         // Then
-        // Aceita qualquer Instant
-        verify(tokenRepository).invalidateTokensForUser(eq(user.getId()), any(Instant.class));
+        verify(tokenRepository).invalidateTokensForUser(eq(email), any(Instant.class));
         verify(tokenRepository).saveToken(any(PasswordResetToken.class));
         verify(emailSenderService).sendEmail(eq(email), anyString(), anyString());
 
@@ -150,15 +148,16 @@ class PasswordResetServiceImplTest {
         TestUser user = createTestUser("user@example.com");
         UUID userId = user.getId(); // Use the user's actual ID
 
+        userService.createUser(user);
+
         PasswordResetToken resetToken = new PasswordResetToken(
-                token, userId, Instant.now().plusSeconds(3600)
+                token, user.getEmail(), Instant.now().plusSeconds(3600)
         );
 
         when(passwordPolicyService.validatePassword(newPassword)).thenReturn(true);
-        when(tokenRepository.findByTokenAndNotUsed(token)).thenReturn(Optional.of(resetToken));
-        when(idConverter.fromString(userId.toString())).thenReturn(userId);
-        when(userService.getUserById(userId)).thenReturn(user);
+        when(tokenRepository.findByTokenAndNotUsed(PasswordResetServiceImpl.hashToken(token))).thenReturn(Optional.of(resetToken));
         when(passwordEncoder.encode(newPassword)).thenReturn("encoded-password");
+        when(userService.getUserByEmail(user.getEmail())).thenReturn(user);
 
         // When
         passwordResetService.completePasswordReset(token, newPassword);
@@ -167,7 +166,7 @@ class PasswordResetServiceImplTest {
         verify(passwordEncoder).encode(newPassword);
         verify(userService).updateUser(eq(userId), any(TestUser.class));
         verify(tokenRepository).saveToken(argThat(PasswordResetToken::isUsed));
-        verify(tokenRepository).invalidateTokensForUser(eq(userId), any(Instant.class));
+        verify(tokenRepository).invalidateTokensForUser(eq(user.getEmail()), any(Instant.class));
 
         ArgumentCaptor<PasswordResetCompletedEvent> eventCaptor =
                 ArgumentCaptor.forClass(PasswordResetCompletedEvent.class);
@@ -220,11 +219,11 @@ class PasswordResetServiceImplTest {
         String newPassword = "NewPassword123!";
 
         PasswordResetToken expiredToken = new PasswordResetToken(
-                token, UUID.randomUUID(), Instant.now().minusSeconds(3600)
+                token, "randomemail@email.com", Instant.now().minusSeconds(3600)
         );
 
         when(passwordPolicyService.validatePassword(newPassword)).thenReturn(true);
-        when(tokenRepository.findByTokenAndNotUsed(token)).thenReturn(Optional.of(expiredToken));
+        when(tokenRepository.findByTokenAndNotUsed(PasswordResetServiceImpl.hashToken(token))).thenReturn(Optional.of(expiredToken));
 
         // When & Then
         assertThatThrownBy(() -> passwordResetService.completePasswordReset(token, newPassword))
@@ -239,7 +238,7 @@ class PasswordResetServiceImplTest {
         String newPassword = "NewPassword123!";
 
         when(passwordPolicyService.validatePassword(newPassword)).thenReturn(true);
-        when(tokenRepository.findByTokenAndNotUsed(token)).thenReturn(Optional.empty());
+        when(tokenRepository.findByTokenAndNotUsed(PasswordResetServiceImpl.hashToken(token))).thenReturn(Optional.empty());
 
         // When & Then
         assertThatThrownBy(() -> passwordResetService.completePasswordReset(token, newPassword))

@@ -27,6 +27,8 @@ public class AuthProperties {
      */
     private boolean redirectHttps = true;
 
+    private String baseUrl = "http://localhost:8080";
+
     /**
      * JWT configuration
      */
@@ -380,7 +382,7 @@ public class AuthProperties {
     @Setter
     public static class Email {
         private String fromAddress = "noreply@example.com";
-        private String password;
+        private String password; // YOU MAY USE A ENV VARIABLE INSTEAD OF PROPERTIES FOR THIS ONE
         private String host = "smtp.gmail.com";
         private int port = 587;
         private String fromName = "Auth Service";

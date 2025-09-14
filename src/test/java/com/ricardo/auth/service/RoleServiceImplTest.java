@@ -114,7 +114,7 @@ class RoleServiceImplTest {
     void addRoleToUser_WhenUserAlreadyHasRole_ShouldLogAndReturn() {
         // Given
         User user = createUser(1);
-        user.addRole(AppRole.ADMIN);
+        user.addRole(AppRole.VIP);
         userRepository.saveUser(user);
 
         String roleName = "VIP";
@@ -125,11 +125,10 @@ class RoleServiceImplTest {
         // Then
         User updatedUser = userService.getUserById(user.getId());
         long moderatorRoleCount = updatedUser.getRoles().stream()
-                .filter(role -> role.equals(AppRole.ADMIN))
+                .filter(role -> role.equals(AppRole.VIP))
                 .count();
         assertThat(moderatorRoleCount).isEqualTo(1); // Should still have only one
     }
-
     @Test
     @WithMockUser(roles = "ADMIN")
     void removeRoleFromUser_WithValidParameters_ShouldRemoveRole() {

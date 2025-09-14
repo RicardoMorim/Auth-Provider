@@ -354,12 +354,9 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
         String email = jwtService.extractSubject(accessToken);
 
-        if (email != null) {
-            logger.info("Logging out user: {}", email);
-        } else {
+        if (email == null) {
             logger.info("Logging out user with unknown email");
         }
-
         // Revoke refresh token if present and refresh service is available
         if (StringUtils.hasText(refreshToken) && refreshTokenService != null) {
             try {

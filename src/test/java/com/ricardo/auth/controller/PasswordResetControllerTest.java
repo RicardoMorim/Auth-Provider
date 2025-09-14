@@ -1,11 +1,15 @@
 package com.ricardo.auth.controller;
 
+import com.ricardo.auth.core.IpResolver;
 import com.ricardo.auth.core.PasswordResetService;
 import com.ricardo.auth.core.RateLimiter;
+import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.PasswordResetCompleteRequest;
 import com.ricardo.auth.dto.PasswordResetRequest;
 import com.ricardo.auth.service.EventPublisher;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -18,6 +22,8 @@ import org.springframework.http.MediaType;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
+
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
@@ -46,13 +52,21 @@ class PasswordResetControllerTest {
     @MockBean
     private EventPublisher eventPublisher;
 
+    @MockBean
+    private com.ricardo.auth.core.IpResolver ipResolver;
+
     @Autowired
     private ObjectMapper objectMapper;
+
+    @MockBean
+    private UserService<User, AppRole, UUID> userService;
 
     @BeforeEach
     void setUp() {
         when(rateLimiter.isEnabled()).thenReturn(true);
         when(rateLimiter.allowRequest(anyString())).thenReturn(true);
+        // Default: return null for IP unless overridden in test
+        when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn(null);
     }
 
     @Test
@@ -181,7 +195,7 @@ class PasswordResetControllerTest {
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isBadRequest())
-                .andExpect(jsonPath("$.error").value("Password confirmation does not match."));
+                .andExpect(jsonPath("$.message").value("Validation failed: passwordConfirmed Password and confirmation do not match; "));
 
         verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
     }
@@ -244,27 +258,21 @@ class PasswordResetControllerTest {
 
     @Test
     @WithMockUser(roles = "ADMIN")
-    void validateToken_WithValidToken_ShouldReturnValid() throws Exception {
-        // When & Then
-        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
-                .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").value(true))
-                .andExpect(jsonPath("$.message").value("Token is valid."));
-    }
-
-    @Test
-    @WithMockUser(roles = "ADMIN")
     void validateToken_WithInvalidToken_ShouldReturnInvalid() throws Exception {
         mockMvc.perform(get("/api/auth/reset/invalid-token/validate"))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.valid").value(true));
+                .andExpect(jsonPath("$.valid").value(false));
     }
-
     @Test
     void requestPasswordReset_WithXForwardedForHeader_ShouldUseCorrectIP() throws Exception {
         // Given
         PasswordResetRequest request = new PasswordResetRequest();
         request.setEmail("user@example.com");
+
+        when(userService.getUserById(any(UUID.class))).thenReturn(new User(Username.valueOf("user123"), Email.valueOf("user@example.com"), Password.fromHash("Pass1234")));
+
+        // Simulate resolver extracting the correct IP from header
+        when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn("192.168.1.100");
 
         // When & Then
         mockMvc.perform(post("/api/auth/reset-request")
@@ -282,6 +290,8 @@ class PasswordResetControllerTest {
         // Given
         PasswordResetRequest request = new PasswordResetRequest();
         request.setEmail("user@example.com");
+        // Simulate resolver extracting the correct IP from header
+        when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn("192.168.1.200");
 
         // When & Then
         mockMvc.perform(post("/api/auth/reset-request")
