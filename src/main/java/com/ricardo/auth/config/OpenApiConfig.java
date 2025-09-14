@@ -28,10 +28,11 @@ public class OpenApiConfig {
                 .info(new Info()
                         .title("Auth Provider API")
                         .description("JWT Authentication Spring Boot Starter API Documentation. " +
-                                "Uses secure HTTP-only cookie authentication for maximum security. " +
-                                "Cookies are automatically managed with httpOnly, secure, and sameSite flags. " +
-                                "CORS is properly configured for cross-origin requests.")
-                        .version("3.1.0")
+                                "Uses secure HTTP-only cookie authentication. " +
+                                "For cross-site cookie auth, set cookies with SameSite=None; Secure; httpOnly and " +
+                                "configure CORS to allow credentials (Access-Control-Allow-Credentials: true) and " +
+                                "an exact allowed origin (not '*').")
+                        .version("4.0.0")
                         .contact(new Contact()
                                 .name("Ricardo")
                                 .email("ricardomorim05@gmail.com")
@@ -47,13 +48,12 @@ public class OpenApiConfig {
                         .addList("CookieAuth"))
                 .components(new Components()
                         .addSecuritySchemes("CookieAuth", new SecurityScheme()
-                                .name("CookieAuth")
                                 .type(SecurityScheme.Type.APIKEY)
                                 .in(SecurityScheme.In.COOKIE)
                                 .name("access_token")
                                 .description("Secure HTTP-only cookie authentication. " +
-                                        "Automatically managed by browser when credentials are included in requests. " +
-                                        "Cookies are set with httpOnly=true, secure=true, and sameSite=Strict for maximum security. " +
-                                        "No manual token management required - just include credentials: 'include' in fetch requests.")));
+                                        "For cross-origin use, set cookies with SameSite=None; Secure; httpOnly. " +
+                                        "Ensure the client sends requests with credentials: 'include' and the server's CORS " +
+                                        "allows credentials and the exact Origin. No manual token management required.")));
     }
 }

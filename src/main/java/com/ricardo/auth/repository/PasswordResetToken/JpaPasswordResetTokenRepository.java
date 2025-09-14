@@ -19,22 +19,20 @@ public interface JpaPasswordResetTokenRepository extends PasswordResetTokenRepos
     Optional<PasswordResetToken> findByTokenAndNotUsed(@Param("token") String token, @Param("now") Instant now);
 
     @Modifying
-    @Query("UPDATE PasswordResetToken t SET t.used = true, t.usedAt = :now WHERE t.userId = :userId AND t.used = false")
-    void invalidateTokensForUser(@Param("userId") UUID userId, @Param("now") Instant now);
+    @Query("UPDATE PasswordResetToken t SET t.used = true, t.usedAt = :now WHERE t.email = :email AND t.used = false")
+    void invalidateTokensForUser(@Param("email") String email, @Param("now") Instant now);
 
 
-    @Query("""
-                SELECT COUNT(t)
-                FROM PasswordResetToken t
-                JOIN User u ON t.userId = u.id
-                WHERE u.email = :email
-                  AND t.createdAt > :since
-            """)
-    int countResetAttemptsForEmailSinceInternal(@Param("email") Email email,
+
+    @Query("SELECT COUNT(t) FROM PasswordResetToken t WHERE t.email = :email AND t.createdAt > :since")
+    int countResetAttemptsForEmailSinceInternal(@Param("email") String email,
                                                 @Param("since") Instant since);
 
     default int countResetAttemptsForEmailSince(String email, Instant since) {
-        return countResetAttemptsForEmailSinceInternal(Email.valueOf(email), since);
+        if (email == null || email.trim().isEmpty()) {
+            return 0;
+        }
+        return countResetAttemptsForEmailSinceInternal(email, since);
     }
 
     @Modifying
@@ -64,10 +62,5 @@ public interface JpaPasswordResetTokenRepository extends PasswordResetTokenRepos
         return save(token);
     }
 
-    @Override
-    default int countResetAttemptsForIpSince(String ipAddress, Instant since) {
-        // JPA implementation doesn't track IP addresses by default
-        return 0;
-    }
 }
 

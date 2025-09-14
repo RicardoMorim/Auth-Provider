@@ -84,6 +84,15 @@ public class AuthAutoConfiguration {
 
     // ========== COMMON SERVICES ==========
 
+    @Configuration
+    @ConditionalOnMissingBean(IpResolver.class)
+    static class IpResolverConfig {
+        @Bean
+        public IpResolver ipResolver() {
+            return new com.ricardo.auth.service.SimpleIpResolver();
+        }
+    }
+
     /**
      * Jwt service.
      *
@@ -305,15 +314,16 @@ public class AuthAutoConfiguration {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
             String createTableSql = """
-                    CREATE TABLE IF NOT EXISTS refresh_tokens (
-                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        token VARCHAR(1000) UNIQUE NOT NULL,
-                        user_email VARCHAR(255) NOT NULL,
-                        expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
-                        revoked BOOLEAN NOT NULL DEFAULT FALSE,
-                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                        version BIGINT NOT NULL DEFAULT 0
-                    )
+                                    CREATE TABLE IF NOT EXISTS refresh_tokens (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    token VARCHAR(1000) UNIQUE NOT NULL,
+                    user_email VARCHAR(255) NOT NULL,
+                    expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+                    revoked BOOLEAN NOT NULL DEFAULT FALSE,
+                    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                    version BIGINT NOT NULL DEFAULT 0,
+                    FOREIGN KEY (user_email) REFERENCES users(email) ON DELETE CASCADE
+                                    )
                     """;
 
             jdbcTemplate.execute(createTableSql);
@@ -555,20 +565,27 @@ public class AuthAutoConfiguration {
         public JavaMailSender javaMailSender(AuthProperties properties) {
             Dotenv dotenv = Dotenv.load();
             JavaMailSenderImpl sender = new JavaMailSenderImpl();
-            if (properties.getEmail().getPassword() == null && dotenv.get("MAIL_PASSWORD") == null) {
-                throw new IllegalStateException("Email password must be set in properties or in the env variables (as 'MAIL_PASSWORD') to enable email sending");
+            String mailUsername = dotenv.get("MAIL_USERNAME");
+            String mailPassword = dotenv.get("MAIL_PASSWORD");
+            if (properties.getEmail().getPassword() == null && mailPassword == null) {
+                logger.warn("Email password not configured. Email sending will be disabled. Set 'MAIL_PASSWORD' env variable or configure in properties.");
+                return null; // Return null to indicate email service is not available
+            }
+
+            if (mailUsername == null && properties.getEmail().getFromAddress() == null) {
+                logger.warn("Email username not configured. Email sending will be disabled. Set 'MAIL_USERNAME' env variable or configure in properties.");
+                return null;
             }
 
 
-            if (dotenv.get("MAIL_USERNAME") == null && properties.getEmail().getFromAddress() == null) {
-                throw new IllegalStateException("Email username must be set in properties or in the env variables (as 'MAIL_USERNAME') to enable email sending");
+            if (mailUsername != null && !mailUsername.isBlank()) {
+                properties.getEmail().setFromAddress(mailUsername);
             }
 
-            if (dotenv.get("MAIL_USERNAME") != null && !dotenv.get("MAIL_USERNAME").isBlank())
-                properties.getEmail().setFromAddress(dotenv.get("MAIL_USERNAME"));
+            if (mailPassword != null && !mailPassword.isBlank()) {
+                properties.getEmail().setPassword(mailPassword);
+            }
 
-            if (dotenv.get("MAIL_PASSWORD") != null && !dotenv.get("MAIL_PASSWORD").isBlank())
-                properties.getEmail().setPassword(dotenv.get("MAIL_PASSWORD"));
 
             sender.setUsername(properties.getEmail().getFromAddress());
             sender.setPassword(properties.getEmail().getPassword());
@@ -579,7 +596,7 @@ public class AuthAutoConfiguration {
             props.put("mail.smtp.auth", "true");
             props.put("mail.smtp.starttls.enable", "true");
             props.put("mail.smtp.starttls.required", "true");
-            props.put("mail.smtp.ssl.trust", "smtp.gmail.com");
+            props.put("mail.smtp.ssl.trust", properties.getEmail().getHost());
 
             return sender;
         }
@@ -651,6 +668,43 @@ public class AuthAutoConfiguration {
         }
     }
 
+    @Configuration
+    @ConditionalOnMissingBean(PasswordResetService.class)
+    static class PasswordResetServiceConfig {
+        @Bean
+        public PasswordResetService passwordResetService(EmailSenderService emailSenderService,
+                                                         UserService<User, AppRole, UUID> userService,
+                                                         PasswordResetTokenRepository tokenRepository,
+                                                         PasswordEncoder passwordEncoder,
+                                                         PasswordPolicyService passwordPolicyService,
+                                                         AuthProperties authProperties,
+                                                         Publisher eventPublisher,
+                                                         IdConverter<UUID> idConverter,
+                                                         AuthProperties properties) {
+            return new PasswordResetServiceImpl<>(emailSenderService,
+                    userService,
+                    tokenRepository,
+                    passwordEncoder,
+                    passwordPolicyService,
+                    authProperties,
+                    eventPublisher,
+                    idConverter,
+                    properties);
+        }
+    }
+
+    @Configuration
+    @ConditionalOnMissingBean(RoleService.class)
+    static class RoleServiceConfig {
+        @Bean
+        public RoleService<User, AppRole, UUID> roleService(UserService<User, AppRole, UUID> userService,
+                                                            RoleMapper<AppRole> roleMapper,
+                                                            AuthProperties authProperties,
+                                                            Publisher eventPublisher, IdConverter<UUID> idConverter) {
+            return new RoleServiceImpl<>(userService, roleMapper, authProperties, eventPublisher, idConverter);
+        }
+    }
+
     @Order(2)
     @DependsOn("userSchemaInitializer")
     @Component("PasswordResetTokenSchemaInitializer")
@@ -681,19 +735,24 @@ public class AuthAutoConfiguration {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
             String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
-            String createTableSql = String.format("""
-                    CREATE TABLE IF NOT EXISTS %s (
-                        id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
-                        token VARCHAR(1000) UNIQUE NOT NULL,
-                        user_id UUID NOT NULL,
-                        expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
-                        used BOOLEAN NOT NULL DEFAULT FALSE,
-                        used_at TIMESTAMP WITH TIME ZONE,
-                        created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-                        FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
-                    )
-                    """, tableName);
 
+            // Validate table name to prevent SQL injection
+            if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                throw new IllegalArgumentException("Invalid table name: " + tableName);
+            }
+
+            String createTableSql = String.format("""
+                                    CREATE TABLE IF NOT EXISTS %s (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    token VARCHAR(1000) UNIQUE NOT NULL,
+                    email VARCHAR(255) NOT NULL,
+                    expiry_date TIMESTAMP WITH TIME ZONE NOT NULL,
+                    used BOOLEAN NOT NULL DEFAULT FALSE,
+                    used_at TIMESTAMP WITH TIME ZONE,
+                    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+                    FOREIGN KEY (email) REFERENCES users(email) ON DELETE CASCADE
+                                    )
+                    """, tableName);
             jdbcTemplate.execute(createTableSql);
             logger.debug("Table '{}' created or already exists", tableName);
         }
@@ -702,12 +761,12 @@ public class AuthAutoConfiguration {
             String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
             String[] indexStatements = {
                     String.format("CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_token ON %s(token)", tableName, tableName),
-                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_user_id ON %s(user_id)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_email ON %s(email)", tableName, tableName),
                     String.format("CREATE INDEX IF NOT EXISTS idx_%s_expiry_date ON %s(expiry_date)", tableName, tableName),
                     String.format("CREATE INDEX IF NOT EXISTS idx_%s_used ON %s(used)", tableName, tableName),
                     String.format("CREATE INDEX IF NOT EXISTS idx_%s_used_expiry ON %s(used, expiry_date)", tableName, tableName),
-                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_user_created ON %s(user_id, created_at)", tableName, tableName),
-                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_user_active ON %s(user_id, used, expiry_date)", tableName, tableName)
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_email_created ON %s(email, created_at)", tableName, tableName),
+                    String.format("CREATE INDEX IF NOT EXISTS idx_%s_email_active ON %s(email, used, expiry_date)", tableName, tableName)
             };
 
             for (String indexSql : indexStatements) {

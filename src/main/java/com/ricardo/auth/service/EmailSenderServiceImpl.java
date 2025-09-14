@@ -8,8 +8,9 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
-@Service
+
 @AllArgsConstructor
 @Slf4j
 public class EmailSenderServiceImpl implements EmailSenderService {
@@ -37,11 +38,11 @@ public class EmailSenderServiceImpl implements EmailSenderService {
                 return false;
             }
 
-            if (authProperties.getEmail().getFromAddress() == null || authProperties.getEmail().getFromAddress().isEmpty()) {
+            var emailCfg = authProperties.getEmail();
+            if (emailCfg == null || !StringUtils.hasText(emailCfg.getFromAddress())) {
                 log.warn("Sender email address is not configured.");
                 return false;
             }
-
             SimpleMailMessage message = new SimpleMailMessage();
             message.setTo(to);
             message.setSubject(subject);

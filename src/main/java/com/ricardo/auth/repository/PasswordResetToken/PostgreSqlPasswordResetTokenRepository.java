@@ -40,9 +40,9 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
     }
 
     @Override
-    public void invalidateTokensForUser(UUID userId, Instant now) {
-        String sql = "UPDATE " + getTableName() + " SET used = true, usedAt = ? WHERE user_id = ? AND used = false";
-        jdbcTemplate.update(sql, now, userId);
+    public void invalidateTokensForUser(String email, Instant now) {
+        String sql = "UPDATE " + getTableName() + " SET used = true, used_at = ? WHERE email = ? AND used = false";
+        jdbcTemplate.update(sql, Timestamp.from(now), email);
     }
 
     @Override
@@ -55,12 +55,7 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
         return jdbcTemplate.queryForObject(sql, Integer.class, email, Timestamp.from(since));
     }
 
-    @Override
-    public int countResetAttemptsForIpSince(String ipAddress, Instant since) {
-        // This would require storing IP addresses - for now return 0
-        // In production, you'd want to create an additional table for tracking IP-based attempts
-        return 0;
-    }
+
 
     @Override
     public PasswordResetToken saveToken(PasswordResetToken token) {
@@ -73,8 +68,8 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
 
     private PasswordResetToken insertToken(PasswordResetToken token) {
         String sql = """
-            INSERT INTO %s (id, token, user_id, expiry_date, used, used_at, created_at) 
-            VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id
+            INSERT INTO %s (id, token, user_id, expiry_date, used, used_at, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
             """.formatted(getTableName());
         
         UUID id = UUID.randomUUID();
@@ -83,7 +78,7 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
         jdbcTemplate.update(sql, 
             id,
             token.getToken(),
-            token.getUserId(),
+            token.getEmail(),
             Timestamp.from(token.getExpiryDate()),
             token.isUsed(),
             token.getUsedAt() != null ? Timestamp.from(token.getUsedAt()) : null,
@@ -132,7 +127,7 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
     private static class PasswordResetTokenRowMapper implements RowMapper<PasswordResetToken> {
         @Override
         public PasswordResetToken mapRow(ResultSet rs, int rowNum) throws SQLException {
-            PasswordResetToken token = new PasswordResetToken(rs.getString("token"), UUID.fromString(rs.getString("user_id")), rs.getTimestamp("expiry_date").toInstant());
+            PasswordResetToken token = new PasswordResetToken(rs.getString("token"), rs.getString("email"), rs.getTimestamp("expiry_date").toInstant());
             token.setId(UUID.fromString(rs.getString("id")));
             token.setUsed(rs.getBoolean("used"));
             if (rs.getTimestamp("used_at") != null) {

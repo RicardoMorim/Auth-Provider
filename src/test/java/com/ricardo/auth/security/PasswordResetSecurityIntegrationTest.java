@@ -7,6 +7,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.http.MediaType;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
@@ -29,9 +30,10 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
         "ricardo.auth.jwt.secret=jrQBZmSULrzxVbDCxZk1BOqp3dOo95fp+ZA422w1GXs=",
         "ricardo.auth.password-reset.max-attempts=3",
         "ricardo.auth.password-reset.time-window-ms=3600000",
-        "ricardo.auth.rate-limiter.requests=5",
+        "ricardo.auth.rate-limiter.max-requests=10",
         "ricardo.auth.rate-limiter.time-window-ms=60000",
-        "ricardo.auth.password-reset.token-expiry-hours=1"
+        "ricardo.auth.password-reset.token-expiry-hours=1",
+        "ricardo.auth.rate-limiter.type=redis"
 })
 class PasswordResetSecurityIntegrationTest {
 
@@ -49,13 +51,11 @@ class PasswordResetSecurityIntegrationTest {
 
     @Test
     void passwordResetRequest_ShouldBeAccessibleWithoutAuthentication() throws Exception {
-        // Password reset request endpoint should be publicly accessible
         mockMvc.perform(post("/api/auth/reset-request").with(csrf())
                         .contentType("application/json")
-                        .content("{\"email\":\"test@example.com\"}"))
+                        .content("{\"email\":\"unique1@example.com\"}")) // Email único
                 .andExpect(status().isOk());
     }
-
 
     @Test
     void passwordResetComplete_ShouldBeAccessibleWithoutAuthentication() throws Exception {
@@ -84,22 +84,25 @@ class PasswordResetSecurityIntegrationTest {
     }
 
     @Test
-    void rateLimiterFilter_ShouldBeApplied() throws Exception {
-        // Test that rate limiter filter is in the filter chain
-        // This is validated by the filter being called (no exception thrown)
-        mockMvc.perform(post("/api/auth/reset-request").with(csrf())
-                        .contentType("application/json")
+    void rateLimiterFilter_ShouldThrottleAfterConfiguredRequests() throws Exception {
+        for (int i = 0; i < 3; i++) {
+            mockMvc.perform(post("/api/auth/reset-request")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"email\":\"test@example.com\"}"))
+                    .andExpect(status().isOk());
+        }
+        mockMvc.perform(post("/api/auth/reset-request")
+                        .contentType(MediaType.APPLICATION_JSON)
                         .content("{\"email\":\"test@example.com\"}"))
-                .andExpect(status().isOk());
+                .andExpect(status().isTooManyRequests());
     }
 
     @Test
     void csrfProtection_ShouldBeConfiguredCorrectly() throws Exception {
-        // Password reset endpoints should ignore CSRF (configured in CSRF_PUBLIC_ENDPOINTS)
-        mockMvc.perform(post("/api/auth/reset-request").with(csrf())
-                        .contentType("application/json")
-                        .content("{\"email\":\"test@example.com\"}"))
-                .andExpect(status().isOk()); // Should not fail due to CSRF
+        mockMvc.perform(post("/api/auth/reset-request")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("{\"email\":\"unique2@example.com\"}")) // Email único
+                .andExpect(status().isOk());
     }
 
     @Test
