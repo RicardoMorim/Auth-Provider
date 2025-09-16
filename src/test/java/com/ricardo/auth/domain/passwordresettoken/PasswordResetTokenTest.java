@@ -15,6 +15,9 @@ import static org.assertj.core.api.Assertions.assertThat;
  */
 class PasswordResetTokenTest {
 
+    /**
+     * Constructor with valid parameters should create token.
+     */
     @Test
     void constructor_WithValidParameters_ShouldCreateToken() {
         // Given
@@ -34,6 +37,9 @@ class PasswordResetTokenTest {
         assertThat(resetToken.getCreatedAt()).isNotNull();
     }
 
+    /**
+     * Is expired with future expiry date should return false.
+     */
     @Test
     void isExpired_WithFutureExpiryDate_ShouldReturnFalse() {
         // Given
@@ -50,6 +56,9 @@ class PasswordResetTokenTest {
         assertThat(expired).isFalse();
     }
 
+    /**
+     * Is expired with past expiry date should return true.
+     */
     @Test
     void isExpired_WithPastExpiryDate_ShouldReturnTrue() {
         // Given
@@ -66,6 +75,9 @@ class PasswordResetTokenTest {
         assertThat(expired).isTrue();
     }
 
+    /**
+     * Is valid with valid unused token should return true.
+     */
     @Test
     void isValid_WithValidUnusedToken_ShouldReturnTrue() {
         // Given
@@ -82,6 +94,9 @@ class PasswordResetTokenTest {
         assertThat(valid).isTrue();
     }
 
+    /**
+     * Is valid with used token should return false.
+     */
     @Test
     void isValid_WithUsedToken_ShouldReturnFalse() {
         // Given
@@ -100,6 +115,9 @@ class PasswordResetTokenTest {
         assertThat(valid).isFalse();
     }
 
+    /**
+     * Is valid with expired token should return false.
+     */
     @Test
     void isValid_WithExpiredToken_ShouldReturnFalse() {
         // Given
@@ -116,6 +134,9 @@ class PasswordResetTokenTest {
         assertThat(valid).isFalse();
     }
 
+    /**
+     * Is valid with used and expired token should return false.
+     */
     @Test
     void isValid_WithUsedAndExpiredToken_ShouldReturnFalse() {
         // Given
@@ -134,6 +155,9 @@ class PasswordResetTokenTest {
         assertThat(valid).isFalse();
     }
 
+    /**
+     * Sets used should update used status.
+     */
     @Test
     void setUsed_ShouldUpdateUsedStatus() {
         // Given
@@ -153,6 +177,9 @@ class PasswordResetTokenTest {
     }
 
 
+    /**
+     * Created at should be set on creation.
+     */
     @Test
     void createdAt_ShouldBeSetOnCreation() {
         // Given
@@ -170,6 +197,9 @@ class PasswordResetTokenTest {
         assertThat(token.getCreatedAt()).isBetween(beforeCreation, afterCreation);
     }
 
+    /**
+     * To string should not expose token.
+     */
     @Test
     void toString_ShouldNotExposeToken() {
         // Given
@@ -188,6 +218,9 @@ class PasswordResetTokenTest {
         assertThat(tokenString).contains("PasswordResetToken");
     }
 
+    /**
+     * Equals with same id should return true.
+     */
     @Test
     void equals_WithSameId_ShouldReturnTrue() {
         // Given
@@ -203,6 +236,9 @@ class PasswordResetTokenTest {
         assertThat(token1.hashCode()).isEqualTo(token2.hashCode());
     }
 
+    /**
+     * Equals with different id should return false.
+     */
     @Test
     void equals_WithDifferentId_ShouldReturnFalse() {
         // Given

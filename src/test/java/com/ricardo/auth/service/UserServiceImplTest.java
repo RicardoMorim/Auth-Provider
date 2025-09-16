@@ -174,7 +174,7 @@ class UserServiceImplTest {
      * Update user should update user details.
      */
     @Test
-    void updateUser_shouldUpdateUserDetails() {
+    void updateUser_shouldUpdateEmailAndUsernameDetails() {
         // Arrange
         Username newUsername = Username.valueOf("updateduser");
         Email newEmail = Email.valueOf("updated@example.com");
@@ -182,7 +182,7 @@ class UserServiceImplTest {
         User userDetails = new User(newUsername, newEmail, newPassword);
 
         // Act
-        User updatedUser = userService.updateUser(testUser.getId(), userDetails);
+        User updatedUser = userService.updateEmailAndUsername(testUser.getId(), userDetails.getEmail(), userDetails.getUsername());
 
         // Assert
         assertNotNull(updatedUser);

@@ -12,7 +12,6 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.authentication.AuthenticationCredentialsNotFoundException;
 import org.springframework.security.test.context.support.WithMockUser;
 import org.springframework.test.context.ActiveProfiles;
@@ -23,6 +22,9 @@ import java.util.UUID;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
+/**
+ * The type Role service impl test.
+ */
 @SpringBootTest
 @ActiveProfiles("test")
 class RoleServiceImplTest {
@@ -48,11 +50,17 @@ class RoleServiceImplTest {
     @Autowired
     private UserRepository<User, AppRole, UUID> userRepository;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         userRepository.deleteAll();
     }
 
+    /**
+     * Add role to user with valid parameters should add role.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WithValidParameters_ShouldAddRole() {
@@ -72,6 +80,9 @@ class RoleServiceImplTest {
 
     }
 
+    /**
+     * Add role to user with null user id should throw exception.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WithNullUserId_ShouldThrowException() {
@@ -81,6 +92,9 @@ class RoleServiceImplTest {
                 .hasMessageContaining("User ID cannot be null");
     }
 
+    /**
+     * Add role to user with null role name should throw exception.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WithNullRoleName_ShouldThrowException() {
@@ -95,6 +109,9 @@ class RoleServiceImplTest {
                 .hasMessageContaining("Role name cannot be null or empty");
     }
 
+    /**
+     * Add role to user with empty role name should throw exception.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WithEmptyRoleName_ShouldThrowException() {
@@ -109,6 +126,9 @@ class RoleServiceImplTest {
                 .hasMessageContaining("Role name cannot be null or empty");
     }
 
+    /**
+     * Add role to user when user already has role should log and return.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WhenUserAlreadyHasRole_ShouldLogAndReturn() {
@@ -129,6 +149,10 @@ class RoleServiceImplTest {
                 .count();
         assertThat(moderatorRoleCount).isEqualTo(1); // Should still have only one
     }
+
+    /**
+     * Remove role from user with valid parameters should remove role.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void removeRoleFromUser_WithValidParameters_ShouldRemoveRole() {
@@ -149,6 +173,9 @@ class RoleServiceImplTest {
         assertThat(updatedUser.getRoles()).doesNotContain(moderatorRole);
     }
 
+    /**
+     * Remove role from user when user does not have role should log and return.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void removeRoleFromUser_WhenUserDoesNotHaveRole_ShouldLogAndReturn() {
@@ -169,6 +196,9 @@ class RoleServiceImplTest {
         assertThat(updatedUser.getRoles()).doesNotContain(AppRole.ADMIN);
     }
 
+    /**
+     * Gets user roles with valid user id should return user roles response.
+     */
     @Test
     @WithMockUser(roles = {"ADMIN", "USER_READ"})
     void getUserRoles_WithValidUserId_ShouldReturnUserRolesResponse() {
@@ -190,6 +220,9 @@ class RoleServiceImplTest {
         assertThat(response.getRoles()).containsExactlyInAnyOrder("USER", "ADMIN");
     }
 
+    /**
+     * Gets user roles with null user id should throw exception.
+     */
     @Test
     @WithMockUser(roles = {"ADMIN", "USER_READ"})
     void getUserRoles_WithNullUserId_ShouldThrowException() {
@@ -199,6 +232,9 @@ class RoleServiceImplTest {
                 .hasMessageContaining("User ID cannot be null");
     }
 
+    /**
+     * Bulk update user roles with valid parameters should update roles.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void bulkUpdateUserRoles_WithValidParameters_ShouldUpdateRoles() {
@@ -225,6 +261,9 @@ class RoleServiceImplTest {
 
     }
 
+    /**
+     * Bulk update user roles with null user id should throw exception.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void bulkUpdateUserRoles_WithNullUserId_ShouldThrowException() {
@@ -238,6 +277,9 @@ class RoleServiceImplTest {
                 .hasMessageContaining("User ID cannot be null");
     }
 
+    /**
+     * Bulk update user roles with no operations should throw exception.
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void bulkUpdateUserRoles_WithNoOperations_ShouldThrowException() {
@@ -253,6 +295,9 @@ class RoleServiceImplTest {
                 .hasMessageContaining("At least one role operation must be specified");
     }
 
+    /**
+     * User has role with existing role should return true.
+     */
     @Test
     void userHasRole_WithExistingRole_ShouldReturnTrue() {
         // Given
@@ -270,6 +315,9 @@ class RoleServiceImplTest {
         assertThat(hasRole).isTrue();
     }
 
+    /**
+     * User has role with non existing role should return false.
+     */
     @Test
     void userHasRole_WithNonExistingRole_ShouldReturnFalse() {
         // Given
@@ -285,6 +333,9 @@ class RoleServiceImplTest {
         assertThat(hasRole).isFalse();
     }
 
+    /**
+     * Add role to user without admin role should throw access denied exception.
+     */
     @Test
     void addRoleToUser_WithoutAdminRole_ShouldThrowAccessDeniedException() {
         // Given

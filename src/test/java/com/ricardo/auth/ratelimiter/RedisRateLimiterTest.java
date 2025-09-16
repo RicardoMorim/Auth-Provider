@@ -37,6 +37,9 @@ class RedisRateLimiterTest {
         redisTemplate.getConnectionFactory().getConnection().flushDb();
     }
 
+    /**
+     * Context loads.
+     */
     @Test
     void contextLoads() {
         // Context loads test
@@ -44,6 +47,9 @@ class RedisRateLimiterTest {
         log.info("Max Requests: {}, Time Window (ms): {}, ", rateLimiter.getMaxRequests(), rateLimiter.getWindowMillis());
     }
 
+    /**
+     * Test rate limiter initialization.
+     */
     @Test
     void testRateLimiterInitialization() {
         assertNotNull(rateLimiter);

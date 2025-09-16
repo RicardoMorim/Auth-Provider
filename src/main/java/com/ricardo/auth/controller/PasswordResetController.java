@@ -40,6 +40,15 @@ public class PasswordResetController {
     private final EventPublisher eventPublisher;
     private final IpResolver ipResolver;
 
+    /**
+     * Instantiates a new Password reset controller.
+     *
+     * @param passwordResetService the password reset service
+     * @param rateLimiter          the rate limiter
+     * @param eventPublisher       the event publisher
+     * @param authProperties       the auth properties
+     * @param ipResolver           the ip resolver
+     */
     public PasswordResetController(PasswordResetService passwordResetService, @Qualifier("passwordResetRateLimiter") RateLimiter rateLimiter, EventPublisher eventPublisher, AuthProperties authProperties, IpResolver ipResolver) {
         this.passwordResetService = passwordResetService;
         this.rateLimiter = rateLimiter;
@@ -50,6 +59,10 @@ public class PasswordResetController {
     /**
      * Request a password reset for the given email address.
      * Implements rate limiting and timing attack prevention.
+     *
+     * @param request     the request
+     * @param httpRequest the http request
+     * @return the response entity
      */
     @Operation(
         summary = "Request password reset",
@@ -113,6 +126,11 @@ public class PasswordResetController {
 
     /**
      * Complete password reset using a valid token.
+     *
+     * @param token       the token
+     * @param request     the request
+     * @param httpRequest the http request
+     * @return the response entity
      */
     @Operation(
         summary = "Complete password reset",
@@ -204,6 +222,9 @@ public class PasswordResetController {
 
     /**
      * Validate a password reset token (optional endpoint for UI validation).
+     *
+     * @param token the token
+     * @return the response entity
      */
     @Operation(
         summary = "Validate password reset token",

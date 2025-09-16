@@ -5,12 +5,10 @@ import lombok.Data;
 import lombok.NoArgsConstructor;
 
 import java.util.List;
-import java.util.UUID;
 
 /**
  * Response DTO for user roles information.
- * 
- * @since 3.1.0
+ *
  */
 @Data
 @NoArgsConstructor
@@ -24,6 +22,10 @@ public class UserRolesResponse {
 
     /**
      * Constructor for basic role information.
+     *
+     * @param userId   the user id
+     * @param username the username
+     * @param roles    the roles
      */
     public UserRolesResponse(String userId, String username, List<String> roles) {
         this.userId = userId;

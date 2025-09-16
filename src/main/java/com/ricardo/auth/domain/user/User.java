@@ -1,5 +1,6 @@
 package com.ricardo.auth.domain.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.UuidGenerator;
@@ -13,7 +14,6 @@ import java.util.stream.Collectors;
 /**
  * The type User.
  */
-
 @Table(
         name = "users",
         indexes = {
@@ -57,6 +57,12 @@ public class User implements AuthUser<UUID, AppRole> {
 
     private Instant createdAt;
     private Instant updatedAt;
+
+    private boolean accountNonExpired = true;
+    private boolean accountNonLocked = true;
+    private boolean credentialsNonExpired = true;
+
+    private boolean enabled = true;
 
     /**
      * Instantiates a new User.
@@ -102,11 +108,13 @@ public class User implements AuthUser<UUID, AppRole> {
      * @return the authorities
      */
     @Override
+    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getAuthority()))
                 .collect(Collectors.toSet());
     }
+
 
     /**
      * Gets version.
@@ -165,7 +173,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return accountNonExpired;
     }
 
     /**
@@ -175,7 +183,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return accountNonLocked;
     }
 
     /**
@@ -185,7 +193,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return credentialsNonExpired;
     }
 
     /**
@@ -195,7 +203,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 
     @Override

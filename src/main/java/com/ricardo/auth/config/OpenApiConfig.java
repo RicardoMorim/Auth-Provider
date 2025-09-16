@@ -22,6 +22,11 @@ import java.util.List;
 @ConditionalOnClass(OpenAPI.class)
 public class OpenApiConfig {
 
+    /**
+     * Auth provider open api open api.
+     *
+     * @return the open api
+     */
     @Bean
     public OpenAPI authProviderOpenAPI() {
         return new OpenAPI()

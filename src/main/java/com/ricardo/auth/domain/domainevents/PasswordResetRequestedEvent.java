@@ -2,9 +2,18 @@ package com.ricardo.auth.domain.domainevents;
 
 import java.util.Objects;
 
+/**
+ * The type Password reset requested event.
+ */
 public record PasswordResetRequestedEvent(String username, String email) {
 
-  public PasswordResetRequestedEvent {
+    /**
+     * Instantiates a new Password reset requested event.
+     *
+     * @param username the username
+     * @param email    the email
+     */
+    public PasswordResetRequestedEvent {
     Objects.requireNonNull(username, "username must not be null");
     Objects.requireNonNull(email, "email must not be null");
     if (username.isBlank()) throw new IllegalArgumentException("username must not be blank");

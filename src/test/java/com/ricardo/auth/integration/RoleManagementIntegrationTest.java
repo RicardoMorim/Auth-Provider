@@ -70,6 +70,11 @@ class RoleManagementIntegrationTest {
     private User adminUser;
     private Cookie adminAccessTokenCookie;
 
+    /**
+     * Sets up.
+     *
+     * @throws Exception the exception
+     */
     @BeforeEach
     void setUp() throws Exception {
         // Clear database
@@ -101,6 +106,11 @@ class RoleManagementIntegrationTest {
         adminAccessTokenCookie = new Cookie("access_token", adminToken);
     }
 
+    /**
+     * Gets user roles with admin role should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithAdminRole_ShouldReturnSuccess() throws Exception {
         // When & Then
@@ -114,6 +124,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.roles[0]").value("USER"));
     }
 
+    /**
+     * Gets user roles with admin authority alternative token should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithAdminAuthority_AlternativeToken_ShouldReturnSuccess() throws Exception {
         String userReadToken = jwtService.generateAccessToken(
@@ -130,6 +145,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.userId").value(testUser.getId().toString()));
     }
 
+    /**
+     * Gets user roles without permission should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithoutPermission_ShouldReturnForbidden() throws Exception {
         // Given - Create user with only USER role (no admin or USER_READ)
@@ -146,6 +166,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Gets user roles without authentication should return unauthorized.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithoutAuthentication_ShouldReturnUnauthorized() throws Exception {
         // When & Then
@@ -153,6 +178,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Add role to user with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithValidRequest_ShouldReturnSuccess() throws Exception {
         // Given
@@ -180,6 +210,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.roles[?(@=='VIP')]").exists());
     }
 
+    /**
+     * Add role to user with admin authority should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithAdminAuthority_ShouldReturnSuccess() throws Exception {
         String userWriteToken = jwtService.generateAccessToken(
@@ -210,6 +245,11 @@ class RoleManagementIntegrationTest {
 
     }
 
+    /**
+     * Add role to user with empty role name should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithEmptyRoleName_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -226,6 +266,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Add role to user with invalid role should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithInvalidRole_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -243,6 +288,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.error").exists());
     }
 
+    /**
+     * Add role to user without permission should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithoutPermission_ShouldReturnForbidden() throws Exception {
         // Given - Create user without proper permissions
@@ -265,6 +315,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Remove role from user with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void removeRoleFromUser_WithValidRequest_ShouldReturnSuccess() throws Exception {
         // First, add a role to ensure it can be removed
@@ -297,6 +352,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.roles[?(@=='VIP')]").doesNotExist());
     }
 
+    /**
+     * Remove role from user without permission should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void removeRoleFromUser_WithoutPermission_ShouldReturnForbidden() throws Exception {
         // Given - Create user without proper permissions
@@ -319,6 +379,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Bulk update user roles with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void bulkUpdateUserRoles_WithValidRequest_ShouldReturnSuccess() throws Exception {
@@ -350,6 +415,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.roles[?(@=='USER')]").doesNotExist());
     }
 
+    /**
+     * Bulk update user roles without admin role should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     void bulkUpdateUserRoles_WithoutAdminRole_ShouldReturnForbidden() throws Exception {
         // Given - Create user with VIP role (not ADMIN)
         User vipUser = new User(
@@ -379,6 +449,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Bulk update user roles with empty request should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void bulkUpdateUserRoles_WithEmptyRequest_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -396,6 +471,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Gets user roles with non existent user should return not found.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithNonExistentUser_ShouldReturnNotFound() throws Exception {
         // Given - non-existent but valid username format
@@ -408,6 +488,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Add role to user with long reason should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithLongReason_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -424,6 +509,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Remove role from user with long role name should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void removeRoleFromUser_WithLongRoleName_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -440,6 +530,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Complete role management workflow should work end to end.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void completeRoleManagementWorkflow_ShouldWorkEndToEnd() throws Exception {
         // Step 1: Get initial user roles
@@ -492,6 +587,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(jsonPath("$.roles[?(@=='USER')]").doesNotExist());
     }
 
+    /**
+     * Gets user roles with malicious username should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithMaliciousUsername_ShouldReturnBadRequest() throws Exception {
         // Test SQL injection attempt
@@ -507,6 +607,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Gets user roles with reserved username should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithReservedUsername_ShouldReturnBadRequest() throws Exception {
         // Test reserved username  
@@ -521,6 +626,11 @@ class RoleManagementIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Gets user roles with invalid username format should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithInvalidUsernameFormat_ShouldReturnBadRequest() throws Exception {
         // Too short

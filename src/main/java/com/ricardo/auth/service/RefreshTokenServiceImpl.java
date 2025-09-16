@@ -11,6 +11,7 @@ import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.security.SecureRandom;
@@ -22,6 +23,7 @@ import java.util.Base64;
  * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  *
  * @param <U>  the AuthUser type parameter
+ * @param <R>  the type parameter
  * @param <ID> the ID type parameter
  */
 public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID>
@@ -62,8 +64,10 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     }
 
     @Override
+    @Cacheable(value = "userByEmail", key = "#refreshToken.userEmail")
     public U getUserFromRefreshToken(RefreshToken refreshToken) {
         String userEmail = refreshToken.getUserEmail();
+
         return userService.getUserByEmail(userEmail);
     }
 
@@ -89,6 +93,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     }
 
     @Override
+    @Cacheable(value = "refreshToken", key = "#tokenValue")
     public RefreshToken findByToken(String tokenValue) {
         return refreshTokenRepository.findByToken(tokenValue)
                 .orElseThrow(() -> new ResourceNotFoundException("Token not found"));

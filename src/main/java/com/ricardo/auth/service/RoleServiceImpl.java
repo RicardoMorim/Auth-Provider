@@ -12,6 +12,7 @@ import com.ricardo.auth.dto.UserRolesResponse;
 import com.ricardo.auth.helper.IdConverter;
 import com.ricardo.auth.helper.RoleMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +27,9 @@ import java.util.Set;
  * Implementation of RoleService that provides secure role management.
  * Follows OWASP security guidelines and your decoupled architecture.
  *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
  * @since 3.1.0
  */
 @Service
@@ -38,6 +42,15 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     private final Publisher eventPublisher;
     private final IdConverter<ID> idConverter;
 
+    /**
+     * Instantiates a new Role service.
+     *
+     * @param userService    the user service
+     * @param roleMapper     the role mapper
+     * @param authProperties the auth properties
+     * @param eventPublisher the event publisher
+     * @param idConverter    the id converter
+     */
     public RoleServiceImpl(UserService<U, R, ID> userService,
                            RoleMapper<R> roleMapper,
                            AuthProperties authProperties,
@@ -73,7 +86,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
 
             // Add role to user
             user.addRole(role);
-            userService.updateUser(userId, user);
+            userService.updateEmailAndUsername(userId, user.getEmail(), user.getUsername());
 
             log.info("Role {} added to user {} by admin {} with reason: {}",
                     roleName, userId, getCurrentUsername(), reason);
@@ -141,6 +154,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
+    @Cacheable(value = "userHasRoleCache", key = "#roleName")
     public boolean userHasRole(ID userId, String roleName) {
         try {
             U user = userService.getUserById(userId);
@@ -156,13 +170,16 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
+    @Cacheable(value = "getUserRolesCache", key = "#userId")
     public Set<R> getSetUserRoles(ID userId) {
         U user = userService.getUserById(userId);
+
         return user.getRoles();
     }
 
     @Override
     @PreAuthorize("hasRole('ADMIN') or hasAuthority('USER_READ')")
+    @Cacheable(value = "getUserRolesCache", key = "#userId")
     public UserRolesResponse getUserRoles(ID userId) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID cannot be null");

@@ -232,6 +232,12 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
         return deletedCount != null ? deletedCount : 0;
     }
 
+    /**
+     * Save all tokens list.
+     *
+     * @param tokens the tokens
+     * @return the list
+     */
     @Transactional
     public List<RefreshToken> saveAllTokens(List<RefreshToken> tokens) {
         List<RefreshToken> toInsert = new ArrayList<>();

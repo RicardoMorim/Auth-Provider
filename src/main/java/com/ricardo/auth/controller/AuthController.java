@@ -2,15 +2,13 @@ package com.ricardo.auth.controller;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.*;
-import com.ricardo.auth.domain.domainevents.UserLoggedOutEvent;
 import com.ricardo.auth.domain.domainevents.UserAuthenticatedEvent;
 import com.ricardo.auth.domain.domainevents.UserAuthenticationFailedEvent;
+import com.ricardo.auth.domain.domainevents.UserLoggedOutEvent;
 import com.ricardo.auth.domain.domainevents.enums.AuthenticationFailedReason;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.refreshtoken.RefreshToken;
-import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.domain.user.AuthUser;
-import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.AuthenticatedUserDTO;
 import com.ricardo.auth.dto.ErrorResponse;
 import com.ricardo.auth.dto.LoginRequestDTO;
@@ -32,20 +30,20 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.util.Collection;
+import java.util.LinkedHashMap;
 import java.util.Map;
-import java.util.UUID;
 
 /**
  * Generic Auth Controller that works with any AuthUser implementation and ID type.
  * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  *
  * @param <U>  the user type that extends AuthUser
+ * @param <R>  the type parameter
  * @param <ID> the ID type for the user
  */
 @RestController
@@ -59,9 +57,9 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private final AuthProperties authProperties;
     private final TokenBlocklist blocklist;
     private final UserService<U, R, ID> userService;
+    private final Publisher eventPublisher;
 
     private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
-    private final Publisher eventPublisher;
 
     /**
      * Constructor with optional refresh token service
@@ -71,6 +69,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @param refreshTokenService   the refresh token service (can be null)
      * @param authProperties        the auth properties
      * @param blocklist             the blocklist
+     * @param eventPublisher        the event publisher
+     * @param userService           the user service
      */
     public AuthController(
             JwtService jwtService,
@@ -96,37 +96,37 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @return the response entity
      */
     @Operation(
-        summary = "User login",
-        description = "Authenticate user with email and password, returns JWT tokens as HTTP-only cookies"
+            summary = "User login",
+            description = "Authenticate user with email and password, returns JWT tokens as HTTP-only cookies"
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Authentication successful",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "401", 
-            description = "Invalid credentials",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Authentication successful",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Invalid credentials",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request format",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid request format",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)
-            )
-        )
     })
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
     public ResponseEntity<?> login(
-        @Parameter(description = "Login credentials", required = true)
-        @Valid @RequestBody LoginRequestDTO request, 
-        HttpServletResponse response) {
+            @Parameter(description = "Login credentials", required = true)
+            @Valid @RequestBody LoginRequestDTO request,
+            HttpServletResponse response) {
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -137,25 +137,25 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(new ErrorResponse("Authentication failed: no principal"));
             }
-            
+
             @SuppressWarnings("unchecked")
             U userDetails = (U) principal;
-            
+
             // Log successful login (without sensitive data)
             logger.info("Successful login for user: {}", userDetails.getEmail());
-            
+
             // Publish authentication success event
             eventPublisher.publishEvent(new UserAuthenticatedEvent(
-                userDetails.getUsername(), 
-                userDetails.getEmail(), 
-                userDetails.getRoles()
+                    userDetails.getUsername(),
+                    userDetails.getEmail(),
+                    userDetails.getRoles()
             ));
-            
+
             String accessToken = jwtService.generateAccessToken(
                     userDetails.getEmail(), // Using AuthUser's getEmail() method
                     userDetails.getAuthorities()
             );
-            
+
             if (refreshTokenService != null) {
                 // Generate both access and refresh tokens
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails);
@@ -164,19 +164,19 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 // Legacy behavior - single token
                 setAccessCookie(response, accessToken);
             }
-            
+
             return ResponseEntity.ok().build();
-            
+
         } catch (Exception e) {
             // Log failed login attempt (without sensitive data)
             logger.warn("Failed login attempt for email: {} - {}", request.getEmail(), e.getMessage());
-            
+
             // Publish authentication failure event
             eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
-                request.getEmail(), 
-                AuthenticationFailedReason.INVALID_CREDENTIALS
+                    request.getEmail(),
+                    AuthenticationFailedReason.INVALID_CREDENTIALS
             ));
-            
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ErrorResponse("Authentication failed"));
         }
@@ -190,31 +190,31 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @return the response entity
      */
     @Operation(
-        summary = "Refresh JWT token",
-        description = "Generate new access token using refresh token from HTTP-only cookie"
+            summary = "Refresh JWT token",
+            description = "Generate new access token using refresh token from HTTP-only cookie"
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Token refreshed successfully",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "401", 
-            description = "Invalid or expired refresh token",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token refreshed successfully",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Invalid or expired refresh token",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "501",
+                    description = "Refresh tokens not enabled",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
-        ),
-        @ApiResponse(
-            responseCode = "501",
-            description = "Refresh tokens not enabled",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)
-            )
-        )
     })
     @PostMapping("/refresh")
     public ResponseEntity<?> refresh(
@@ -280,31 +280,31 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @return the authenticated user DTO
      */
     @Operation(
-        summary = "Get current user info",
-        description = "Get information about the currently authenticated user",
-        security = @SecurityRequirement(name = "CookieAuth")
+            summary = "Get current user info",
+            description = "Get information about the currently authenticated user",
+            security = @SecurityRequirement(name = "CookieAuth")
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "User information retrieved successfully",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = AuthenticatedUserDTO.class)
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "User information retrieved successfully",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = AuthenticatedUserDTO.class)
+                    )
+            ),
+            @ApiResponse(
+                    responseCode = "401",
+                    description = "Not authenticated",
+                    content = @Content(
+                            mediaType = "application/json",
+                            schema = @Schema(implementation = ErrorResponse.class)
+                    )
             )
-        ),
-        @ApiResponse(
-            responseCode = "401", 
-            description = "Not authenticated",
-            content = @Content(
-                mediaType = "application/json",
-                schema = @Schema(implementation = ErrorResponse.class)
-            )
-        )
     })
     @GetMapping("/me")
     public ResponseEntity<AuthenticatedUserDTO> getAuthenticatedUser(
-        @Parameter(hidden = true) Authentication authentication) {
+            @Parameter(hidden = true) Authentication authentication) {
         String name = authentication.getName();
         Collection<? extends GrantedAuthority> authorities = authentication.getAuthorities();
 
@@ -321,15 +321,15 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @return the response entity
      */
     @Operation(
-        summary = "User logout",
-        description = "Logout user by revoking tokens and clearing HTTP-only cookies"
+            summary = "User logout",
+            description = "Logout user by revoking tokens and clearing HTTP-only cookies"
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Logout successful",
-            content = @Content(mediaType = "application/json")
-        )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Logout successful",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     @PostMapping("/logout")
     public ResponseEntity<?> logout(

@@ -1,9 +1,10 @@
 package com.ricardo.auth.core;
 
 import com.ricardo.auth.domain.user.AuthUser;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
-import java.util.List;
 import java.util.Optional;
 
 /**
@@ -11,6 +12,7 @@ import java.util.Optional;
  * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  *
  * @param <U>  the type parameter
+ * @param <R>  the type parameter
  * @param <ID> the type parameter
  */
 public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
@@ -31,14 +33,34 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     U createUser(U user);
 
+
+    /**
+     * Update username and email u.
+     *
+     * @param id       the id
+     * @param email    the email
+     * @param username the username
+     * @return the u
+     */
+    U updateEmailAndUsername(ID id, String email, String username);
+
+    /**
+     * Update password u.
+     *
+     * @param id       the id
+     * @param password the password
+     * @return the u
+     */
+    U updatePassword(ID id, String password);
+
     /**
      * Update user u.
      *
-     * @param id          the id
-     * @param userDetails the user details
+     * @param id   the id
+     * @param user the user
      * @return the u
      */
-    U updateUser(ID id, U userDetails);
+    U updateUser(ID id, U user);
 
     /**
      * Delete user.
@@ -63,12 +85,10 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     U getUserByEmail(String email);
 
-    /**
-     * Gets all users.
-     *
-     * @return the all users
-     */
-    List<U> getAllUsers();
+    Page<U> getAllUsers(Pageable pageable, String username, String email,
+                        String role, String createdAfter, String createdBefore);
+
+    public Page<U> searchUsers(String query, Pageable pageable);
 
     /**
      * Authenticate optional.
@@ -80,7 +100,18 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     Optional<U> authenticate(String email, String rawPassword, PasswordEncoder encoder);
 
+    /**
+     * Gets user by user name.
+     *
+     * @param userName the user name
+     * @return the user by user name
+     */
     U getUserByUserName(String userName);
 
+    /**
+     * Count admins int.
+     *
+     * @return the int
+     */
     int countAdmins();
 }

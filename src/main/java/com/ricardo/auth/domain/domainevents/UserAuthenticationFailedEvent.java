@@ -2,8 +2,17 @@ package com.ricardo.auth.domain.domainevents;
 
 import com.ricardo.auth.domain.domainevents.enums.AuthenticationFailedReason;
 
+/**
+ * The type User authentication failed event.
+ */
 public record UserAuthenticationFailedEvent(String email, AuthenticationFailedReason reason) {
-  public UserAuthenticationFailedEvent {
+    /**
+     * Instantiates a new User authentication failed event.
+     *
+     * @param email  the email
+     * @param reason the reason
+     */
+    public UserAuthenticationFailedEvent {
     java.util.Objects.requireNonNull(email, "email must not be null");
     java.util.Objects.requireNonNull(reason, "reason must not be null");
   }

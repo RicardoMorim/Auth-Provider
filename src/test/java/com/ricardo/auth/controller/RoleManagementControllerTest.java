@@ -71,6 +71,11 @@ class RoleManagementControllerTest {
     private User adminUser;
     private Cookie adminAccessTokenCookie;
 
+    /**
+     * Sets up.
+     *
+     * @throws Exception the exception
+     */
     @BeforeEach
     void setUp() throws Exception {
         // Clear database
@@ -102,6 +107,11 @@ class RoleManagementControllerTest {
         adminAccessTokenCookie = new Cookie("access_token", adminToken);
     }
 
+    /**
+     * Gets user roles with admin role should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithAdminRole_ShouldReturnSuccess() throws Exception {
         // When & Then
@@ -116,6 +126,11 @@ class RoleManagementControllerTest {
     }
 
 
+    /**
+     * Gets user roles without permission should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithoutPermission_ShouldReturnForbidden() throws Exception {
         // Given - Create user with only USER role (no admin or USER_READ)
@@ -132,6 +147,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Gets user roles without authentication should return unauthorized.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithoutAuthentication_ShouldReturnUnauthorized() throws Exception {
         // When & Then
@@ -139,6 +159,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Add role to user with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void addRoleToUser_WithValidRequest_ShouldReturnSuccess() throws Exception {
@@ -169,6 +194,11 @@ class RoleManagementControllerTest {
     }
 
 
+    /**
+     * Add role to user with empty role name should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithEmptyRoleName_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -185,6 +215,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Add role to user with invalid role should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithInvalidRole_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -202,6 +237,11 @@ class RoleManagementControllerTest {
                 .andExpect(jsonPath("$.error").exists());
     }
 
+    /**
+     * Add role to user without permission should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithoutPermission_ShouldReturnForbidden() throws Exception {
         // Given - Create user without proper permissions
@@ -224,6 +264,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Remove role from user with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void removeRoleFromUser_WithValidRequest_ShouldReturnSuccess() throws Exception {
@@ -255,6 +300,11 @@ class RoleManagementControllerTest {
                 .andExpect(jsonPath("$.roles[?(@=='VIP')]").doesNotExist());
     }
 
+    /**
+     * Remove role from user without permission should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void removeRoleFromUser_WithoutPermission_ShouldReturnForbidden() throws Exception {
         // Given - Create user without proper permissions
@@ -277,6 +327,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Bulk update user roles with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void bulkUpdateUserRoles_WithValidRequest_ShouldReturnSuccess() throws Exception {
         // Given
@@ -306,6 +361,11 @@ class RoleManagementControllerTest {
                 .andExpect(jsonPath("$.roles[?(@=='USER')]").doesNotExist());
     }
 
+    /**
+     * Bulk update user roles without admin role should return forbidden.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void bulkUpdateUserRoles_WithoutAdminRole_ShouldReturnForbidden() throws Exception {
         // Given - Create user with MODERATOR role (not ADMIN)
@@ -337,6 +397,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isForbidden());
     }
 
+    /**
+     * Bulk update user roles with empty request should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void bulkUpdateUserRoles_WithEmptyRequest_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -354,6 +419,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Gets user roles with non existent user should return not found.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void getUserRoles_WithNonExistentUser_ShouldReturnNotFound() throws Exception {
         // Given
@@ -366,6 +436,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isNotFound());
     }
 
+    /**
+     * Add role to user with long reason should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void addRoleToUser_WithLongReason_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -382,6 +457,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Remove role from user with long role name should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void removeRoleFromUser_WithLongRoleName_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -398,6 +478,11 @@ class RoleManagementControllerTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Complete role management workflow should work end to end.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void completeRoleManagementWorkflow_ShouldWorkEndToEnd() throws Exception {
         // Step 1: Get initial user roles

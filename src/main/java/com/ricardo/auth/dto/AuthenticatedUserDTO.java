@@ -1,6 +1,8 @@
 package com.ricardo.auth.dto;
 
 import com.ricardo.auth.core.AuthenticatedUser;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
@@ -10,15 +12,17 @@ import java.util.stream.Collectors;
 /**
  * The type Authenticated user dto.
  */
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuthenticatedUserDTO implements AuthenticatedUser {
 
-    private final String email;
-    private final List<String> roles;
+    private String email;
+    private List<String> roles;
 
     /**
      * Instantiates a new Authenticated user dto.
      *
-     * @param email        the email
+     * @param email       the email
      * @param authorities the authorities
      */
     public AuthenticatedUserDTO(String email, Collection<? extends GrantedAuthority> authorities) {
@@ -34,6 +38,7 @@ public class AuthenticatedUserDTO implements AuthenticatedUser {
                         .collect(Collectors.toList())
         );
     }
+
     @Override
     public String getEmail() {
         return email;

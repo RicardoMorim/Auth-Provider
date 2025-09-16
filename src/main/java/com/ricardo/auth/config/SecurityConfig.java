@@ -38,7 +38,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-
     // Refresh token, login, password reset and user creation are public endpoints
     private final static String[] JWT_PUBLIC_ENDPOINTS = {
             "/api/auth/refresh",
@@ -46,11 +45,23 @@ public class SecurityConfig {
             "/api/auth/reset-request",
             "/api/auth/reset/*/validate",
             "/api/auth/reset/**",
-            "/api/users/create"
+            "/api/users/create",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/api/csrf-token",
     };
 
     // Only login and user creation are public for CSRF (Refresh routes need CSRF protection)
-    private final static String[] CSRF_PUBLIC_ENDPOINTS = {"/api/auth/login", "/api/users/create", "/api/auth/reset-request", "/api/auth/reset/**"};
+    private final static String[] CSRF_PUBLIC_ENDPOINTS = {
+            "/api/auth/login",
+            "/api/users/create",
+            "/api/auth/reset-request",
+            "/api/auth/reset/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/api/csrf-token",
+    };
+
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     @Autowired
@@ -156,7 +167,7 @@ public class SecurityConfig {
      */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("rateLimiter") RateLimiter rateLimiter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter) throws Exception {
         if (authProperties.isRedirectHttps()) {
             http.redirectToHttps(withDefaults());
         }

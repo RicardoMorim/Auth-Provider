@@ -9,6 +9,7 @@ import com.ricardo.auth.domain.user.AuthUser;
  * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  *
  * @param <U>  the AuthUser type parameter
+ * @param <R>  the type parameter
  * @param <ID> the ID type parameter
  */
 public interface RefreshTokenService<U extends AuthUser<ID, R>, R extends Role, ID> {

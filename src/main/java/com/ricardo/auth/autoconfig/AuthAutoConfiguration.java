@@ -1,5 +1,6 @@
 package com.ricardo.auth.autoconfig;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.blocklist.InMemoryTokenBlocklist;
 import com.ricardo.auth.blocklist.RedisTokenBlockList;
 import com.ricardo.auth.config.UserSecurityService;
@@ -24,6 +25,7 @@ import com.ricardo.auth.repository.user.UserPostgreSQLRepository;
 import com.ricardo.auth.repository.user.UserRepository;
 import com.ricardo.auth.security.JwtAuthFilter;
 import com.ricardo.auth.service.*;
+import com.zaxxer.hikari.HikariDataSource;
 import io.github.cdimascio.dotenv.Dotenv;
 import jakarta.annotation.PostConstruct;
 import org.slf4j.Logger;
@@ -34,6 +36,8 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
+import org.springframework.cache.CacheManager;
+import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.*;
 import org.springframework.core.annotation.Order;
@@ -67,7 +71,10 @@ import java.util.UUID;
 public class AuthAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(AuthAutoConfiguration.class);
 
-    // ========== JPA CONFIGURATION ==========
+    /**
+     * The type Jpa configuration.
+     */
+// ========== JPA CONFIGURATION ==========
     @Configuration
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "JPA", matchIfMissing = true)
     @EntityScan(basePackages = "com.ricardo.auth.domain")
@@ -84,9 +91,17 @@ public class AuthAutoConfiguration {
 
     // ========== COMMON SERVICES ==========
 
+    /**
+     * The type Ip resolver config.
+     */
     @Configuration
     @ConditionalOnMissingBean(IpResolver.class)
     static class IpResolverConfig {
+        /**
+         * Ip resolver ip resolver.
+         *
+         * @return the ip resolver
+         */
         @Bean
         public IpResolver ipResolver() {
             return new com.ricardo.auth.service.SimpleIpResolver();
@@ -109,14 +124,22 @@ public class AuthAutoConfiguration {
      * User service.
      *
      * @param userRepository the user repository
+     * @param eventPublisher the event publisher
      * @return the user service
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher, PasswordEncoder encoder) {
-        return new UserServiceImpl<>(userRepository, eventPublisher, encoder);
+    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher, CacheManager cacheManager) {
+        return new UserServiceImpl<>(userRepository, eventPublisher, cacheManager);
     }
 
+    /**
+     * User security service user security service.
+     *
+     * @param userService the user service
+     * @param idConverter the id converter
+     * @return the user security service
+     */
     @Bean
     @ConditionalOnMissingBean
     public UserSecurityService<User, AppRole, UUID> userSecurityService(UserService<User, AppRole, UUID> userService, IdConverter<UUID> idConverter) {
@@ -150,8 +173,8 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserDetailsServiceImpl userDetailsService(UserService<User, AppRole, UUID> userService) {
-        return new UserDetailsServiceImpl(userService);
+    public UserDetailsServiceImpl<User, AppRole, UUID> userDetailsService(UserService<User, AppRole, UUID> userService) {
+        return new UserDetailsServiceImpl<>(userService);
     }
 
     /**
@@ -159,6 +182,7 @@ public class AuthAutoConfiguration {
      *
      * @param jwtService     the jwt service
      * @param tokenBlocklist the token blocklist
+     * @param authProperties the auth properties
      * @return the jwt auth filter
      */
     @Bean
@@ -187,6 +211,8 @@ public class AuthAutoConfiguration {
      * @param refreshTokenService the refresh token service
      * @param authProperties      the auth properties
      * @param tokenBlocklist      the token blocklist
+     * @param publisher           the publisher
+     * @param userService         the user service
      * @return the auth controller
      */
     @Bean
@@ -203,6 +229,11 @@ public class AuthAutoConfiguration {
         return new AuthController<>(jwtService, authManager, refreshTokenService, authProperties, tokenBlocklist, publisher, userService);
     }
 
+    /**
+     * App role mapper role mapper.
+     *
+     * @return the role mapper
+     */
     @Bean
     @ConditionalOnMissingBean(name = "appRoleMapper")
     public RoleMapper<AppRole> appRoleMapper() {
@@ -216,6 +247,7 @@ public class AuthAutoConfiguration {
      *
      * @param userService the user service
      * @param userBuilder the user builder
+     * @param idConverter the id converter
      * @return the user controller
      */
     @Bean
@@ -267,6 +299,16 @@ public class AuthAutoConfiguration {
         }
 
 
+        /**
+         * User repository user repository.
+         *
+         * @param userRowMapper          the user row mapper
+         * @param userSqlParameterMapper the user sql parameter mapper
+         * @param roleMapper             the role mapper
+         * @param idConverter            the id converter
+         * @param dataSource             the data source
+         * @return the user repository
+         */
         @Bean
         public UserRepository<User, AppRole, UUID> userRepository(
                 UserRowMapper<User, AppRole, UUID> userRowMapper,
@@ -286,6 +328,9 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type Refresh token schema initializer.
+     */
     @Order(3)
     @DependsOn("userSchemaInitializer")
     @Component("RefreshTokenSchemaInitializer")
@@ -294,10 +339,18 @@ public class AuthAutoConfiguration {
 
         private final JdbcTemplate jdbcTemplate;
 
+        /**
+         * Instantiates a new Refresh token schema initializer.
+         *
+         * @param jdbcTemplate the jdbc template
+         */
         public RefreshTokenSchemaInitializer(JdbcTemplate jdbcTemplate) {
             this.jdbcTemplate = jdbcTemplate;
         }
 
+        /**
+         * Initialize schema.
+         */
         @PostConstruct
         public void initializeSchema() {
             try {
@@ -349,6 +402,10 @@ public class AuthAutoConfiguration {
         }
     }
 
+
+    /**
+     * The type User schema initializer.
+     */
     @Component("userSchemaInitializer")
     @Order(1)
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
@@ -356,10 +413,18 @@ public class AuthAutoConfiguration {
 
         private final JdbcTemplate jdbcTemplate;
 
+        /**
+         * Instantiates a new User schema initializer.
+         *
+         * @param jdbcTemplate the jdbc template
+         */
         public UserSchemaInitializer(JdbcTemplate jdbcTemplate) {
             this.jdbcTemplate = jdbcTemplate;
         }
 
+        /**
+         * Initialize schema.
+         */
         @PostConstruct
         public void initializeSchema() {
             try {
@@ -436,8 +501,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the rate limiter
          */
-        @Bean("rateLimiter")
-        @ConditionalOnMissingBean(name = "rateLimiter")
+        @Bean("generalRateLimiter")
+        @ConditionalOnMissingBean(name = "generalRateLimiter")
         public RateLimiter memoryRateLimiter(AuthProperties authProperties) {
             return new InMemoryRateLimiter(authProperties);
         }
@@ -458,8 +523,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the rate limiter
          */
-        @Bean("rateLimiter")
-        @ConditionalOnMissingBean(name = "rateLimiter")
+        @Bean("generalRateLimiter")
+        @ConditionalOnMissingBean(name = "generalRateLimiter")
         public RateLimiter redisRateLimiter(
                 RedisTemplate<String, String> redisTemplate,
                 AuthProperties authProperties
@@ -511,12 +576,17 @@ public class AuthAutoConfiguration {
     }
 
 
+    /**
+     * The type Auth user factory config.
+     */
     @Configuration
     @ConditionalOnMissingBean(AuthUserFactory.class)
     static class AuthUserFactoryConfig {
         /**
          * Auth user factory auth user factory.
          *
+         * @param passwordPolicyService the password policy service
+         * @param passwordEncoder       the password encoder
          * @return the auth user factory
          */
         @Bean
@@ -525,6 +595,9 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type Id converter config.
+     */
     @Configuration
     @ConditionalOnMissingBean(IdConverter.class)
     static class IdConverterConfig {
@@ -539,12 +612,17 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type Email sender service config.
+     */
     @Configuration
     @ConditionalOnMissingBean(EmailSenderService.class)
     static class EmailSenderServiceConfig {
         /**
          * Email sender service email sender service.
          *
+         * @param javaMailSender the java mail sender
+         * @param properties     the properties
          * @return the email sender service
          */
         @Bean
@@ -553,12 +631,16 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type Java mail sender config.
+     */
     @Configuration
     @ConditionalOnMissingBean(JavaMailSender.class)
     static class JavaMailSenderConfig {
         /**
          * Java mail sender java mail sender.
          *
+         * @param properties the properties
          * @return the java mail sender
          */
         @Bean
@@ -602,12 +684,16 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type Event publisher config.
+     */
     @Configuration
     @ConditionalOnMissingBean(Publisher.class)
     static class EventPublisherConfig {
         /**
          * Event publisher publisher.
          *
+         * @param publisher the publisher
          * @return the publisher
          */
         @Bean
@@ -617,12 +703,16 @@ public class AuthAutoConfiguration {
     }
 
 
+    /**
+     * The type User row mapper config.
+     */
     @Configuration
     @ConditionalOnMissingBean(UserRowMapper.class)
     static class UserRowMapperConfig {
         /**
          * User row mapper user row mapper.
          *
+         * @param idConverter the id converter
          * @return the user row mapper
          */
         @Bean
@@ -631,6 +721,9 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type User sql parameter mapper config.
+     */
     @Configuration
     @ConditionalOnMissingBean(UserSqlParameterMapper.class)
     static class UserSqlParameterMapperConfig {
@@ -668,9 +761,26 @@ public class AuthAutoConfiguration {
         }
     }
 
+    /**
+     * The type Password reset service config.
+     */
     @Configuration
     @ConditionalOnMissingBean(PasswordResetService.class)
     static class PasswordResetServiceConfig {
+        /**
+         * Password reset service password reset service.
+         *
+         * @param emailSenderService    the email sender service
+         * @param userService           the user service
+         * @param tokenRepository       the token repository
+         * @param passwordEncoder       the password encoder
+         * @param passwordPolicyService the password policy service
+         * @param authProperties        the auth properties
+         * @param eventPublisher        the event publisher
+         * @param idConverter           the id converter
+         * @param properties            the properties
+         * @return the password reset service
+         */
         @Bean
         public PasswordResetService passwordResetService(EmailSenderService emailSenderService,
                                                          UserService<User, AppRole, UUID> userService,
@@ -680,7 +790,8 @@ public class AuthAutoConfiguration {
                                                          AuthProperties authProperties,
                                                          Publisher eventPublisher,
                                                          IdConverter<UUID> idConverter,
-                                                         AuthProperties properties) {
+                                                         AuthProperties properties,
+                                                         CacheManager cacheManager) {
             return new PasswordResetServiceImpl<>(emailSenderService,
                     userService,
                     tokenRepository,
@@ -689,22 +800,69 @@ public class AuthAutoConfiguration {
                     authProperties,
                     eventPublisher,
                     idConverter,
-                    properties);
+                    properties,
+                    cacheManager);
         }
     }
 
+    /**
+     * The type Role service config.
+     */
     @Configuration
     @ConditionalOnMissingBean(RoleService.class)
     static class RoleServiceConfig {
+        /**
+         * Role service role service.
+         *
+         * @param userService    the user service
+         * @param roleMapper     the role mapper
+         * @param authProperties the auth properties
+         * @param eventPublisher the event publisher
+         * @param idConverter    the id converter
+         * @return the role service
+         */
         @Bean
         public RoleService<User, AppRole, UUID> roleService(UserService<User, AppRole, UUID> userService,
                                                             RoleMapper<AppRole> roleMapper,
                                                             AuthProperties authProperties,
-                                                            Publisher eventPublisher, IdConverter<UUID> idConverter) {
+                                                            Publisher eventPublisher,
+                                                            IdConverter<UUID> idConverter) {
             return new RoleServiceImpl<>(userService, roleMapper, authProperties, eventPublisher, idConverter);
         }
     }
 
+    /**
+     * Data source data source.
+     *
+     * @param properties the properties
+     * @return the data source
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
+    public DataSource dataSource(AuthProperties properties) {
+        HikariDataSource ds = new HikariDataSource();
+        ds.setJdbcUrl(properties.getRepository().getDatabase().getUrl());
+        ds.setUsername(properties.getRepository().getDatabase().getUsername());
+        ds.setPassword(properties.getRepository().getDatabase().getPassword());
+        ds.setDriverClassName(properties.getRepository().getDatabase().getDriverClassName());
+        return ds;
+    }
+
+    /**
+     * Jdbc template jdbc template.
+     *
+     * @param dataSource the data source
+     * @return the jdbc template
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
+    public JdbcTemplate jdbcTemplate(DataSource dataSource) {
+        return new JdbcTemplate(dataSource);
+    }
+
+    /**
+     * The type Password reset token schema initializer.
+     */
     @Order(2)
     @DependsOn("userSchemaInitializer")
     @Component("PasswordResetTokenSchemaInitializer")
@@ -714,11 +872,20 @@ public class AuthAutoConfiguration {
         private final JdbcTemplate jdbcTemplate;
         private final AuthProperties authProperties;
 
+        /**
+         * Instantiates a new Password reset token schema initializer.
+         *
+         * @param jdbcTemplate   the jdbc template
+         * @param authProperties the auth properties
+         */
         public PasswordResetTokenSchemaInitializer(JdbcTemplate jdbcTemplate, AuthProperties authProperties) {
             this.jdbcTemplate = jdbcTemplate;
             this.authProperties = authProperties;
         }
 
+        /**
+         * Initialize schema.
+         */
         @PostConstruct
         public void initializeSchema() {
             try {
