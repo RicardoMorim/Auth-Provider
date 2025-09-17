@@ -1,0 +1,121 @@
+
+PS D:\projects\Auth-Provider> docker exec -i redis redis-cli FLUSHALL
+OK
+PS D:\projects\Auth-Provider> python .\benchmark.py
+Starting Comprehensive API Benchmarking Suite
+Target: http://localhost:8080
+Dataset Size: 100000
+Sequential Requests: 60000
+Concurrent Threads: 4, Total Requests: 100000
+Query/Update Count: 60000
+Initial CSRF token for login obtained: AbAGdsypFO5QKpnTMPOF...
+Login successful for session 2739458320304. Status: 200
+Session cookies after login: {'XSRF-TOKEN': 'd5cee9a4-6bac-466d-a744-90d73b1fbc3e', 'access_token': 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJyaWNhcmRvLWF1dGgtY2xpZW50Iiwicm9sZXMiOlsiUk9MRV9BRE1JTiJdLCJpc3MiOiJyaWNhcmRvLWF1dGgiLCJ0b2tlbl90eXBlIjoiYWNjZXNzIiwianRpIjoiNjg3NWExNzEtZWM3MC00MzFhLTkwMDAtMDAzYzkyNDM3NDU3Iiwic3ViIjoicmljYXJkb2F0bTI4QGdtYWlsLmNvbSIsImlhdCI6MTc1ODA3MDA0MywiZXhwIjoxMTc1ODA3MDA0M30.Zo5F5FqHpEHoZ5XbOY5cSKjDyuu3OmSjNxfcsMtsCQk', 'refresh_token': 'i-QR7qZnXUZ0YOnb4b0kmtK5t1irWLgWLjgP3YxVJZ-xvghAbMfYKDSRXh4uCeKYa9WZ0PoUMc9SXQXfp_GOSA'}
+Main CSRF token and cookies stored globally.
+✓ Initial authentication successful.
+✓ Main CSRF token re-fetched and confirmed after login.
+
+Running Benchmark Dataset Creation Test (Creating 100000 users concurrently)...
+  Creating 100000 users using 4 threads...
+  Dataset creation complete. Successfully created 100000/100000 users (0 failed).
+
+Dataset Creation - No successful requests
+
+--- Completed Benchmark Dataset Creation Test. ---
+Sleeping for 20 seconds...
+Proceeding with tests using 100000 users.
+
+--- Re-logging in to get a fresh authentication token for stress tests ---
+Initial CSRF token for login obtained: wYJ1-Pz_eJMp0Kgny19o...
+Login successful for session 2739461224208. Status: 200
+Session cookies after login: {'XSRF-TOKEN': '0ef0751d-b7d6-482c-bb35-5e8c9ee6a57c', 'access_token': 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJyaWNhcmRvLWF1dGgtY2xpZW50Iiwicm9sZXMiOlsiUk9MRV9BRE1JTiJdLCJpc3MiOiJyaWNhcmRvLWF1dGgiLCJ0b2tlbl90eXBlIjoiYWNjZXNzIiwianRpIjoiYmJkNzlmMDItMjg5NC00NzIyLTlhZTgtYjE5NTg5YWUzYmY0Iiwic3ViIjoicmljYXJkb2F0bTI4QGdtYWlsLmNvbSIsImlhdCI6MTc1ODA3MzcwMywiZXhwIjoxMTc1ODA3MzcwM30.byCe0dNj25nG86--_Zq5Bg1QQW9z6rbV6XmzIdqHI3k', 'refresh_token': 'T7NENJGNZ4vO03OQeuKztp9NMaWirn1kKlPZ23skszWor_XD1lzg-czQS3OaK1eFmMOQtFhpQKj6K3kf2zxing'}
+Main CSRF token and cookies stored globally.
+✓ Re-login successful. Tokens updated for stress tests.
+
+Running Varied Sequential Test (60000 requests)...
+
+Varied Sequential Stats:
+  Requests: 60000 (Success: 60000)
+  Success Rate: 100.00%
+  Throughput: 46.66 req/s
+  Latency Stats:
+    Avg: 0.0212s
+    Min: 0.0048s
+    Max: 1.8562s
+    P50: 0.0227s
+    P90: 0.0320s
+    P95: 0.0337s
+    P99: 0.0353s
+
+--- Completed <Lambda>. ---
+Sleeping for 10 seconds...
+
+Running Varied Concurrent Test (100000 requests)...
+
+Varied Concurrent Stats:
+  Requests: 100000 (Success: 54995)
+  Success Rate: 55.00%
+  Throughput: 139.01 req/s
+  Latency Stats:
+    Avg: 0.0159s
+    Min: 0.0051s
+    Max: 0.5232s
+    P50: 0.0130s
+    P90: 0.0295s
+    P95: 0.0328s
+    P99: 0.0395s
+
+--- Completed <Lambda>. ---
+Sleeping for 15 seconds...
+
+Running Query and Update Test (using benchmark dataset)...
+  Testing with 60000 users.
+  Querying user existence...
+  Updating users...
+
+Query and Update - No results found
+
+--- Completed <Lambda>. ---
+Sleeping for 10 seconds...
+
+Running Authentication Overhead Test...
+Authentication overhead: 178.77% (0.0120s)
+
+Authentication Overhead - No results found
+
+--- Completed <Lambda>. ---
+Sleeping for 5 seconds...
+
+Running Token Security Test (Authenticated Endpoint)...
+  Testing CSRF protection for user: benchmark_user_30636bbfa498_10
+  Testing with INVALID CSRF token...
+    Invalid Token Test Status: 401
+  Testing WITHOUT CSRF token...
+    No Token Test Status: 401
+  Testing with VALID CSRF token...
+    Valid Token Test Status: 200
+
+Token Security - No results found
+
+--- Completed <Lambda>. ---
+This was the last test, no final sleep.
+
+--- Fetching Database Metrics ---
+DB Metrics Summary: {'total_operations': 339927, 'successful_operations': 339927, 'failed_operations': 0, 'db_success_rate_percent': 100.0, 'avg_db_duration_ms': 0.8003483100783404, 'min_db_duration_ms': 0, 'max_db_duration_ms': 866, 'p50_db_duration_ms': 1, 'p90_db_duration_ms': 2.0, 'p95_db_duration_ms': 2.0, 'p99_db_duration_ms': 6.0, 'operation_types': {'getUserByEmail': {'count': 2, 'avg_duration_ms': 24}, 'createUser': {'count': 99921, 'avg_duration_ms': 1.416378939362096}, 'getAllUsers': {'count': 1, 'avg_duration_ms': 38}, 'userExists': {'count': 60000, 'avg_duration_ms': 0.2929333333333333}, 'getUserByUserName': {'count': 60001, 'avg_duration_ms': 0.32439459342344296}, 'getUserById': {'count': 60001, 'avg_duration_ms': 0.23637939367677205}, 'updateEmailAndUsername': {'count': 60001, 'avg_duration_ms': 1.3203946600889984}}}
+Results saved to benchmark_results/benchmark_results_20250917_041709.csv
+Summary statistics saved to benchmark_results/summary_stats.json
+
+============================================================
+COMPREHENSIVE BENCHMARK SUMMARY
+============================================================
+Total Requests: 380043
+Total Duration: 8992.78 seconds
+Overall Success Rate: 61.84%
+Overall Throughput: 44.15 req/s
+Users in Benchmark Pool: 100000
+
+Final cleanup: Attempting to delete 100000 users created by tests...
+  Successfully deleted 0 out of 100000 users requiring cleanup.
+
+✓ Benchmarking completed! Results saved in benchmark_results/
+Note: 100000 benchmark users remain in the database.

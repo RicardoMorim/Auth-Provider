@@ -5,6 +5,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -85,10 +86,10 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     U getUserByEmail(String email);
 
-    Page<U> getAllUsers(Pageable pageable, String username, String email,
+    List<U> getAllUsers(Pageable pageable, String username, String email,
                         String role, String createdAfter, String createdBefore);
 
-    public Page<U> searchUsers(String query, Pageable pageable);
+    List<U> searchUsers(String query, Pageable pageable);
 
     /**
      * Authenticate optional.

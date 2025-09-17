@@ -552,7 +552,7 @@ public class UserPostgreSQLRepository<U extends AuthUser<ID, R>, R extends Role,
 
     private String buildSortClause(Pageable pageable) {
         if (pageable.getSort().isEmpty()) {
-            return " ORDER BY u.id ASC";
+            return " ORDER BY u.id ASC ";
         }
 
         StringBuilder sortClause = new StringBuilder(" ORDER BY ");
@@ -562,8 +562,8 @@ public class UserPostgreSQLRepository<U extends AuthUser<ID, R>, R extends Role,
                     .append(order.getDirection().name()).append(", ");
         });
 
-        // Remove trailing comma and space
         sortClause.setLength(sortClause.length() - 2);
+        sortClause.append(" ");
         return sortClause.toString();
     }
 

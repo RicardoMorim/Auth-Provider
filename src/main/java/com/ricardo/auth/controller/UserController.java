@@ -2,6 +2,7 @@ package com.ricardo.auth.controller;
 
 import com.ricardo.auth.core.Role;
 import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.DatabaseOperation;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.UpdateUserRequestDTO;
@@ -9,6 +10,7 @@ import com.ricardo.auth.dto.UserDTO;
 import com.ricardo.auth.dto.UserDTOMapper;
 import com.ricardo.auth.factory.AuthUserFactory;
 import com.ricardo.auth.helper.IdConverter;
+import com.ricardo.auth.service.UserMetricsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -17,16 +19,16 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.data.domain.Page;
-import org.springframework.data.domain.PageRequest;
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.domain.Sort;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
+
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/users")
@@ -37,10 +39,13 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
     private final AuthUserFactory<U, R, ID> userBuilder;
     private final IdConverter<ID> idConverter;
 
-    public UserController(UserService<U, R, ID> userService, AuthUserFactory<U, R, ID> userBuilder, IdConverter<ID> idConverter) {
+    private final UserMetricsService metricsCollector;
+
+    public UserController(UserService<U, R, ID> userService, AuthUserFactory<U, R, ID> userBuilder, IdConverter<ID> idConverter, UserMetricsService metricsCollector) {
         this.userService = userService;
         this.userBuilder = userBuilder;
         this.idConverter = idConverter;
+        this.metricsCollector = metricsCollector;
     }
 
     @PostMapping("/create")
@@ -143,10 +148,10 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         Sort sort = Sort.by(sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC, sortBy);
         Pageable pageable = PageRequest.of(page, Math.min(size, 100), sort);
 
-        Page<U> users = userService.getAllUsers(pageable, username, email, role, createdAfter, createdBefore);
-        Page<UserDTO> userDTOs = users.map(UserDTOMapper::toDTO);
-
-        return ResponseEntity.ok(userDTOs);
+        List<U> users = userService.getAllUsers(pageable, username, email, role, createdAfter, createdBefore);
+        List<UserDTO> userDTOs = users.stream().map(UserDTOMapper::toDTO).toList();
+        Page<UserDTO> pagedUserDTOs = new PageImpl<>(userDTOs, pageable, users.size());
+        return ResponseEntity.ok(pagedUserDTOs);
     }
 
     @GetMapping("/search")
@@ -170,10 +175,19 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         Sort sort = Sort.by(sortDir.equalsIgnoreCase("desc") ? Sort.Direction.DESC : Sort.Direction.ASC, sortBy);
         Pageable pageable = PageRequest.of(page, Math.min(size, 100), sort);
 
-        Page<U> users = userService.searchUsers(query, pageable);
-        Page<UserDTO> userDTOs = users.map(UserDTOMapper::toDTO);
+        List<U> users = userService.searchUsers(query, pageable);
+        List<UserDTO> userDTOs = users.stream()
+                .map(UserDTOMapper::toDTO).toList();
 
-        return ResponseEntity.ok(userDTOs);
+        Page<UserDTO> pagedUserDTOs = new PageImpl<>(userDTOs, pageable, users.size());
+
+        return ResponseEntity.ok(pagedUserDTOs);
+    }
+
+    // TODO - REMOVE THIS
+    @GetMapping("/metrics/db-operations")
+    public List<DatabaseOperation> getDatabaseOperations() {
+        return metricsCollector.getOperations();
     }
 
 

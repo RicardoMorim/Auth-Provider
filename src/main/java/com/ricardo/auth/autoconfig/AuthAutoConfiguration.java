@@ -1,6 +1,5 @@
 package com.ricardo.auth.autoconfig;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.blocklist.InMemoryTokenBlocklist;
 import com.ricardo.auth.blocklist.RedisTokenBlockList;
 import com.ricardo.auth.config.UserSecurityService;
@@ -37,7 +36,6 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.boot.autoconfigure.domain.EntityScan;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cache.CacheManager;
-import org.springframework.cache.concurrent.ConcurrentMapCacheManager;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.*;
 import org.springframework.core.annotation.Order;
@@ -129,8 +127,8 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher, CacheManager cacheManager) {
-        return new UserServiceImpl<>(userRepository, eventPublisher, cacheManager);
+    public UserService<User, AppRole, UUID> userService(UserRepository<User, AppRole, UUID> userRepository, EventPublisher eventPublisher, CacheManager cacheManager, UserMetricsService userMetricsService) {
+        return new UserServiceImpl<>(userRepository, eventPublisher, cacheManager, userMetricsService);
     }
 
     /**
@@ -254,8 +252,8 @@ public class AuthAutoConfiguration {
     @ConditionalOnMissingBean
     @ConditionalOnProperty(prefix = "ricardo.auth.controllers", name = "user.enabled", havingValue = "true", matchIfMissing = true)
     public UserController<User, AppRole, UUID> userController(
-            UserService<User, AppRole, UUID> userService, AuthUserFactory<User, AppRole, UUID> userBuilder, IdConverter<UUID> idConverter) {
-        return new UserController<>(userService, userBuilder, idConverter);
+            UserService<User, AppRole, UUID> userService, AuthUserFactory<User, AppRole, UUID> userBuilder, IdConverter<UUID> idConverter, UserMetricsService userMetricsService) {
+        return new UserController<>(userService, userBuilder, idConverter, userMetricsService);
     }
 
     /**
@@ -337,25 +335,18 @@ public class AuthAutoConfiguration {
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class RefreshTokenSchemaInitializer {
 
-        private final JdbcTemplate jdbcTemplate;
+        private final DataSource dataSource;
 
-        /**
-         * Instantiates a new Refresh token schema initializer.
-         *
-         * @param jdbcTemplate the jdbc template
-         */
-        public RefreshTokenSchemaInitializer(JdbcTemplate jdbcTemplate) {
-            this.jdbcTemplate = jdbcTemplate;
+        public RefreshTokenSchemaInitializer(DataSource dataSource) {
+            this.dataSource = dataSource;
         }
 
-        /**
-         * Initialize schema.
-         */
         @PostConstruct
         public void initializeSchema() {
             try {
-                createTableIfNotExists();
-                createIndexes();
+                JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+                createTableIfNotExists(jdbcTemplate);
+                createIndexes(jdbcTemplate);
                 logger.info("RefreshToken schema initialization completed successfully");
             } catch (Exception e) {
                 logger.error("Failed to initialize RefreshToken schema", e);
@@ -363,7 +354,7 @@ public class AuthAutoConfiguration {
             }
         }
 
-        private void createTableIfNotExists() {
+        private void createTableIfNotExists(JdbcTemplate jdbcTemplate) {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
             String createTableSql = """
@@ -383,17 +374,18 @@ public class AuthAutoConfiguration {
             logger.debug("Table 'refresh_tokens' created or already exists");
         }
 
-        private void createIndexes() {
+        private void createIndexes(JdbcTemplate jdbcTemplate) {
             // Note: UNIQUE constraint on token is already handled by table creation
             String[] indexStatements = {
-                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_user_email ON refresh_tokens(user_email)",
-                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_expiry_date ON refresh_tokens(expiry_date)",
-                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_user_created ON refresh_tokens(user_email, created_at)",
-                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_revoked ON refresh_tokens(revoked)",
-                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_expiry_date_revoked ON refresh_tokens(expiry_date, revoked)",
-                    "CREATE INDEX IF NOT EXISTS idx_refresh_token_version ON refresh_tokens(version)"
-            };
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_email ON refresh_tokens(user_email)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_token ON refresh_tokens(token)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_expiry_date ON refresh_tokens(expiry_date)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked ON refresh_tokens(revoked)",
 
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_email_revoked ON refresh_tokens(user_email, revoked)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_revoked_expiry ON refresh_tokens(revoked, expiry_date)",
+                    "CREATE INDEX IF NOT EXISTS idx_refresh_tokens_user_email_expiry ON refresh_tokens(user_email, expiry_date)"
+            };
             for (String indexSql : indexStatements) {
                 jdbcTemplate.execute(indexSql);
             }
@@ -411,25 +403,18 @@ public class AuthAutoConfiguration {
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class UserSchemaInitializer {
 
-        private final JdbcTemplate jdbcTemplate;
+        private final DataSource dataSource;
 
-        /**
-         * Instantiates a new User schema initializer.
-         *
-         * @param jdbcTemplate the jdbc template
-         */
-        public UserSchemaInitializer(JdbcTemplate jdbcTemplate) {
-            this.jdbcTemplate = jdbcTemplate;
+        public UserSchemaInitializer(DataSource dataSource) {
+            this.dataSource = dataSource;
         }
 
-        /**
-         * Initialize schema.
-         */
         @PostConstruct
         public void initializeSchema() {
             try {
-                createUserTablesIfNotExists();
-                createUserIndexes();
+                JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+                createUserTablesIfNotExists(jdbcTemplate);
+                createUserIndexes(jdbcTemplate);
                 logger.info("User schema initialization completed successfully");
             } catch (Exception e) {
                 logger.error("Failed to initialize User schema", e);
@@ -437,7 +422,7 @@ public class AuthAutoConfiguration {
             }
         }
 
-        private void createUserTablesIfNotExists() {
+        private void createUserTablesIfNotExists(JdbcTemplate jdbcTemplate) {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
             // Create users table
@@ -470,23 +455,28 @@ public class AuthAutoConfiguration {
             logger.debug("Table 'user_roles' created or already exists");
         }
 
-        private void createUserIndexes() {
+        private void createUserIndexes(JdbcTemplate jdbcTemplate) {
             String[] indexStatements = {
-                    "CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)",
-                    "CREATE INDEX IF NOT EXISTS idx_users_username ON users(username)",
-                    "CREATE INDEX IF NOT EXISTS idx_users_id ON users(id)",
+                    // Índices para queries de data e versioning
+                    "CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_updated_at ON users(updated_at)",
+                    "CREATE INDEX IF NOT EXISTS idx_users_version ON users(version)",
+
+                    // Índices compostos para performance
+                    "CREATE INDEX IF NOT EXISTS idx_users_created_updated ON users(created_at, updated_at)",
+
+                    // Índices para user_roles
                     "CREATE INDEX IF NOT EXISTS idx_user_roles_user_id ON user_roles(user_id)",
-                    "CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role)"
+                    "CREATE INDEX IF NOT EXISTS idx_user_roles_role ON user_roles(role)",
+                    "CREATE INDEX IF NOT EXISTS idx_user_roles_role_user_id ON user_roles(role, user_id)"
             };
 
             for (String indexSql : indexStatements) {
                 jdbcTemplate.execute(indexSql);
             }
-
-            logger.debug("All user indexes created or already exist");
         }
-    }
 
+    }
 
     /**
      * The type Memory rate limiter config.
@@ -869,28 +859,20 @@ public class AuthAutoConfiguration {
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
     public static class PasswordResetTokenSchemaInitializer {
 
-        private final JdbcTemplate jdbcTemplate;
+        private final DataSource dataSource;
         private final AuthProperties authProperties;
 
-        /**
-         * Instantiates a new Password reset token schema initializer.
-         *
-         * @param jdbcTemplate   the jdbc template
-         * @param authProperties the auth properties
-         */
-        public PasswordResetTokenSchemaInitializer(JdbcTemplate jdbcTemplate, AuthProperties authProperties) {
-            this.jdbcTemplate = jdbcTemplate;
+        public PasswordResetTokenSchemaInitializer(DataSource dataSource, AuthProperties authProperties) {
+            this.dataSource = dataSource;
             this.authProperties = authProperties;
         }
 
-        /**
-         * Initialize schema.
-         */
         @PostConstruct
         public void initializeSchema() {
             try {
-                createPasswordResetTokenTableIfNotExists();
-                createPasswordResetTokenIndexes();
+                JdbcTemplate jdbcTemplate = new JdbcTemplate(dataSource);
+                createPasswordResetTokenTableIfNotExists(jdbcTemplate);
+                createPasswordResetTokenIndexes(jdbcTemplate);
                 logger.info("Password Reset Token schema initialization completed successfully");
             } catch (Exception e) {
                 logger.error("Failed to initialize Password Reset Token schema", e);
@@ -898,7 +880,8 @@ public class AuthAutoConfiguration {
             }
         }
 
-        private void createPasswordResetTokenTableIfNotExists() {
+
+        private void createPasswordResetTokenTableIfNotExists(JdbcTemplate jdbcTemplate) {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
             String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
@@ -924,7 +907,7 @@ public class AuthAutoConfiguration {
             logger.debug("Table '{}' created or already exists", tableName);
         }
 
-        private void createPasswordResetTokenIndexes() {
+        private void createPasswordResetTokenIndexes(JdbcTemplate jdbcTemplate) {
             String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
             String[] indexStatements = {
                     String.format("CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_token ON %s(token)", tableName, tableName),
@@ -1003,5 +986,4 @@ public class AuthAutoConfiguration {
         }
     }
 }
-
 

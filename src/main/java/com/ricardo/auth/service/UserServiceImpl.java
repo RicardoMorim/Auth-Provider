@@ -36,25 +36,40 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     private final UserRepository<U, R, ID> userRepository;
     private final EventPublisher eventPublisher;
     private final CacheManager cacheManager;
-
+    private final UserMetricsService userMetricsService;
 
     /**
      * Instantiates a new User service.
      *
-     * @param userRepository the user repository
-     * @param eventPublisher the event publisher
+     * @param userRepository     the user repository
+     * @param eventPublisher     the event publisher
+     * @param cacheManager       the cache manager
+     * @param userMetricsService the service to record database operation metrics
      */
-    public UserServiceImpl(UserRepository<U, R, ID> userRepository, EventPublisher eventPublisher, CacheManager cacheManager) {
-        this.eventPublisher = eventPublisher;
+    public UserServiceImpl(UserRepository<U, R, ID> userRepository,
+                           EventPublisher eventPublisher,
+                           CacheManager cacheManager,
+                           UserMetricsService userMetricsService) { // Add dependency
         this.userRepository = userRepository;
+        this.eventPublisher = eventPublisher;
         this.cacheManager = cacheManager;
+        this.userMetricsService = userMetricsService; // Assign dependency
     }
 
     @Override
     @Cacheable(value = "userById", key = "#id")
     public U getUserById(ID id) {
-        return userRepository.findById(id)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+        long startTime = System.currentTimeMillis();
+        String operation = "getUserById";
+        try {
+            U user = userRepository.findById(id)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with id: " + id));
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return user;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
     @Override
@@ -70,12 +85,25 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             @CachePut(value = "userById", key = "#user.id"),
     })
     public U createUser(U user) {
-        if (userRepository.existsByEmail(user.getEmail())) {
-            throw new DuplicateResourceException("Email already exists: " + user.getEmail());
-        }
+        long startTime = System.currentTimeMillis();
+        String operation = "createUser";
+        try {
+            if (userRepository.existsByEmail(user.getEmail())) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+                throw new DuplicateResourceException("Email already exists: " + user.getEmail());
+            }
 
-        eventPublisher.publishEvent(new UserCreatedEvent(user.getUsername(), user.getEmail(), user.getRoles()));
-        return userRepository.saveUser(user);
+            eventPublisher.publishEvent(new UserCreatedEvent(user.getUsername(), user.getEmail(), user.getRoles()));
+            U savedUser = userRepository.saveUser(user); // Record time after save
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return savedUser;
+        } catch (Exception e) {
+            // Only record if not already recorded due to DuplicateResourceException
+            if (!(e instanceof DuplicateResourceException)) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            }
+            throw e;
+        }
     }
 
     @Override
@@ -86,113 +114,228 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             @CacheEvict(value = "users", allEntries = true)
     })
     public U updateEmailAndUsername(ID id, String email, String username) {
-        U user = getUserById(id);
+        long startTime = System.currentTimeMillis();
+        String operation = "updateEmailAndUsername";
+        try {
+            U user = getUserById(id); // This might have its own metric recorded
 
-        // Validate email uniqueness if changing email
-        if (!user.getEmail().equals(email) &&
-                userRepository.existsByEmail(email)) {
-            throw new DuplicateResourceException("Email already exists: " + email);
+            // Validate email uniqueness if changing email
+            if (!user.getEmail().equals(email) &&
+                    userRepository.existsByEmail(email)) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+                throw new DuplicateResourceException("Email already exists: " + email);
+            }
+
+            user.setUsername(username);
+            user.setEmail(email);
+            eventPublisher.publishEvent(new UserUpdatedEvent(user.getUsername(), user.getEmail()));
+            U updatedUser = userRepository.saveUser(user); // Record time after save
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return updatedUser;
+        } catch (Exception e) {
+            // Only record if not already recorded due to DuplicateResourceException
+            if (!(e instanceof DuplicateResourceException)) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            }
+            throw e;
         }
-
-        user.setUsername(username);
-        user.setEmail(email);
-        eventPublisher.publishEvent(new UserUpdatedEvent(user.getUsername(), user.getEmail()));
-        return userRepository.saveUser(user);
     }
 
     @Override
     @CachePut(value = "userById", key = "#id")
     @CacheEvict(value = "users", allEntries = true)
     public U updateUser(ID id, U user) {
-        U existingUser = getUserById(id);
-        // Validate email uniqueness if changing email
-        if (!existingUser.getEmail().equals(user.getEmail()) &&
-                userRepository.existsByEmail(user.getEmail())) {
-            throw new DuplicateResourceException("Email already exists: " + user.getEmail());
+        long startTime = System.currentTimeMillis();
+        String operation = "updateUser";
+        try {
+            U existingUser = getUserById(id); // This might have its own metric recorded
+
+            // Validate email uniqueness if changing email
+            if (!existingUser.getEmail().equals(user.getEmail()) &&
+                    userRepository.existsByEmail(user.getEmail())) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+                throw new DuplicateResourceException("Email already exists: " + user.getEmail());
+            }
+
+            existingUser.setUsername(user.getUsername());
+            existingUser.setEmail(user.getEmail());
+            existingUser.setRoles(user.getRoles());
+            // PASSWORD IS NOT UPDATED HERE IT HAS ITS OWN METHOD `updatePassword`
+
+            eventPublisher.publishEvent(new UserUpdatedEvent(existingUser.getUsername(), existingUser.getEmail()));
+            U savedUser = userRepository.saveUser(existingUser); // Record time after save
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return savedUser;
+        } catch (Exception e) {
+            // Only record if not already recorded due to DuplicateResourceException
+            if (!(e instanceof DuplicateResourceException)) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            }
+            throw e;
         }
-
-
-        existingUser.setUsername(user.getUsername());
-        existingUser.setEmail(user.getEmail());
-        existingUser.setRoles(user.getRoles());
-        // PASSWORD IS NOT UPDATED HERE IT HAS ITS OWN METHOD `updatePassword`
-
-        eventPublisher.publishEvent(new UserUpdatedEvent(existingUser.getUsername(), existingUser.getEmail()));
-        return userRepository.saveUser(existingUser);
     }
 
     @Override
     public U updatePassword(ID id, String encodedPassword) {
-        U user = getUserById(id);
+        long startTime = System.currentTimeMillis();
+        String operation = "updatePassword";
+        try {
+            U user = getUserById(id); // This might have its own metric recorded
 
-        user.setPassword(encodedPassword);
-        return userRepository.saveUser(user);
+            user.setPassword(encodedPassword);
+            U savedUser = userRepository.saveUser(user); // Record time after save
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return savedUser;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
     @Override
     @Cacheable(value = "userExists", key = "#email")
     public boolean userExists(String email) {
-        return userRepository.existsByEmail(email);
+        long startTime = System.currentTimeMillis();
+        String operation = "userExists";
+        try {
+            boolean exists = userRepository.existsByEmail(email);
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return exists;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
     @Override
     public void deleteUser(ID id) {
-        if (!userRepository.existsById(id)) {
-            throw new ResourceNotFoundException("User not found with id: " + id);
+        long startTime = System.currentTimeMillis();
+        String operation = "deleteUser";
+        try {
+            if (!userRepository.existsById(id)) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+                throw new ResourceNotFoundException("User not found with id: " + id);
+            }
+            U user = getUserById(id); // This might have its own metric recorded
+
+            evictCache("userById", id);
+            evictCache("userByEmail", user.getEmail());
+            evictCache("userByUsername", user.getUsername());
+            evictCache("userExists", user.getEmail());
+            clearCache("users");
+            clearCache("adminCount");
+
+            eventPublisher.publishEvent(new UserDeletedEvent(user.getUsername(), user.getEmail()));
+            userRepository.deleteById(id); // Record time after deletion
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+        } catch (Exception e) {
+            // Only record if not already recorded due to ResourceNotFoundException
+            if (!(e instanceof ResourceNotFoundException)) {
+                userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            }
+            throw e;
         }
-        U user = getUserById(id);
-
-        evictCache("userById", id);
-        evictCache("userByEmail", user.getEmail());
-        evictCache("userByUsername", user.getUsername());
-        evictCache("userExists", user.getEmail());
-        clearCache("users");
-        clearCache("adminCount");
-
-        eventPublisher.publishEvent(new UserDeletedEvent(user.getUsername(), user.getEmail()));
-        userRepository.deleteById(id);
     }
 
     @Override
     @Cacheable(value = "userByEmail", key = "#email")
     public U getUserByEmail(String email) {
-        return userRepository.findByEmail(email)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+        long startTime = System.currentTimeMillis();
+        String operation = "getUserByEmail";
+        try {
+            U user = userRepository.findByEmail(email)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + email));
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return user;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
     @Override
     @Cacheable(value = "users", key = "{#pageable.pageNumber, #pageable.pageSize, #username, #email, #role, #createdAfter, #createdBefore}")
-    public Page<U> getAllUsers(Pageable pageable, String username, String email,
+    public List<U> getAllUsers(Pageable pageable, String username, String email,
                                String role, String createdAfter, String createdBefore) {
-        return userRepository.findAllWithFilters(username, email, List.of(role),
-                Instant.parse(createdAfter), Instant.parse(createdBefore), pageable);
+        long startTime = System.currentTimeMillis();
+        String operation = "getAllUsers";
+        try {
+            // Parse dates safely if needed, or handle potential parse exceptions
+            Instant after = createdAfter != null ? Instant.parse(createdAfter) : null;
+            Instant before = createdBefore != null ? Instant.parse(createdBefore) : null;
+            List<String> roles = role != null ? List.of(role) : List.of();
+
+            Page<U> users = userRepository.findAllWithFilters(username, email, roles, after, before, pageable);
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return users.getContent();
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e; // Re-throw to maintain original behavior
+        }
     }
 
     @Override
     @Cacheable(value = "allUsersList", key = "{#query, #pageable.pageSize, #pageable.pageNumber}")
-    public Page<U> searchUsers(String query, Pageable pageable) {
-        return userRepository.searchByQuery(query, pageable);
+    public List<U> searchUsers(String query, Pageable pageable) {
+        long startTime = System.currentTimeMillis();
+        String operation = "searchUsers";
+        try {
+            Page<U> users = userRepository.searchByQuery(query, pageable);
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return users.getContent();
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e; // Re-throw to maintain original behavior
+        }
     }
 
     @Override
     public Optional<U> authenticate(String email, String rawPassword, PasswordEncoder encoder) {
-        return userRepository.findByEmail(email)
-                .filter(user -> encoder.matches(rawPassword, user.getPassword()));
+        long startTime = System.currentTimeMillis();
+        String operation = "authenticate";
+        try {
+            Optional<U> userOpt = userRepository.findByEmail(email)
+                    .filter(user -> encoder.matches(rawPassword, user.getPassword()));
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), userOpt.isPresent());
+            return userOpt;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
     @Override
     @Cacheable(value = "userByUsername", key = "#username")
     public U getUserByUserName(String username) {
-        return userRepository.findByUsername(username)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+        long startTime = System.currentTimeMillis();
+        String operation = "getUserByUserName";
+        try {
+            U user = userRepository.findByUsername(username)
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + username));
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return user;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
     @Override
     @Cacheable(value = "adminCount")
     public int countAdmins() {
-        return userRepository.countUsersByRole("ADMIN");
+        long startTime = System.currentTimeMillis();
+        String operation = "countAdmins";
+        try {
+            int count = userRepository.countUsersByRole("ADMIN");
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), true);
+            return count;
+        } catch (Exception e) {
+            userMetricsService.recordOperation(operation, startTime, System.currentTimeMillis(), false);
+            throw e;
+        }
     }
 
+    // Helper methods remain unchanged
     private void evictCache(String cacheName, Object key) {
         Cache cache = cacheManager.getCache(cacheName);
         if (cache != null) {
