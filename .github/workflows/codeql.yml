@@ -93,6 +93,12 @@ jobs:
           java-version: '21'
           cache: maven
 
+      - name: Create test database
+        run: |
+          psql -h localhost -U postgres -c 'CREATE DATABASE "AuthLibraryTest";'
+        env:
+          PGPASSWORD: 8080
+
       - name: Cache Maven packages
         uses: actions/cache@v4
         with:
