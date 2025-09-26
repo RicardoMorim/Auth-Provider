@@ -64,7 +64,7 @@ jobs:
           echo RICARDO_AUTH_JWT_SECRET=${{ secrets.RICARDO_AUTH_JWT_SECRET }} >> .env
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           java-version: '21'
           distribution: 'temurin'
