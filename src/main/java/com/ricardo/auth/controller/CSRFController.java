@@ -51,6 +51,7 @@ public class CSRFController {
     @GetMapping("/api/csrf-token")
     public ResponseEntity<Map<String, String>> getCsrfToken(HttpServletRequest request, HttpServletResponse response) {
         CsrfToken csrfToken = (CsrfToken) request.getAttribute(CsrfToken.class.getName());
+
         if (csrfToken == null) {
             CookieCsrfTokenRepository tokenRepository = CookieCsrfTokenRepository.withHttpOnlyFalse();
             csrfToken = tokenRepository.generateToken(request);
@@ -58,13 +59,23 @@ public class CSRFController {
         }
 
         Map<String, String> tokenInfo = Map.of(
-                "token", csrfToken.getToken(),
-                "headerName", csrfToken.getHeaderName(),
-                "parameterName", csrfToken.getParameterName()
+                "token", sanitizeForLogging(csrfToken.getToken()),
+                "headerName", sanitizeForLogging(csrfToken.getHeaderName()),
+                "parameterName", sanitizeForLogging(csrfToken.getParameterName())
         );
 
-        log.info("CSRF token generated: {}", tokenInfo);
-
         return ResponseEntity.ok(tokenInfo);
+    }
+
+    private static String sanitizeForLogging(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                .replace("\"", "\\\"")
+                .trim();
     }
 }
