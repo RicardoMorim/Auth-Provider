@@ -45,6 +45,11 @@ jobs:
           echo MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} >> .env
           echo RICARDO_AUTH_JWT_SECRET=${{ secrets.RICARDO_AUTH_JWT_SECRET }} >> .env
 
+      - name: Create test database
+        run: |
+          psql -h localhost -U postgres -c 'CREATE DATABASE "AuthLibraryTest";'
+        env:
+          PGPASSWORD: postgres
 
       - name: Set up Java, Maven Central credentials, and GPG signing
         uses: actions/setup-java@v4
