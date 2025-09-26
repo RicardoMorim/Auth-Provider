@@ -95,6 +95,14 @@ public class User implements AuthUser<UUID, AppRole> {
         return id;
     }
 
+    @Override
+    public void setId(UUID id) {
+        if (id != null) {
+            this.id = id;
+        } else {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
+    }
 
     @Override
     public String getEmail() {
@@ -118,7 +126,6 @@ public class User implements AuthUser<UUID, AppRole> {
                 .map(role -> new SimpleGrantedAuthority(role.getAuthority()))
                 .collect(Collectors.toSet());
     }
-
 
     /**
      * Gets version.
@@ -216,6 +223,18 @@ public class User implements AuthUser<UUID, AppRole> {
     }
 
     @Override
+    public void setRoles(Set<AppRole> roles) {
+        if (roles == null || roles.isEmpty()) {
+            this.roles = new HashSet<>();
+            return;
+        }
+        // Defensive copy and null-filter
+        this.roles = roles.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
+    }
+
+    @Override
     public void addRole(AppRole role) {
         if (role != null) {
             this.roles.add(role);
@@ -229,42 +248,19 @@ public class User implements AuthUser<UUID, AppRole> {
         }
     }
 
-
-    @Override
-    public void setId(UUID id) {
-        if (id != null) {
-            this.id = id;
-        } else {
-            throw new IllegalArgumentException("ID cannot be null");
-        }
-    }
-
-
-    @Override
-    public void setRoles(Set<AppRole> roles) {
-        if (roles == null || roles.isEmpty()) {
-            this.roles = new HashSet<>();
-            return;
-        }
-        // Defensive copy and null-filter
-        this.roles = roles.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(HashSet::new));
-    }
-
     @Override
     public Instant getCreatedAt() {
         return createdAt;
     }
 
     @Override
-    public Instant getUpdatedAt() {
-        return updatedAt;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
     @Override
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt != null ? createdAt : Instant.now();
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     @Override

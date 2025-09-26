@@ -321,10 +321,6 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
         return tokens;
     }
 
-    // Helper record for mapping returned IDs to tokens
-    private record TokenIdMapping(UUID id, String token) {
-    }
-
     @Override
     public int countActiveTokensByUser(String userEmail) {
         if (userEmail == null || userEmail.trim().isEmpty()) {
@@ -340,6 +336,10 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     public void deleteAll() {
         String sql = String.format("DELETE FROM %s", tableName);
         jdbcTemplate.update(sql);
+    }
+
+    // Helper record for mapping returned IDs to tokens
+    private record TokenIdMapping(UUID id, String token) {
     }
 
     private static class RefreshTokenRowMapper implements RowMapper<RefreshToken> {

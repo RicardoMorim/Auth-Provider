@@ -10,12 +10,14 @@ and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.
 ### 🔐 New Authentication Features
 
 **Password Reset System**
+
 - **OWASP Compliant**: Secure password reset with time-limited tokens
 - **Email Integration**: Full email support with customizable templates
 - **Rate Limiting**: Protection against password reset abuse
 - **Secure Tokens**: Cryptographically secure reset tokens with expiration
 
 **Role Management API**
+
 - **Full CRUD**: Complete role management with proper authorization
 - **Admin Controls**: ADMIN-only role creation, modification, and deletion
 - **Role Validation**: Prevention of role deletion if assigned to users
@@ -27,18 +29,22 @@ and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.
 - **Extensible**: Easy to add custom event listeners for monitoring.
 
 **OpenAPI Documentation Integration**
+
 - **Complete Swagger Integration**: Full OpenAPI 3.0 documentation with security schemes
 - **Interactive Documentation**: Swagger UI available at `/swagger-ui.html`
 - **Cookie Authentication**: OpenAPI configured for cookie-based auth (consistent with v2.0.0 authentication system)
 - **Comprehensive Endpoints**: All endpoints documented with examples and security requirements
 
 ### 🛡️ Enhanced Security Measures
+
 **Enhanced Input Validation**
+
 - **Sanitization**: Input sanitization to prevent injection attacks
 - **Enhanced Validation**: Comprehensive validation with detailed error messages
 - **Security Headers**: Additional security headers for XSS and clickjacking protection
 
 **Better Exception Handling**
+
 - **Comprehensive Error Responses**: Improved error handling with detailed, user-friendly messages
 - **Security-Aware Errors**: Exception responses that don't leak sensitive information
 - **Standardized Error Format**: Consistent error response structure across all endpoints
@@ -46,12 +52,14 @@ and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.
 ### 📚 Complete Documentation Overhaul
 
 **Developer Documentation**
+
 - **Bean Lifecycle**: Complete documentation of all beans and their dependencies
 - **Configuration Reference**: Comprehensive properties documentation
 - **Architecture Guide**: Domain-driven design patterns and structure
 - **Integration Examples**: Real-world integration patterns
 
 **Enhanced API Documentation**
+
 - **OpenAPI Integration**: Complete API documentation with interactive examples
 - **Security Schemes**: Detailed authentication and authorization documentation
 - **Error Responses**: Comprehensive error code and message documentation
@@ -70,7 +78,7 @@ ricardo:
       fromName: "Auth Service"
       resetSubject: "Password Reset Request"
 
-    
+
     # Password Reset (NEW in v4.0.0)
     password-reset:
       enabled: true
@@ -86,33 +94,38 @@ ricardo:
 ### 🔄 New API Endpoints
 
 **Password Reset** (NEW in v4.0.0)
+
 - `POST /api/auth/password-reset/request` - Request password reset via email
 - `POST /api/auth/password-reset/confirm` - Confirm password reset with token
 
 **Role Management** (NEW in v4.0.0) - ADMIN only
+
 - `GET /api/roles` - List all roles
 - `POST /api/roles` - Create new role
 - `PUT /api/roles/{id}` - Update existing role
 - `DELETE /api/roles/{id}` - Delete role (if not assigned)
 
-
 ### 🏗️ Breaking Changes
 
 **Role Management Requirements**
+
 - **NEW**: ADMIN role required for all role management operations
 - **ENHANCED**: Role validation prevents deletion of roles assigned to users
 
 **Email Configuration Requirements** (for Password Reset)
+
 - **REQUIRED**: Email configuration must be provided for password reset functionality
 - **NEW**: Email templates can be customized via configuration properties
 
 **OpenAPI Integration**
+
 - **NEW**: OpenAPI endpoints are publicly accessible by default
 - **CONFIGURABLE**: Can be disabled via `ricardo.auth.openapi.enabled: false`
 
 ### 🔄 Migration Guide
 
 **From 3.x to 4.0**
+
 1. **Configure Email Settings**: Set up email configuration for password reset functionality
 2. **Review Role Assignments**: Ensure proper ADMIN roles are assigned for role management
 3. **Update API Documentation**: Integrate with new OpenAPI/Swagger endpoints if needed
@@ -120,6 +133,7 @@ ricardo:
 5. **Update Dependencies**: Ensure OpenAPI dependencies are included if using documentation features
 
 **New Features Integration**
+
 ```yaml
 # Add to your application.yml
 ricardo:
@@ -136,6 +150,7 @@ ricardo:
 ### 🧪 Testing Enhancements
 
 **Comprehensive Test Suite**
+
 - **Password Reset Tests**: Complete end-to-end testing of email and token-based reset flow
 - **Role Management Tests**: Full testing of CRUD operations and authorization
 - **OpenAPI Tests**: Validation of API documentation generation and accuracy
@@ -145,6 +160,7 @@ ricardo:
 ### 📊 Monitoring and Observability
 
 **Enhanced Logging**
+
 - **Password Reset Events**: Comprehensive audit logging for password reset attempts
 - **Role Management Events**: Enhanced logging for role creation, modification, and deletion
 - **Input Validation Events**: Security event logging for validation failures and potential attacks
@@ -153,21 +169,24 @@ ricardo:
 ### 🌟 Production Ready Features
 
 **Security Hardening**
+
 - **Input Sanitization**: Production-ready input sanitization and validation
 - **Exception Handling**: Enhanced error handling that doesn't leak sensitive information
 - **Password Reset Security**: OWASP-compliant password reset implementation
 - **Role-Based Security**: Enhanced authorization controls for administrative functions
 
 **Performance Optimizations**
+
 - **OpenAPI Caching**: Optimized API documentation generation and caching
 - **Email Performance**: Efficient email queuing and delivery for password resets
 - **Database Optimization**: Enhanced queries for role and password reset operations
 - **Validation Performance**: Optimized input validation and sanitization performance
- - **Caching Enhancements**: Caching improvements for frequently accessed configuration and metadata
+- **Caching Enhancements**: Caching improvements for frequently accessed configuration and metadata
 
 ### 📖 Documentation Updates
 
 **Complete Documentation Refresh**
+
 - **Password Reset Guide**: Comprehensive password reset implementation and configuration guide
 - **Role Management Guide**: Detailed role management API documentation and best practices
 - **OpenAPI Integration**: Complete OpenAPI configuration and customization documentation
@@ -177,6 +196,7 @@ ricardo:
 ### 🔒 Security Improvements
 
 **Enhanced Protection**
+
 - **Input Sanitization**: Comprehensive input sanitization to prevent injection attacks
 - **Exception Security**: Improved exception handling that doesn't expose sensitive system information
 - **Password Reset Security**: OWASP-compliant password reset tokens with proper expiration and cleanup
@@ -205,7 +225,8 @@ If you need any of these features, please consider contributing! See [CONTRIBUTI
 - ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
 - ~~**Refresh Token Support**: Automatic token refresh mechanism~~ [Implemented in 1.2.0]
 - **Account Management**: Email verification, password reset, account locking
-- ~~**Redis Cache**: Caching integration for improved performance~~ [Implemented for both rate limiting and token revocation in 2.0.0]
+- ~~**Redis Cache**: Caching integration for improved
+  performance~~ [Implemented for both rate limiting and token revocation in 2.0.0]
 - **Metrics Integration**: Micrometer metrics for monitoring
 
 ### Breaking Changes (Future Versions)
@@ -217,6 +238,7 @@ If you need any of these features, please consider contributing! See [CONTRIBUTI
 ## [3.0.2] - 2025-08-13
 
 ### Added
+
 - Added a findByUsername method to the UserService interface for better user lookup by username.
 
 ## [3.0.1] - 2025-08-12

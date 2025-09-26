@@ -27,6 +27,13 @@ import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
+/**
+ * The type User controller.
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
+ */
 @RestController
 @RequestMapping("/api/users")
 @Validated
@@ -36,12 +43,25 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
     private final AuthUserFactory<U, R, ID> userBuilder;
     private final IdConverter<ID> idConverter;
 
+    /**
+     * Instantiates a new User controller.
+     *
+     * @param userService the user service
+     * @param userBuilder the user builder
+     * @param idConverter the id converter
+     */
     public UserController(UserService<U, R, ID> userService, AuthUserFactory<U, R, ID> userBuilder, IdConverter<ID> idConverter) {
         this.userService = userService;
         this.userBuilder = userBuilder;
         this.idConverter = idConverter;
     }
 
+    /**
+     * Create user response entity.
+     *
+     * @param request the request
+     * @return the response entity
+     */
     @PostMapping("/create")
     public ResponseEntity<UserDTO> createUser(
             @Parameter(description = "User creation request", required = true)
@@ -51,6 +71,12 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.status(HttpStatus.CREATED).body(UserDTOMapper.toDTO(newUser));
     }
 
+    /**
+     * Gets user by email.
+     *
+     * @param email the email
+     * @return the user by email
+     */
     @GetMapping("/email/{email}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> getUserByEmail(
@@ -60,6 +86,12 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.ok(UserDTOMapper.toDTO(user));
     }
 
+    /**
+     * Gets user by id.
+     *
+     * @param username the username
+     * @return the user by id
+     */
     @GetMapping("/{username}")
     @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwnerUsername(authentication.name, #username)")
     public ResponseEntity<UserDTO> getUserById(@PathVariable String username) {
@@ -67,6 +99,12 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.ok(UserDTOMapper.toDTO(user));
     }
 
+    /**
+     * User exists response entity.
+     *
+     * @param email the email
+     * @return the response entity
+     */
     @GetMapping("/exists/{email}")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<Boolean> userExists(@PathVariable String email) {
@@ -74,6 +112,14 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.ok(exists);
     }
 
+    /**
+     * Update user response entity.
+     *
+     * @param request        the request
+     * @param username       the username
+     * @param authentication the authentication
+     * @return the response entity
+     */
     @PutMapping("/update/{username}")
     @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwnerUsername(authentication.name, #username)")
     public ResponseEntity<UserDTO> updateUser(@Valid @RequestBody UpdateUserRequestDTO request, @PathVariable("username") String username, Authentication authentication) {
@@ -86,6 +132,13 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.ok(UserDTOMapper.toDTO(updatedUser));
     }
 
+    /**
+     * Delete user response entity.
+     *
+     * @param username       the username
+     * @param authentication the authentication
+     * @return the response entity
+     */
     @DeleteMapping("/delete/{username}")
     @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwnerUsername(authentication.name, #username)")
     public ResponseEntity<Void> deleteUser(@PathVariable String username, Authentication authentication) {
@@ -93,6 +146,20 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.noContent().build();
     }
 
+    /**
+     * Gets all users.
+     *
+     * @param page          the page
+     * @param size          the size
+     * @param sortBy        the sort by
+     * @param sortDir       the sort dir
+     * @param username      the username
+     * @param email         the email
+     * @param role          the role
+     * @param createdAfter  the created after
+     * @param createdBefore the created before
+     * @return the all users
+     */
     @GetMapping
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(
@@ -144,6 +211,16 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         return ResponseEntity.ok(pagedUserDTOs);
     }
 
+    /**
+     * Search users response entity.
+     *
+     * @param query   the query
+     * @param page    the page
+     * @param size    the size
+     * @param sortBy  the sort by
+     * @param sortDir the sort dir
+     * @return the response entity
+     */
     @GetMapping("/search")
     @PreAuthorize("hasRole('ADMIN')")
     @Operation(

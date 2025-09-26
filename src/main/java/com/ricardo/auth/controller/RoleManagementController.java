@@ -5,7 +5,6 @@ import com.ricardo.auth.core.RoleService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.AuthUser;
-import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.dto.AddRoleRequest;
 import com.ricardo.auth.dto.BulkRoleUpdateRequest;
 import com.ricardo.auth.dto.RemoveRoleRequest;
@@ -52,8 +51,9 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Instantiates a new Role management controller.
      *
-     * @param roleService the role service
-     * @param userService the user service
+     * @param roleService     the role service
+     * @param userService     the user service
+     * @param userVoConverter the user vo converter
      */
     public RoleManagementController(RoleService<U, R, ID> roleService, UserService<U, R, ID> userService, VoConverter userVoConverter) {
         this.roleService = roleService;

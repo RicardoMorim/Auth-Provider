@@ -5,6 +5,7 @@ Complete API reference for the Ricardo Auth Spring Boot Starter endpoints.
 ## ⚠️ What's New in v4.0.0
 
 **New Features in v4.0.0:**
+
 - **Password Reset System**: OWASP-compliant password reset with email integration
 - **Role Management API**: Full CRUD API for role management with proper authorization
 - **OpenAPI Integration**: Complete Swagger/OpenAPI documentation at `/swagger-ui.html`
@@ -13,12 +14,14 @@ Complete API reference for the Ricardo Auth Spring Boot Starter endpoints.
 - **Domain Events**: Comprehensive audit trail with event publishing
 
 **Previous Major Changes:**
+
 - **Cookie Authentication (v2.0.0)**: All authentication uses secure HTTP-only cookies exclusively
 - **Rate Limiting & Token Blocklist (v2.0.0)**: Built-in protection against abuse
 - **UUID Primary Keys (v3.0.0)**: All entities now use UUID instead of Long for IDs
 - **CSRF Protection (v3.0.0)**: Enhanced security with CSRF tokens for state-changing operations
 
 **New API Endpoints in v4.0.0:**
+
 - New password reset endpoints: `/api/auth/reset-request`, `/api/auth/reset/{token}`
 - New role management endpoints: `/api/users/{username}/roles`
 - Enhanced user management with username-based operations
@@ -35,17 +38,21 @@ https://yourdomain.com # Production
 
 ## Authentication
 
-Most endpoints are authenticated via secure HTTP-only cookies (`access_token`, `refresh_token`). Public endpoints (e.g., login, password reset, token validation, create) do not require authentication.
+Most endpoints are authenticated via secure HTTP-only cookies (`access_token`, `refresh_token`). Public endpoints (e.g.,
+login, password reset, token validation, create) do not require authentication.
 
 **Key Authentication Features:**
-- **Cookie-Only (since v2.0.0)**: All authentication uses secure HTTP-only cookies exclusively  
+
+- **Cookie-Only (since v2.0.0)**: All authentication uses secure HTTP-only cookies exclusively
 - **No Authorization Headers (since v2.0.0)**: Authorization header authentication removed for security
 - **HTTPS Required (since v2.0.0)**: Secure cookies require HTTPS in production environments
 - **CSRF Protection (since v3.0.0)**: Enhanced security with CSRF tokens
 - **Interactive Documentation (NEW in v4.0.0)**: Complete OpenAPI documentation available at `/swagger-ui.html`
+
 ### Frontend Integration Requirements
 
 **Email Configuration Required:**
+
 ```yaml
 ricardo:
   auth:
@@ -75,6 +82,7 @@ spring:
 ```
 
 **Optional .env File (only 3 properties supported):**
+
 ```env
 RICARDO_AUTH_JWT_SECRET=your-256-bit-secret-key-here
 MAIL_USERNAME=your_smtp_username
@@ -82,6 +90,7 @@ MAIL_PASSWORD=your_smtp_password
 ```
 
 **Frontend API Calls:**
+
 ```javascript
 // Ensure credentials (cookies) are included in all requests
 fetch('/api/auth/me', {
@@ -102,12 +111,14 @@ fetch('/api/auth/me', {
 ### Endpoints Exempt from CSRF
 
 The following public endpoints do **not** require CSRF tokens:
+
 - `POST /api/auth/login` (public authentication)
 - `POST /api/users/create` (public user registration)
 
 ### Endpoints Requiring CSRF
 
 All other authenticated endpoints require CSRF tokens:
+
 - `POST /api/auth/refresh`
 - `POST /api/auth/revoke`
 - `POST /api/auth/password-reset/request`
@@ -122,53 +133,54 @@ All other authenticated endpoints require CSRF tokens:
 
 ### Authentication Endpoints
 
-| Method | Endpoint | Description | Auth Required | CSRF |
-|--------|----------|-------------|---------------|------|
-| POST | `/api/auth/login` | User authentication | No | No |
-| POST | `/api/auth/refresh` | Refresh access token | Cookies | Yes |
-| POST | `/api/auth/logout` | User logout | Cookies | Yes |
-| GET | `/api/auth/me` | Get current user info | Cookies | No |
-| POST | `/api/auth/revoke` | Revoke tokens (ADMIN) | Cookies | Yes |
+| Method | Endpoint            | Description           | Auth Required | CSRF |
+|--------|---------------------|-----------------------|---------------|------|
+| POST   | `/api/auth/login`   | User authentication   | No            | No   |
+| POST   | `/api/auth/refresh` | Refresh access token  | Cookies       | Yes  |
+| POST   | `/api/auth/logout`  | User logout           | Cookies       | Yes  |
+| GET    | `/api/auth/me`      | Get current user info | Cookies       | No   |
+| POST   | `/api/auth/revoke`  | Revoke tokens (ADMIN) | Cookies       | Yes  |
 
 ### Password Reset Endpoints
 
-| Method | Endpoint | Description | Auth Required | CSRF |
-|--------|----------|-------------|---------------|------|
-| POST | `/api/auth/reset-request` | Request password reset | No | No |
-| POST | `/api/auth/reset/{token}` | Complete password reset | No | No |
-| GET | `/api/auth/reset/{token}/validate` | Validate reset token | No | No |
+| Method | Endpoint                           | Description             | Auth Required | CSRF |
+|--------|------------------------------------|-------------------------|---------------|------|
+| POST   | `/api/auth/reset-request`          | Request password reset  | No            | No   |
+| POST   | `/api/auth/reset/{token}`          | Complete password reset | No            | No   |
+| GET    | `/api/auth/reset/{token}/validate` | Validate reset token    | No            | No   |
 
 ### User Management Endpoints
 
-| Method | Endpoint | Description | Auth Required | CSRF |
-|--------|----------|-------------|---------------|------|
-| POST | `/api/users/create` | Create new user | Admin | Yes |
-| GET | `/api/users/{username}` | Get user by username | Owner/Admin | No |
-| GET | `/api/users/email/{email}` | Get user by email | Admin | No |
-| GET | `/api/users/exists/{email}` | Check if user exists | Admin | No |
-| GET | `/api/users` | Get all users | Admin | No |
-| PUT | `/api/users/update/{username}` | Update user | Owner/Admin | Yes |
-| DELETE | `/api/users/delete/{username}` | Delete user | Owner/Admin | Yes |
+| Method | Endpoint                       | Description          | Auth Required | CSRF |
+|--------|--------------------------------|----------------------|---------------|------|
+| POST   | `/api/users/create`            | Create new user      | Admin         | Yes  |
+| GET    | `/api/users/{username}`        | Get user by username | Owner/Admin   | No   |
+| GET    | `/api/users/email/{email}`     | Get user by email    | Admin         | No   |
+| GET    | `/api/users/exists/{email}`    | Check if user exists | Admin         | No   |
+| GET    | `/api/users`                   | Get all users        | Admin         | No   |
+| PUT    | `/api/users/update/{username}` | Update user          | Owner/Admin   | Yes  |
+| DELETE | `/api/users/delete/{username}` | Delete user          | Owner/Admin   | Yes  |
 
 ### Role Management Endpoints (ADMIN Only)
 
-| Method | Endpoint | Description | Auth Required | CSRF |
-|--------|----------|-------------|---------------|------|
-| GET | `/api/users/{username}/roles` | Get user roles | Admin | No |
-| POST | `/api/users/{username}/roles` | Add role to user | Admin | Yes |
-| DELETE | `/api/users/{username}/roles` | Remove role from user | Admin | Yes |
-| PUT | `/api/users/{username}/roles/bulk` | Bulk update user roles | Admin | Yes |
+| Method | Endpoint                           | Description            | Auth Required | CSRF |
+|--------|------------------------------------|------------------------|---------------|------|
+| GET    | `/api/users/{username}/roles`      | Get user roles         | Admin         | No   |
+| POST   | `/api/users/{username}/roles`      | Add role to user       | Admin         | Yes  |
+| DELETE | `/api/users/{username}/roles`      | Remove role from user  | Admin         | Yes  |
+| PUT    | `/api/users/{username}/roles/bulk` | Bulk update user roles | Admin         | Yes  |
 
 ### Documentation Endpoints
 
-| Method | Endpoint | Description | Auth Required |
-|--------|----------|-------------|---------------|
-| GET | `/swagger-ui.html` | Interactive API documentation | No |
-| GET | `/v3/api-docs` | OpenAPI specification | No |
+| Method | Endpoint           | Description                   | Auth Required |
+|--------|--------------------|-------------------------------|---------------|
+| GET    | `/swagger-ui.html` | Interactive API documentation | No            |
+| GET    | `/v3/api-docs`     | OpenAPI specification         | No            |
 
 ### Frontend Integration
 
 **JavaScript/Fetch Example:**
+
 ```javascript
 // Get CSRF token from cookie
 function getCsrfToken() {
@@ -194,6 +206,7 @@ fetch('/api/auth/refresh', {
 ```
 
 **jQuery Example:**
+
 ```javascript
 // Set CSRF token for all AJAX requests
 $.ajaxSetup({
@@ -206,6 +219,7 @@ $.ajaxSetup({
 ```
 
 **React/Axios Example:**
+
 ```javascript
 import axios from 'axios';
 
@@ -228,6 +242,7 @@ api.interceptors.request.use(config => {
 When CSRF token is missing or invalid, you'll receive:
 
 **Response (403 Forbidden):**
+
 ```json
 {
   "error": "Forbidden",
@@ -1274,7 +1289,8 @@ The API implements rate limiting (in-memory or Redis). When rate limited, you'll
 > **Note:**
 > If you are integrating with a third-party frontend, mobile app, or any cross-domain/embedded context where cookies are
 > the only authentication method, you **must** set `SameSite=None` and `Secure=true` for the relevant cookies. This is
-> required for browsers to send cookies in cross-site requests and is essential for proper login and session functionality
+> required for browsers to send cookies in cross-site requests and is essential for proper login and session
+> functionality
 > in embedded or cross-site scenarios.
 
 ## Postman Collection
@@ -1901,9 +1917,9 @@ You can import the following comprehensive Postman collection to test all API en
 
 1. **Import Collection**: Copy the JSON above and import it into Postman
 2. **Environment Setup**: The collection includes all necessary variables
-3. **Update Variables**: 
-   - Set `baseUrl` to your server URL (default: `http://localhost:8080`)
-   - Update `userEmail` and `userPassword` with valid credentials
+3. **Update Variables**:
+    - Set `baseUrl` to your server URL (default: `http://localhost:8080`)
+    - Update `userEmail` and `userPassword` with valid credentials
 4. **Login First**: Always run the "Login" request first to authenticate
 5. **Automatic Cookie Handling**: The collection automatically handles cookies and CSRF tokens
 6. **Admin Operations**: Role management requires admin credentials

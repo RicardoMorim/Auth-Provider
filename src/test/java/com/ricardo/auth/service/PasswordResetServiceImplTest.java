@@ -42,35 +42,30 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceImplTest {
 
-    @Mock
-    private EmailSenderService emailSenderService;
-
-    @Mock
-    private UserService<TestUser, TestRole, UUID> userService;
-
-    @Mock
-    private PasswordResetTokenRepository tokenRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private PasswordPolicyService passwordPolicyService;
-
-    @Mock
-    private Publisher eventPublisher;
-
     /**
      * The Id converter.
      */
     @Mock
     IdConverter<UUID> idConverter;
-
-    private AuthProperties authProperties;
-    private PasswordResetServiceImpl<TestUser, TestRole, UUID> passwordResetService;
-
+    /**
+     * The Cache manager.
+     */
     @Mock
     CacheManager cacheManager;
+    @Mock
+    private EmailSenderService emailSenderService;
+    @Mock
+    private UserService<TestUser, TestRole, UUID> userService;
+    @Mock
+    private PasswordResetTokenRepository tokenRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private PasswordPolicyService passwordPolicyService;
+    @Mock
+    private Publisher eventPublisher;
+    private AuthProperties authProperties;
+    private PasswordResetServiceImpl<TestUser, TestRole, UUID> passwordResetService;
 
     /**
      * Sets up.
@@ -370,19 +365,13 @@ class PasswordResetServiceImplTest {
         }
 
         @Override
-        public void setRoles(Set<TestRole> roles) {
-            this.roles = roles;
+        public Long getVersion() {
+            return Version;
         }
-
 
         @Override
         public void setVersion(Long version) {
             this.Version = version;
-        }
-
-        @Override
-        public Long getVersion() {
-            return Version;
         }
 
         @Override
@@ -425,6 +414,11 @@ class PasswordResetServiceImplTest {
         @Override
         public java.util.Set<TestRole> getRoles() {
             return java.util.Set.of();
+        }
+
+        @Override
+        public void setRoles(Set<TestRole> roles) {
+            this.roles = roles;
         }
 
         @Override

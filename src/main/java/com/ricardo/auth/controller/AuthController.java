@@ -36,7 +36,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.Duration;
 import java.util.Collection;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 /**
@@ -52,6 +51,7 @@ import java.util.Map;
 @Tag(name = "Authentication", description = "JWT Authentication endpoints")
 public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     private final JwtService jwtService;
     private final AuthenticationManager authenticationManager;
     private final RefreshTokenService<U, R, ID> refreshTokenService;
@@ -59,8 +59,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private final TokenBlocklist blocklist;
     private final UserService<U, R, ID> userService;
     private final Publisher eventPublisher;
-
-    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
 
     /**
      * Constructor with optional refresh token service

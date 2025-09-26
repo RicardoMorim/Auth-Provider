@@ -54,10 +54,10 @@ class EmailSenderServiceImplTest {
 
         // Then
         assertThat(result).isTrue();
-        
+
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
-        
+
         SimpleMailMessage sentMessage = messageCaptor.getValue();
         assertThat(sentMessage.getTo()).containsExactly(to);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
@@ -124,8 +124,9 @@ class EmailSenderServiceImplTest {
     @Test
     void sendEmail_WhenMailSenderThrowsException_ShouldReturnFalse() {
         // Given
-        doThrow(new MailException("SMTP server unavailable") {}).when(mailSender)
-            .send(any(SimpleMailMessage.class));
+        doThrow(new MailException("SMTP server unavailable") {
+        }).when(mailSender)
+                .send(any(SimpleMailMessage.class));
 
         // When
         boolean result = emailService.sendEmail("user@example.com", "Subject", "Body");
@@ -165,10 +166,10 @@ class EmailSenderServiceImplTest {
 
         // Then
         assertThat(result).isTrue();
-        
+
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
-        
+
         SimpleMailMessage sentMessage = messageCaptor.getValue();
         assertThat(sentMessage.getSubject()).isEqualTo(longSubject);
     }
@@ -186,22 +187,22 @@ class EmailSenderServiceImplTest {
 
         // Then
         assertThat(result).isTrue();
-        
+
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
-        
+
         SimpleMailMessage sentMessage = messageCaptor.getValue();
         assertThat(sentMessage.getText()).isEqualTo(specialCharsBody);
     }
 
     private AuthProperties createAuthProperties() {
         AuthProperties properties = new AuthProperties();
-        
+
         AuthProperties.Email email = new AuthProperties.Email();
         email.setFromAddress("noreply@test.com");
         email.setFromName("Test App");
         properties.setEmail(email);
-        
+
         return properties;
     }
 }

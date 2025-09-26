@@ -4,7 +4,6 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.LoginRequestDTO;
-import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import com.ricardo.auth.repository.user.UserRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;

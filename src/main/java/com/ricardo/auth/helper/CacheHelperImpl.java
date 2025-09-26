@@ -3,19 +3,22 @@ package com.ricardo.auth.helper;
 import com.ricardo.auth.core.Role;
 import com.ricardo.auth.domain.user.AuthUser;
 import lombok.AllArgsConstructor;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
-import org.springframework.security.config.core.GrantedAuthorityDefaults;
 import org.springframework.security.core.GrantedAuthority;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 
 import java.util.Collection;
-import java.util.List;
 
 
+/**
+ * The type Cache helper.
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
+ */
 @AllArgsConstructor
-public class CacheHelperImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements CacheHelper<U, R, ID>{
+public class CacheHelperImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements CacheHelper<U, R, ID> {
 
     private CacheManager cacheHelper;
 

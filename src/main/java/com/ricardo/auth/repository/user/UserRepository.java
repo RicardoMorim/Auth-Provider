@@ -7,7 +7,6 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.repository.NoRepositoryBean;
 
-import java.time.Instant;
 import java.util.List;
 import java.util.Optional;
 
@@ -160,11 +159,22 @@ public interface UserRepository<U extends AuthUser<ID, R>, R extends Role, ID> {
 
     /**
      * Find all users with pagination
+     *
+     * @param pageable the pageable
+     * @return the page
      */
     Page<U> findAll(Pageable pageable);
 
     /**
      * Find users with filters and pagination
+     *
+     * @param username      the username
+     * @param email         the email
+     * @param roleList      the role list
+     * @param createdAfter  the created after
+     * @param createdBefore the created before
+     * @param pageable      the pageable
+     * @return the page
      */
     Page<U> findAllWithFilters(String username, String email, java.util.List<String> roleList,
                                java.time.Instant createdAfter, java.time.Instant createdBefore,
@@ -173,6 +183,10 @@ public interface UserRepository<U extends AuthUser<ID, R>, R extends Role, ID> {
 
     /**
      * Search users by query with pagination
+     *
+     * @param query    the query
+     * @param pageable the pageable
+     * @return the page
      */
     Page<U> searchByQuery(String query, Pageable pageable);
 

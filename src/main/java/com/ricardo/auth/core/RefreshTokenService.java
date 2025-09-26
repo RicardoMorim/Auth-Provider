@@ -13,6 +13,9 @@ import com.ricardo.auth.domain.user.AuthUser;
  * @param <ID> the ID type parameter
  */
 public interface RefreshTokenService<U extends AuthUser<ID, R>, R extends Role, ID> {
+    /**
+     * Delete all tokens.
+     */
     void deleteAllTokens();
 
     /**

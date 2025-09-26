@@ -52,6 +52,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
      * @param authProperties the auth properties
      * @param eventPublisher the event publisher
      * @param idConverter    the id converter
+     * @param cacheHelper    the cache helper
      */
     public RoleServiceImpl(UserService<U, R, ID> userService,
                            RoleMapper<R> roleMapper,

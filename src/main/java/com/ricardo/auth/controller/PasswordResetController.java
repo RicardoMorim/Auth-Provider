@@ -65,25 +65,25 @@ public class PasswordResetController {
      * @return the response entity
      */
     @Operation(
-        summary = "Request password reset",
-        description = "Request a password reset email. Always returns success to prevent user enumeration."
+            summary = "Request password reset",
+            description = "Request a password reset email. Always returns success to prevent user enumeration."
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Request processed (always returns success)",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "429", 
-            description = "Too many requests - rate limit exceeded",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "400",
-            description = "Invalid request format",
-            content = @Content(mediaType = "application/json")
-        )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Request processed (always returns success)",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Too many requests - rate limit exceeded",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request format",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     @PostMapping("/reset-request")
     public ResponseEntity<Map<String, String>> requestPasswordReset(
@@ -98,10 +98,10 @@ public class PasswordResetController {
 
         if (rateLimiter.isEnabled() && !rateLimiter.allowRequest(RATE_LIMIT_KEY_FOR_RESET_REQUEST + clientIp)) {
             log.warn("Rate limit exceeded for password reset request from IP: {}", clientIp);
-            
+
             // Publish rate limit exceeded event (only email, no IP for privacy)
             eventPublisher.publishEvent(new TooManyAuthRequestsEvent(request.getEmail()));
-            
+
             return ResponseEntity.status(429)
                     .body(Map.of("message", "Too many requests. Please try again later."));
         }
@@ -133,30 +133,30 @@ public class PasswordResetController {
      * @return the response entity
      */
     @Operation(
-        summary = "Complete password reset",
-        description = "Complete password reset using a valid token and new password"
+            summary = "Complete password reset",
+            description = "Complete password reset using a valid token and new password"
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Password reset completed successfully",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "400", 
-            description = "Invalid token, password, or request format",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "429", 
-            description = "Too many requests - rate limit exceeded",
-            content = @Content(mediaType = "application/json")
-        ),
-        @ApiResponse(
-            responseCode = "500",
-            description = "Internal server error",
-            content = @Content(mediaType = "application/json")
-        )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Password reset completed successfully",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid token, password, or request format",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "429",
+                    description = "Too many requests - rate limit exceeded",
+                    content = @Content(mediaType = "application/json")
+            ),
+            @ApiResponse(
+                    responseCode = "500",
+                    description = "Internal server error",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     @PostMapping("/reset/{token}")
     public ResponseEntity<Map<String, String>> completePasswordReset(
@@ -167,8 +167,8 @@ public class PasswordResetController {
             @Parameter(hidden = true) HttpServletRequest httpRequest) {
 
 
-        if (token == null || token.trim().isEmpty() || 
-            token.length() > 255 || !token.matches("^[a-zA-Z0-9\\-_]+$")) {
+        if (token == null || token.trim().isEmpty() ||
+                token.length() > 255 || !token.matches("^[a-zA-Z0-9\\-_]+$")) {
             return ResponseEntity.status(400)
                     .body(Map.of("error", "Invalid token format."));
         }
@@ -188,7 +188,7 @@ public class PasswordResetController {
 
         if (rateLimiter.isEnabled() && !rateLimiter.allowRequest(rateLimitKey)) {
             log.warn("Rate limit exceeded for password reset completion from IP: {}", clientIp);
-            
+
             return ResponseEntity.status(429)
                     .body(Map.of("error", "Too many requests. Please try again later."));
         }
@@ -227,23 +227,23 @@ public class PasswordResetController {
      * @return the response entity
      */
     @Operation(
-        summary = "Validate password reset token",
-        description = "Check if a password reset token is valid and not expired"
+            summary = "Validate password reset token",
+            description = "Check if a password reset token is valid and not expired"
     )
     @ApiResponses(value = {
-        @ApiResponse(
-            responseCode = "200", 
-            description = "Token validation result",
-            content = @Content(mediaType = "application/json")
-        )
+            @ApiResponse(
+                    responseCode = "200",
+                    description = "Token validation result",
+                    content = @Content(mediaType = "application/json")
+            )
     })
     @GetMapping("/reset/{token}/validate")
     public ResponseEntity<Map<String, Object>> validateToken(
-        @Parameter(description = "Password reset token to validate", required = true)
-        @PathVariable String token) {
+            @Parameter(description = "Password reset token to validate", required = true)
+            @PathVariable String token) {
         // Basic token format validation
-        if (token == null || token.trim().isEmpty() || 
-            token.length() > 255 || !token.matches("^[a-zA-Z0-9\\-_]+$")) {
+        if (token == null || token.trim().isEmpty() ||
+                token.length() > 255 || !token.matches("^[a-zA-Z0-9\\-_]+$")) {
             return ResponseEntity.ok(Map.of(
                     "valid", false,
                     "message", "Token is invalid or expired."
@@ -281,11 +281,11 @@ public class PasswordResetController {
         if (ip == null || ip.isEmpty() || ip.length() > 45) { // Max IPv6 length is 45
             return false;
         }
-        
+
         // Basic validation for IPv4 and IPv6 patterns
         return ip.matches("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$") || // IPv4
-               ip.matches("^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$") || // IPv6 full
-               ip.matches("^::1$") || // IPv6 loopback
-               ip.matches("^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$"); // IPv6 compressed
+                ip.matches("^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$") || // IPv6 full
+                ip.matches("^::1$") || // IPv6 loopback
+                ip.matches("^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$"); // IPv6 compressed
     }
 }

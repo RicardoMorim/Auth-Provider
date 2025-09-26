@@ -51,6 +51,11 @@ public class RedisRateLimiter implements RateLimiter {
         this.ttlSeconds = new AtomicInteger(toTtlSeconds(this.windowMillis.get()));
     }
 
+    private static int toTtlSeconds(long windowMillis) {
+        // Round up so we don't expire too early
+        return (int) Math.ceil(windowMillis / 1000.0);
+    }
+
     @Override
     public void changeSettings(int maxRequests, long windowMillis) {
         if (maxRequests <= 0) {
@@ -62,11 +67,6 @@ public class RedisRateLimiter implements RateLimiter {
         this.maxRequests.set(maxRequests);
         this.windowMillis.set(windowMillis);
         this.ttlSeconds.set(toTtlSeconds(windowMillis));
-    }
-
-    private static int toTtlSeconds(long windowMillis) {
-        // Round up so we don't expire too early
-        return (int) Math.ceil(windowMillis / 1000.0);
     }
 
     /**

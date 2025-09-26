@@ -1,10 +1,11 @@
 package com.ricardo.auth.repository;
 
-import com.ricardo.auth.autoconfig.AuthAutoConfiguration;
-import com.ricardo.auth.config.SecurityConfig;
 import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.user.*;
-import com.ricardo.auth.helper.*;
+import com.ricardo.auth.helper.IdConverter;
+import com.ricardo.auth.helper.RoleMapper;
+import com.ricardo.auth.helper.UserRowMapper;
+import com.ricardo.auth.helper.UserSqlParameterMapper;
 import com.ricardo.auth.repository.user.UserPostgreSQLRepository;
 import com.ricardo.auth.repository.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -12,12 +13,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.context.annotation.Import;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.annotation.Transactional;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
@@ -488,6 +487,8 @@ class PostgreSQLUserRepositoryTest {
 
     /**
      * Should handle postgre sql timestamp operations.
+     *
+     * @throws InterruptedException the interrupted exception
      */
     @Test
     @DisplayName("Should handle PostgreSQL timestamp operations correctly")
@@ -672,6 +673,8 @@ class PostgreSQLUserRepositoryTest {
 
     /**
      * Should preserve creation timestamp on update.
+     *
+     * @throws InterruptedException the interrupted exception
      */
     @Test
     @DisplayName("Should preserve creation timestamp on update")

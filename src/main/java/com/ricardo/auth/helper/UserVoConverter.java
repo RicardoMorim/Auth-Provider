@@ -3,6 +3,9 @@ package com.ricardo.auth.helper;
 import com.ricardo.auth.domain.user.Email;
 import com.ricardo.auth.domain.user.Username;
 
+/**
+ * The type User vo converter.
+ */
 public class UserVoConverter implements VoConverter<Username, Email> {
 
     /**

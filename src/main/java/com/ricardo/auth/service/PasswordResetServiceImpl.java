@@ -34,6 +34,14 @@ import java.util.Optional;
 @Slf4j
 public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements PasswordResetService {
 
+    /**
+     * The constant PASSWORD_RESET_KEY_PREFIX.
+     */
+    public static final String PASSWORD_RESET_KEY_PREFIX = "password_reset:";
+    /**
+     * The constant PASSWORD_RESET_COMPLETE_KEY_PREFIX.
+     */
+    public static final String PASSWORD_RESET_COMPLETE_KEY_PREFIX = "password_reset_complete:";
     private final EmailSenderService emailSenderService;
     private final UserService<U, R, ID> userService;
     private final PasswordResetTokenRepository tokenRepository;
@@ -47,15 +55,6 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     private final CacheManager cacheManager;
 
     /**
-     * The constant PASSWORD_RESET_KEY_PREFIX.
-     */
-    public static final String PASSWORD_RESET_KEY_PREFIX = "password_reset:";
-    /**
-     * The constant PASSWORD_RESET_COMPLETE_KEY_PREFIX.
-     */
-    public static final String PASSWORD_RESET_COMPLETE_KEY_PREFIX = "password_reset_complete:";
-
-    /**
      * Instantiates a new Password reset service.
      *
      * @param emailSenderService    the email sender service
@@ -67,6 +66,7 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
      * @param eventPublisher        the event publisher
      * @param idConverter           the id converter
      * @param properties            the properties
+     * @param cacheManager          the cache manager
      */
     public PasswordResetServiceImpl(EmailSenderService emailSenderService,
                                     UserService<U, R, ID> userService,
@@ -106,6 +106,23 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     private static String sanitizeIdForLogging(Object id) {
         if (id == null) return "null";
         return sanitizeForLogging(id.toString());
+    }
+
+    /**
+     * Hash the raw reset token using SHA-256 and encode as Base64 URL-safe (no padding).
+     * This ensures tokens are never stored in plaintext at rest.
+     *
+     * @param rawToken the raw token
+     * @return the string
+     */
+    public static String hashToken(String rawToken) {
+        try {
+            MessageDigest md = MessageDigest.getInstance("SHA-256");
+            byte[] digest = md.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
+        } catch (NoSuchAlgorithmException e) {
+            throw new IllegalStateException("SHA-256 algorithm not available", e);
+        }
     }
 
     @Override
@@ -312,23 +329,6 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
             } catch (InterruptedException e) {
                 Thread.currentThread().interrupt();
             }
-        }
-    }
-
-    /**
-     * Hash the raw reset token using SHA-256 and encode as Base64 URL-safe (no padding).
-     * This ensures tokens are never stored in plaintext at rest.
-     *
-     * @param rawToken the raw token
-     * @return the string
-     */
-    public static String hashToken(String rawToken) {
-        try {
-            MessageDigest md = MessageDigest.getInstance("SHA-256");
-            byte[] digest = md.digest(rawToken.getBytes(StandardCharsets.UTF_8));
-            return Base64.getUrlEncoder().withoutPadding().encodeToString(digest);
-        } catch (NoSuchAlgorithmException e) {
-            throw new IllegalStateException("SHA-256 algorithm not available", e);
         }
     }
 
