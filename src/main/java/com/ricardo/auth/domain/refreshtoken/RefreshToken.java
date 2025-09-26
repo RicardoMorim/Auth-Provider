@@ -1,6 +1,7 @@
 package com.ricardo.auth.domain.refreshtoken;
 
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import jakarta.persistence.*;
 import lombok.*;
@@ -23,6 +24,7 @@ import java.util.UUID;
 @Data
 @Builder
 @AllArgsConstructor(access = AccessLevel.PRIVATE)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class RefreshToken {
 
     @Version

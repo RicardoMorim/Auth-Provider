@@ -3,6 +3,9 @@ package com.ricardo.auth.helper;
 import java.util.UUID;
 
 
+/**
+ * The type Uuid converter.
+ */
 public class UUIDConverter implements IdConverter<UUID> {
     @Override
     public UUID fromString(String id) {

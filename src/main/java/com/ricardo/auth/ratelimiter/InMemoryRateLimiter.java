@@ -106,6 +106,16 @@ public class InMemoryRateLimiter implements RateLimiter {
         }
     }
 
+    @Override
+    public void clearAll() {
+        long writeStamp = countersLock.writeLock();
+        try {
+            counters.clear();
+        } finally {
+            countersLock.unlockWrite(writeStamp);
+        }
+    }
+
     private class RequestCounter {
         private final ConcurrentHashMap<Long, AtomicInteger> timestamps = new ConcurrentHashMap<>();
         private final StampedLock lock = new StampedLock();
@@ -151,16 +161,6 @@ public class InMemoryRateLimiter implements RateLimiter {
          */
         long getLastAccess() {
             return lastAccess;
-        }
-    }
-
-    @Override
-    public void clearAll() {
-        long writeStamp = countersLock.writeLock();
-        try {
-            counters.clear();
-        } finally {
-            countersLock.unlockWrite(writeStamp);
         }
     }
 }

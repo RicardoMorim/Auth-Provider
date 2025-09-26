@@ -1,8 +1,11 @@
 package com.ricardo.auth.dto;
 
+import lombok.NoArgsConstructor;
+
 /**
  * The type Error response.
  */
+@NoArgsConstructor
 public class ErrorResponse {
     private String message;
 

@@ -11,6 +11,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -266,7 +267,7 @@ class DtoAndMappingTest {
     @Test
     void authenticatedUserDTO_shouldHandleEmptyAuthorities() {
         // Act
-        AuthenticatedUserDTO dto = new AuthenticatedUserDTO("test@example.com", List.of());
+        AuthenticatedUserDTO dto = new AuthenticatedUserDTO("test@example.com", new ArrayList<String>());
 
         // Assert
         assertEquals("test@example.com", dto.getEmail());
@@ -280,7 +281,7 @@ class DtoAndMappingTest {
     void authenticatedUserDTO_shouldHandleNullEmail() {
         // Act
 
-        assertThrows(NullPointerException.class, ()-> new AuthenticatedUserDTO(null, List.of()));
+        assertThrows(NullPointerException.class, () -> new AuthenticatedUserDTO(null, new ArrayList<String>()));
     }
 
     // ========== UserDTOMapper TESTS ==========
@@ -441,7 +442,7 @@ class DtoAndMappingTest {
         String emailWithSpecialChars = "test+tag@münchen.de";
 
         // Act
-        AuthenticatedUserDTO dto = new AuthenticatedUserDTO(emailWithSpecialChars, List.of());
+        AuthenticatedUserDTO dto = new AuthenticatedUserDTO(emailWithSpecialChars, new ArrayList<String>());
 
         // Assert
         assertEquals(emailWithSpecialChars, dto.getEmail());

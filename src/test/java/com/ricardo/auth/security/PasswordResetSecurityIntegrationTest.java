@@ -44,11 +44,19 @@ class PasswordResetSecurityIntegrationTest {
     @Qualifier("passwordResetRateLimiter")
     private RateLimiter rateLimiter;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         rateLimiter.clearAll();
     }
 
+    /**
+     * Password reset request should be accessible without authentication.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void passwordResetRequest_ShouldBeAccessibleWithoutAuthentication() throws Exception {
         mockMvc.perform(post("/api/auth/reset-request").with(csrf())
@@ -57,6 +65,11 @@ class PasswordResetSecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Password reset complete should be accessible without authentication.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void passwordResetComplete_ShouldBeAccessibleWithoutAuthentication() throws Exception {
         // Password reset completion should be publicly accessible
@@ -66,6 +79,11 @@ class PasswordResetSecurityIntegrationTest {
                 .andExpect(status().isBadRequest());
     }
 
+    /**
+     * Role management endpoints should require authentication.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void roleManagementEndpoints_ShouldRequireAuthentication() throws Exception {
         // Role management endpoints should require authentication
@@ -83,6 +101,11 @@ class PasswordResetSecurityIntegrationTest {
                 .andExpect(status().isUnauthorized());
     }
 
+    /**
+     * Rate limiter filter should throttle after configured requests.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void rateLimiterFilter_ShouldThrottleAfterConfiguredRequests() throws Exception {
         for (int i = 0; i < 3; i++) {
@@ -97,6 +120,11 @@ class PasswordResetSecurityIntegrationTest {
                 .andExpect(status().isTooManyRequests());
     }
 
+    /**
+     * Csrf protection should be configured correctly.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void csrfProtection_ShouldBeConfiguredCorrectly() throws Exception {
         mockMvc.perform(post("/api/auth/reset-request")
@@ -105,6 +133,11 @@ class PasswordResetSecurityIntegrationTest {
                 .andExpect(status().isOk());
     }
 
+    /**
+     * Session management should be stateless.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void sessionManagement_ShouldBeStateless() throws Exception {
         // Multiple requests should not create sessions (stateless configuration)

@@ -217,6 +217,7 @@ Visit `http://localhost:8080/swagger-ui.html` for interactive API documentation.
 ## 🚨 What's New in v4.0.0
 
 **New Features in v4.0.0:**
+
 - **Password Reset System**: OWASP-compliant password reset with email integration
 - **Role Management API**: Full CRUD API for role management with proper authorization
 - **OpenAPI Integration**: Complete Swagger/OpenAPI documentation at `/swagger-ui.html`
@@ -225,6 +226,7 @@ Visit `http://localhost:8080/swagger-ui.html` for interactive API documentation.
 - **Domain Events**: Comprehensive audit trail with event publishing
 
 **Previous Major Changes (Still Required):**
+
 - **Cookie Authentication (v2.0.0)**: Authentication uses secure HTTP-only cookies exclusively
 - **HTTPS Required (v2.0.0)**: Secure cookies require HTTPS in production environments
 - **UUID Primary Keys (v3.0.0)**: All entities use UUID instead of Long for IDs
@@ -233,11 +235,13 @@ Visit `http://localhost:8080/swagger-ui.html` for interactive API documentation.
 ### Migration to v4.0.0
 
 **New Configuration Required:**
+
 - Configure email settings for password reset functionality
 - Update any custom role management code to use new API
 - Access interactive API documentation at `/swagger-ui.html`
 
 **Email Configuration (New in v4.0.0):**
+
 ```yaml
 ricardo:
   auth:

@@ -1,9 +1,10 @@
 package com.ricardo.auth.dto;
 
-import lombok.Data;
-
-import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+
 import java.util.List;
 
 /**
@@ -11,6 +12,8 @@ import java.util.List;
  *
  */
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class BulkRoleUpdateRequest {
 
     private List<String> rolesToAdd;
@@ -21,6 +24,8 @@ public class BulkRoleUpdateRequest {
 
     /**
      * Validates that at least one operation is specified.
+     *
+     * @return the boolean
      */
     @jakarta.validation.constraints.AssertTrue(message = "Provide at least one of rolesToAdd or rolesToRemove")
     public boolean hasOperations() {

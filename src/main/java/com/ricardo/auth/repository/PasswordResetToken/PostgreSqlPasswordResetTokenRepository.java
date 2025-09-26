@@ -16,6 +16,9 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * The type Postgre sql password reset token repository.
+ */
 public class PostgreSqlPasswordResetTokenRepository implements PasswordResetTokenRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(PostgreSqlPasswordResetTokenRepository.class);
@@ -23,6 +26,12 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
     private final AuthProperties authProperties;
     private final PasswordResetTokenRowMapper rowMapper = new PasswordResetTokenRowMapper();
 
+    /**
+     * Instantiates a new Postgre sql password reset token repository.
+     *
+     * @param dataSource     the data source
+     * @param authProperties the auth properties
+     */
     public PostgreSqlPasswordResetTokenRepository(DataSource dataSource, AuthProperties authProperties) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
         this.authProperties = authProperties;
@@ -48,13 +57,12 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
     @Override
     public int countResetAttemptsForEmailSince(String email, Instant since) {
         String sql = """
-            SELECT COUNT(*) FROM %s prt 
-            JOIN users u ON prt.user_id = u.id 
-            WHERE u.email = ? AND prt.created_at > ?
-            """.formatted(getTableName());
+                SELECT COUNT(*) FROM %s prt 
+                JOIN users u ON prt.email = u.email 
+                WHERE u.email = ? AND prt.created_at > ?
+                """.formatted(getTableName());
         return jdbcTemplate.queryForObject(sql, Integer.class, email, Timestamp.from(since));
     }
-
 
 
     @Override
@@ -68,38 +76,36 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
 
     private PasswordResetToken insertToken(PasswordResetToken token) {
         String sql = """
-            INSERT INTO %s (id, token, user_id, expiry_date, used, used_at, created_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?)
-            """.formatted(getTableName());
-        
-        UUID id = UUID.randomUUID();
-        token.setId(id);
-        
-        jdbcTemplate.update(sql, 
-            id,
-            token.getToken(),
-            token.getEmail(),
-            Timestamp.from(token.getExpiryDate()),
-            token.isUsed(),
-            token.getUsedAt() != null ? Timestamp.from(token.getUsedAt()) : null,
-            Timestamp.from(token.getCreatedAt())
+                INSERT INTO %s (token, email, expiry_date, used, used_at, created_at)
+                VALUES (?, ?, ?, ?, ?, ?)
+                RETURNING id
+                """.formatted(getTableName());
+
+        UUID id = jdbcTemplate.queryForObject(sql, UUID.class,
+                token.getToken(),
+                token.getEmail(),
+                Timestamp.from(token.getExpiryDate()),
+                token.isUsed(),
+                token.getUsedAt() != null ? Timestamp.from(token.getUsedAt()) : null,
+                Timestamp.from(token.getCreatedAt())
         );
-        
+
+        token.setId(id);
         return token;
     }
 
     private PasswordResetToken updateToken(PasswordResetToken token) {
         String sql = """
-            UPDATE %s SET used = ?, used_at = ? 
-            WHERE id = ?
-            """.formatted(getTableName());
-        
-        jdbcTemplate.update(sql, 
-            token.isUsed(),
-            token.getUsedAt() != null ? Timestamp.from(token.getUsedAt()) : null,
-            token.getId()
+                UPDATE %s SET used = ?, used_at = ? 
+                WHERE id = ?
+                """.formatted(getTableName());
+
+        jdbcTemplate.update(sql,
+                token.isUsed(),
+                token.getUsedAt() != null ? Timestamp.from(token.getUsedAt()) : null,
+                token.getId()
         );
-        
+
         return token;
     }
 

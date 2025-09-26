@@ -35,6 +35,9 @@ class RedisTokenBlockListTest {
         redisTemplate.getConnectionFactory().getConnection().flushDb();
     }
 
+    /**
+     * Test block list initialization.
+     */
     @Test
     void testBlockListInitialization() {
         assertNotNull(blockList);

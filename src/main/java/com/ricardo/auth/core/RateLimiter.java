@@ -22,7 +22,7 @@ public interface RateLimiter {
     /**
      * Change settings.
      *
-     * @param maxRequests the max requests
+     * @param maxRequests  the max requests
      * @param windowMillis the window millis
      */
     void changeSettings(int maxRequests, long windowMillis);
