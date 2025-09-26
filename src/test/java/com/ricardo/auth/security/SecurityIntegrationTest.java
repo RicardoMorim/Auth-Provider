@@ -326,7 +326,7 @@ class SecurityIntegrationTest {
                 List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
         ));
 
-        mockMvc.perform(delete("/api/users/delete/" + (testUser.getUsername())).with(csrf()).cookie(accessTokenCookie))
+        mockMvc.perform(delete("/api/users/delete/" + createRequest.getUsername()).with(csrf()).cookie(accessTokenCookie))
                 .andExpect(status().isNoContent());
     }
 
@@ -397,7 +397,7 @@ class SecurityIntegrationTest {
         ) + "tampered";
 
         mockMvc.perform(get("/api/auth/me").with(csrf())
-                .cookie(new Cookie("access_token", tamperedToken)))
+                        .cookie(new Cookie("access_token", tamperedToken)))
                 .andExpect(status().isUnauthorized());
     }
 

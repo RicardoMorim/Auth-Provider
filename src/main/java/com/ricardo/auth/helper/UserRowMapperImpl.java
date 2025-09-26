@@ -2,7 +2,6 @@ package com.ricardo.auth.helper;
 
 import com.ricardo.auth.domain.user.*;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.beans.factory.annotation.Autowired;
 
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -10,11 +9,22 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.UUID;
 
+/**
+ * The type User row mapper.
+ */
 @Slf4j
 public class UserRowMapperImpl implements UserRowMapper<User, AppRole, UUID> {
 
+    /**
+     * The Id converter.
+     */
     IdConverter<UUID> idConverter;
 
+    /**
+     * Instantiates a new User row mapper.
+     *
+     * @param idConverter the id converter
+     */
     public UserRowMapperImpl(IdConverter<UUID> idConverter) {
         this.idConverter = idConverter;
     }
@@ -37,8 +47,7 @@ public class UserRowMapperImpl implements UserRowMapper<User, AppRole, UUID> {
 
             if (userId instanceof String stringId) {
                 id = idConverter.fromString(stringId);
-            }
-            else if (userId instanceof UUID) {
+            } else if (userId instanceof UUID) {
                 id = (UUID) userId;
             } else {
                 throw new SQLException("Unexpected type for user ID: " + userId.getClass().getName());
@@ -89,5 +98,19 @@ public class UserRowMapperImpl implements UserRowMapper<User, AppRole, UUID> {
         } catch (SQLException e) {
             throw new RuntimeException("Error mapping row to User", e);
         }
+    }
+
+
+    @Override
+    public String mapSortProperty(String property) {
+        // Map property names to database columns
+        return switch (property.toLowerCase()) {
+            case "username" -> "username";
+            case "email" -> "email";
+            case "createdat" -> "created_at";
+            case "updatedat" -> "updated_at";
+            case "enabled" -> "enabled";
+            default -> "id"; // fallback to id
+        };
     }
 }

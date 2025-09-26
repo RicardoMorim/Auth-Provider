@@ -7,6 +7,7 @@ import com.ricardo.auth.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.core.Ordered;
@@ -38,7 +39,6 @@ import static org.springframework.security.config.Customizer.withDefaults;
 @Configuration
 @EnableMethodSecurity
 public class SecurityConfig {
-
     // Refresh token, login, password reset and user creation are public endpoints
     private final static String[] JWT_PUBLIC_ENDPOINTS = {
             "/api/auth/refresh",
@@ -46,11 +46,23 @@ public class SecurityConfig {
             "/api/auth/reset-request",
             "/api/auth/reset/*/validate",
             "/api/auth/reset/**",
-            "/api/users/create"
+            "/api/users/create",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/api/csrf-token",
     };
 
     // Only login and user creation are public for CSRF (Refresh routes need CSRF protection)
-    private final static String[] CSRF_PUBLIC_ENDPOINTS = {"/api/auth/login", "/api/users/create", "/api/auth/reset-request", "/api/auth/reset/**"};
+    private final static String[] CSRF_PUBLIC_ENDPOINTS = {
+            "/api/auth/login",
+            "/api/users/create",
+            "/api/auth/reset-request",
+            "/api/auth/reset/**",
+            "/swagger-ui/**",
+            "/v3/api-docs/**",
+            "/api/csrf-token",
+    };
+
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
     @Autowired
@@ -81,6 +93,7 @@ public class SecurityConfig {
      * @return the password encoder
      */
     @Bean
+    @ConditionalOnMissingBean(PasswordEncoder.class)
     public PasswordEncoder passwordEncoder() {
         return new BCryptPasswordEncoder();
     }
@@ -93,6 +106,7 @@ public class SecurityConfig {
      * @throws Exception the exception
      */
     @Bean
+    @ConditionalOnMissingBean(AuthenticationManager.class)
     public AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
     }
@@ -103,6 +117,7 @@ public class SecurityConfig {
      * @return the authentication entry point
      */
     @Bean
+    @ConditionalOnMissingBean(AuthenticationEntryPoint.class)
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
@@ -118,6 +133,7 @@ public class SecurityConfig {
      * @return the cors configuration source
      */
     @Bean
+    @ConditionalOnMissingBean(CorsConfigurationSource.class)
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
@@ -156,7 +172,8 @@ public class SecurityConfig {
      */
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE + 1)
-    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("rateLimiter") RateLimiter rateLimiter) throws Exception {
+    @ConditionalOnMissingBean(SecurityFilterChain.class)
+    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter) throws Exception {
         if (authProperties.isRedirectHttps()) {
             http.redirectToHttps(withDefaults());
         }

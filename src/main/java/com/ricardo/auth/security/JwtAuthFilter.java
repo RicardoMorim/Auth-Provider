@@ -246,6 +246,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         logger.debug("Authentication failed: {}", logMessage);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, UNAUTHORIZED_MESSAGE);
     }
+
     /**
      * Sanitize a string for log output by removing CR and LF characters to prevent log injection.
      */

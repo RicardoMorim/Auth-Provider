@@ -11,7 +11,8 @@ import java.util.Set;
  * pelo pacote de autenticação. Qualquer classe de utilizador personalizada deve
  * implementar esta interface. Estende UserDetails para integração com o Spring Security.
  *
- * @param <R> O tipo da Role, que deve implementar a interface Role.
+ * @param <ID> the type parameter
+ * @param <R>  O tipo da Role, que deve implementar a interface Role.
  */
 public interface AuthUser<ID, R extends Role> extends UserDetails {
 
@@ -21,6 +22,13 @@ public interface AuthUser<ID, R extends Role> extends UserDetails {
      * @return the id
      */
     ID getId();
+
+    /**
+     * Sets id.
+     *
+     * @param id the id
+     */
+    void setId(ID id);
 
     /**
      * Gets email.
@@ -58,6 +66,13 @@ public interface AuthUser<ID, R extends Role> extends UserDetails {
     Set<R> getRoles();
 
     /**
+     * Sets roles.
+     *
+     * @param roles the roles
+     */
+    void setRoles(Set<R> roles);
+
+    /**
      * Add role.
      *
      * @param role the role
@@ -71,20 +86,46 @@ public interface AuthUser<ID, R extends Role> extends UserDetails {
      */
     void removeRole(R role);
 
+    /**
+     * Gets version.
+     *
+     * @return the version
+     */
     Long getVersion();
 
+    /**
+     * Sets version.
+     *
+     * @param version the version
+     */
     void setVersion(Long version);
 
-    void setId(ID id);
-
-    void setRoles(Set<R> roles);
-
+    /**
+     * Gets created at.
+     *
+     * @return the created at
+     */
     Instant getCreatedAt();
 
+    /**
+     * Sets created at.
+     *
+     * @param createdAt the created at
+     */
     void setCreatedAt(Instant createdAt);
 
+    /**
+     * Gets updated at.
+     *
+     * @return the updated at
+     */
     Instant getUpdatedAt();
 
+    /**
+     * Sets updated at.
+     *
+     * @param updatedAt the updated at
+     */
     void setUpdatedAt(Instant updatedAt);
 
 }

@@ -6,7 +6,8 @@
 > - **Repository Types**: New `ricardo.auth.repositories.type` configuration (JPA or POSTGRESQL)
 > - **Enhanced Decoupling**: Factory pattern and helper classes for custom implementations
 > - **CSRF Protection**: Cross-Site Request Forgery protection now enabled by default (NEW)
-> - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags
+> - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and
+    `SameSite` flags
 
 > **Breaking Change (v2.0.0):**
 > - Authentication now uses secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite`
@@ -624,7 +625,8 @@ CREATE INDEX idx_refresh_tokens_expiry ON refresh_tokens(expiry_date);
 
 ## Migration Guide: v2.x to v3.0.0
 
-> **⚠️ Warning**: This is a breaking change that requires database migration. Always backup your database before migrating.
+> **⚠️ Warning**: This is a breaking change that requires database migration. Always backup your database before
+> migrating.
 
 ### Migration Steps
 
@@ -737,6 +739,7 @@ ricardo:
 - Requires PostgreSQL database
 
 **When to use PostgreSQL implementation:**
+
 - High-performance requirements
 - PostgreSQL-specific features needed
 - Direct SQL control preferred
