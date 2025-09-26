@@ -49,7 +49,7 @@ public class EmailSenderServiceImpl implements EmailSenderService {
             message.setSubject(subject);
             message.setText(body);
             message.setFrom(authProperties.getEmail().getFromAddress());
-            
+
             mailSender.send(message);
             log.info("Email sent successfully to: {}", to);
             return true;

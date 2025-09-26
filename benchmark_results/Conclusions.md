@@ -23,7 +23,7 @@ Both tests followed the same plan:
 | **Concurrent Errors**    | ~45,000 (Client)     | 0 (Client)      |
 
 **Note:** The "with indexes" test had a bottleneck in the Python client (Windows TCP port exhaustion), causing many
-failures. The "without indexes" test did not have this client issue, perhaps due to it being slower, which allowed 
+failures. The "without indexes" test did not have this client issue, perhaps due to it being slower, which allowed
 windows to have more time to clean up the TCP ports.
 
 ### 2. User Creation Performance (Write)

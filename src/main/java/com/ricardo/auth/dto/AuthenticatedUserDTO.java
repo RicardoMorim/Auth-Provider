@@ -32,7 +32,7 @@ public class AuthenticatedUserDTO implements AuthenticatedUser {
     public AuthenticatedUserDTO(String email, Collection<? extends GrantedAuthority> authorities) {
         this.email = java.util.Objects.requireNonNull(email, "email must not be null");
 
-        if (email.isBlank()){
+        if (email.isBlank()) {
             throw new IllegalArgumentException("Email cannot be blank");
         }
 

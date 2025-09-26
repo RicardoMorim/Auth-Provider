@@ -70,43 +70,6 @@ public class AuthAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(AuthAutoConfiguration.class);
 
     /**
-     * The type Jpa configuration.
-     */
-// ========== JPA CONFIGURATION ==========
-    @Configuration
-    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "JPA", matchIfMissing = true)
-    @EntityScan(basePackages = "com.ricardo.auth.domain")
-    @EnableJpaRepositories(
-            basePackages = "com.ricardo.auth.repository",
-            includeFilters = @ComponentScan.Filter(
-                    type = FilterType.ASSIGNABLE_TYPE,
-                    classes = {DefaultUserJpaRepository.class, DefaultJpaRefreshTokenRepository.class, DefaultJpaPasswordResetTokenRepository.class}
-            )
-    )
-    static class JpaConfiguration {
-        // JPA configuration is handled by annotations
-    }
-
-    // ========== COMMON SERVICES ==========
-
-    /**
-     * The type Ip resolver config.
-     */
-    @Configuration
-    @ConditionalOnMissingBean(IpResolver.class)
-    static class IpResolverConfig {
-        /**
-         * Ip resolver ip resolver.
-         *
-         * @return the ip resolver
-         */
-        @Bean
-        public IpResolver ipResolver() {
-            return new com.ricardo.auth.service.SimpleIpResolver();
-        }
-    }
-
-    /**
      * Jwt service.
      *
      * @param authProperties the auth properties
@@ -118,11 +81,14 @@ public class AuthAutoConfiguration {
         return new JwtServiceImpl(authProperties);
     }
 
+    // ========== COMMON SERVICES ==========
+
     /**
      * User service.
      *
      * @param userRepository the user repository
      * @param eventPublisher the event publisher
+     * @param cacheManager   the cache manager
      * @return the user service
      */
     @Bean
@@ -238,8 +204,6 @@ public class AuthAutoConfiguration {
         return new AppRoleMapper();
     }
 
-    // ========== CONTROLLERS ==========
-
     /**
      * User controller user controller.
      *
@@ -272,6 +236,97 @@ public class AuthAutoConfiguration {
         config.setDatabase(properties.getRedis().getDatabase());
 
         return new LettuceConnectionFactory(config);
+    }
+
+    // ========== CONTROLLERS ==========
+
+    /**
+     * Data source data source.
+     *
+     * @param ds the datasource
+     * @return the template
+     */
+    @Bean
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
+    @ConditionalOnMissingBean(JdbcTemplate.class)
+    public JdbcTemplate jdbcTemplate(DataSource ds) {
+        return new JdbcTemplate(ds);
+    }
+
+    /**
+     * Data source data source.
+     *
+     * @param properties the properties
+     * @return the data source
+     */
+    @Bean
+    @ConditionalOnMissingBean(DataSource.class)
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
+    public DataSource dataSource(AuthProperties properties) {
+        HikariDataSource ds = new HikariDataSource();
+        ds.setJdbcUrl(properties.getRepository().getDatabase().getUrl());
+        ds.setUsername(properties.getRepository().getDatabase().getUsername());
+        ds.setPassword(properties.getRepository().getDatabase().getPassword());
+        ds.setDriverClassName(properties.getRepository().getDatabase().getDriverClassName());
+        return ds;
+    }
+
+    /**
+     * User vo converter user vo converter.
+     *
+     * @return the user vo converter
+     */
+    @Bean
+    @ConditionalOnMissingBean(VoConverter.class)
+    public UserVoConverter userVoConverter() {
+        return new UserVoConverter();
+    }
+
+    /**
+     * Cache helper cache helper.
+     *
+     * @param cacheManager the cache manager
+     * @return the cache helper
+     */
+    @Bean
+    @ConditionalOnMissingBean(CacheHelper.class)
+    public CacheHelper<User, AppRole, UUID> cacheHelper(CacheManager cacheManager) {
+        return new CacheHelperImpl<>(cacheManager);
+    }
+
+    /**
+     * The type Jpa configuration.
+     */
+// ========== JPA CONFIGURATION ==========
+    @Configuration
+    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "JPA", matchIfMissing = true)
+    @EntityScan(basePackages = "com.ricardo.auth.domain")
+    @EnableJpaRepositories(
+            basePackages = "com.ricardo.auth.repository",
+            includeFilters = @ComponentScan.Filter(
+                    type = FilterType.ASSIGNABLE_TYPE,
+                    classes = {DefaultUserJpaRepository.class, DefaultJpaRefreshTokenRepository.class, DefaultJpaPasswordResetTokenRepository.class}
+            )
+    )
+    static class JpaConfiguration {
+        // JPA configuration is handled by annotations
+    }
+
+    /**
+     * The type Ip resolver config.
+     */
+    @Configuration
+    @ConditionalOnMissingBean(IpResolver.class)
+    static class IpResolverConfig {
+        /**
+         * Ip resolver ip resolver.
+         *
+         * @return the ip resolver
+         */
+        @Bean
+        public IpResolver ipResolver() {
+            return new com.ricardo.auth.service.SimpleIpResolver();
+        }
     }
 
     /**
@@ -337,10 +392,18 @@ public class AuthAutoConfiguration {
 
         private final JdbcTemplate jdbcTemplate;
 
+        /**
+         * Instantiates a new Refresh token schema initializer.
+         *
+         * @param jdbcTemplate the jdbc template
+         */
         public RefreshTokenSchemaInitializer(JdbcTemplate jdbcTemplate) {
             this.jdbcTemplate = jdbcTemplate;
         }
 
+        /**
+         * Initialize schema.
+         */
         @PostConstruct
         public void initializeSchema() {
             try {
@@ -394,7 +457,6 @@ public class AuthAutoConfiguration {
         }
     }
 
-
     /**
      * The type User schema initializer.
      */
@@ -405,10 +467,18 @@ public class AuthAutoConfiguration {
 
         private final JdbcTemplate jdbcTemplate;
 
+        /**
+         * Instantiates a new User schema initializer.
+         *
+         * @param jdbcTemplate the jdbc template
+         */
         public UserSchemaInitializer(JdbcTemplate jdbcTemplate) {
             this.jdbcTemplate = jdbcTemplate;
         }
 
+        /**
+         * Initialize schema.
+         */
         @PostConstruct
         public void initializeSchema() {
             try {
@@ -564,7 +634,6 @@ public class AuthAutoConfiguration {
         }
     }
 
-
     /**
      * The type Auth user factory config.
      */
@@ -691,7 +760,6 @@ public class AuthAutoConfiguration {
         }
     }
 
-
     /**
      * The type User row mapper config.
      */
@@ -768,6 +836,7 @@ public class AuthAutoConfiguration {
          * @param eventPublisher        the event publisher
          * @param idConverter           the id converter
          * @param properties            the properties
+         * @param cacheManager          the cache manager
          * @return the password reset service
          */
         @Bean
@@ -794,6 +863,9 @@ public class AuthAutoConfiguration {
         }
     }
 
+
+    // ========== PASSWORD RESET RATE LIMITER CONFIGURATION ==========
+
     /**
      * The type Role service config.
      */
@@ -808,6 +880,7 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @param eventPublisher the event publisher
          * @param idConverter    the id converter
+         * @param cacheHelper    the cache helper
          * @return the role service
          */
         @Bean
@@ -818,31 +891,6 @@ public class AuthAutoConfiguration {
                                                             IdConverter<UUID> idConverter, CacheHelper<User, AppRole, UUID> cacheHelper) {
             return new RoleServiceImpl<>(userService, roleMapper, authProperties, eventPublisher, idConverter, cacheHelper);
         }
-    }
-
-    /**
-     * Data source data source.
-     *
-     * @param ds the datasource
-     * @return the template
-     */
-    @Bean
-    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
-    @ConditionalOnMissingBean(JdbcTemplate.class)
-    public JdbcTemplate jdbcTemplate(DataSource ds) {
-        return new JdbcTemplate(ds);
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(DataSource.class)
-    @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
-    public DataSource dataSource(AuthProperties properties) {
-        HikariDataSource ds = new HikariDataSource();
-        ds.setJdbcUrl(properties.getRepository().getDatabase().getUrl());
-        ds.setUsername(properties.getRepository().getDatabase().getUsername());
-        ds.setPassword(properties.getRepository().getDatabase().getPassword());
-        ds.setDriverClassName(properties.getRepository().getDatabase().getDriverClassName());
-        return ds;
     }
 
     /**
@@ -858,11 +906,20 @@ public class AuthAutoConfiguration {
         private final AuthProperties authProperties;
         private final JdbcTemplate jdbcTemplate;
 
+        /**
+         * Instantiates a new Password reset token schema initializer.
+         *
+         * @param jdbcTemplate   the jdbc template
+         * @param authProperties the auth properties
+         */
         public PasswordResetTokenSchemaInitializer(JdbcTemplate jdbcTemplate, AuthProperties authProperties) {
             this.authProperties = authProperties;
             this.jdbcTemplate = jdbcTemplate;
         }
 
+        /**
+         * Initialize schema.
+         */
         @PostConstruct
         public void initializeSchema() {
             try {
@@ -899,7 +956,7 @@ public class AuthAutoConfiguration {
                                     )
                     """, tableName);
             jdbcTemplate.execute(createTableSql);
-            logger.debug("Table '{}' created or already exists", tableName);
+            logger.debug("Reset Password token Table created or already exists");
         }
 
         private void createPasswordResetTokenIndexes(JdbcTemplate jdbcTemplate) {
@@ -921,9 +978,6 @@ public class AuthAutoConfiguration {
             logger.debug("All password reset token indexes created or already exist");
         }
     }
-
-
-    // ========== PASSWORD RESET RATE LIMITER CONFIGURATION ==========
 
     /**
      * Configuration for the Password Reset specific Memory-based Rate Limiter.
@@ -979,18 +1033,6 @@ public class AuthAutoConfiguration {
             logger.debug("Configured Password Reset Redis Rate Limiter: maxAttempts={}, windowMs={}", maxAttempts, timeWindowMs);
             return limiter;
         }
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(VoConverter.class)
-    public UserVoConverter userVoConverter() {
-        return new UserVoConverter();
-    }
-
-    @Bean
-    @ConditionalOnMissingBean(CacheHelper.class)
-    public CacheHelper<User, AppRole, UUID> cacheHelper(CacheManager cacheManager) {
-        return new CacheHelperImpl<>(cacheManager);
     }
 }
 

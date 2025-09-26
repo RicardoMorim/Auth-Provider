@@ -1,7 +1,6 @@
 package com.ricardo.auth.core;
 
 import com.ricardo.auth.domain.user.AuthUser;
-import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 
@@ -18,6 +17,9 @@ import java.util.Optional;
  */
 public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
 
+    /**
+     * Delete all users.
+     */
     void deleteAllUsers();
 
     /**
@@ -72,7 +74,13 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     void deleteUser(ID id);
 
+    /**
+     * Delete user by username.
+     *
+     * @param username the username
+     */
     void deleteUserByUsername(String username);
+
     /**
      * User exists boolean.
      *
@@ -89,9 +97,27 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     U getUserByEmail(String email);
 
+    /**
+     * Gets all users.
+     *
+     * @param pageable      the pageable
+     * @param username      the username
+     * @param email         the email
+     * @param role          the role
+     * @param createdAfter  the created after
+     * @param createdBefore the created before
+     * @return the all users
+     */
     List<U> getAllUsers(Pageable pageable, String username, String email,
                         String role, String createdAfter, String createdBefore);
 
+    /**
+     * Search users list.
+     *
+     * @param query    the query
+     * @param pageable the pageable
+     * @return the list
+     */
     List<U> searchUsers(String query, Pageable pageable);
 
     /**

@@ -17,6 +17,9 @@ import org.springframework.data.redis.serializer.RedisSerializationContext;
 
 import java.time.Duration;
 
+/**
+ * The type Redis cache config.
+ */
 @Configuration
 @EnableCaching
 public class RedisCacheConfig {
@@ -37,6 +40,12 @@ public class RedisCacheConfig {
         return mapper;
     }
 
+    /**
+     * Redis template redis template.
+     *
+     * @param connectionFactory the connection factory
+     * @return the redis template
+     */
     @Bean
     public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory connectionFactory) {
         GenericJackson2JsonRedisSerializer serializer =
@@ -48,6 +57,11 @@ public class RedisCacheConfig {
         return template;
     }
 
+    /**
+     * Cache configuration redis cache configuration.
+     *
+     * @return the redis cache configuration
+     */
     @Bean
     public RedisCacheConfiguration cacheConfiguration() {
         GenericJackson2JsonRedisSerializer serializer =
@@ -61,6 +75,12 @@ public class RedisCacheConfig {
                 );
     }
 
+    /**
+     * Cache manager redis cache manager.
+     *
+     * @param redisConnectionFactory the redis connection factory
+     * @return the redis cache manager
+     */
     @Bean
     public RedisCacheManager cacheManager(RedisConnectionFactory redisConnectionFactory) {
         return RedisCacheManager.builder(redisConnectionFactory)

@@ -24,6 +24,13 @@ public interface AuthUser<ID, R extends Role> extends UserDetails {
     ID getId();
 
     /**
+     * Sets id.
+     *
+     * @param id the id
+     */
+    void setId(ID id);
+
+    /**
      * Gets email.
      *
      * @return the email
@@ -59,6 +66,13 @@ public interface AuthUser<ID, R extends Role> extends UserDetails {
     Set<R> getRoles();
 
     /**
+     * Sets roles.
+     *
+     * @param roles the roles
+     */
+    void setRoles(Set<R> roles);
+
+    /**
      * Add role.
      *
      * @param role the role
@@ -85,20 +99,6 @@ public interface AuthUser<ID, R extends Role> extends UserDetails {
      * @param version the version
      */
     void setVersion(Long version);
-
-    /**
-     * Sets id.
-     *
-     * @param id the id
-     */
-    void setId(ID id);
-
-    /**
-     * Sets roles.
-     *
-     * @param roles the roles
-     */
-    void setRoles(Set<R> roles);
 
     /**
      * Gets created at.

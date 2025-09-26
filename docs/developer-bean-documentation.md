@@ -2,11 +2,13 @@
 
 ## Overview
 
-This document provides comprehensive information about all auto-configured beans, their dependencies, and configurable properties in the Auth Provider Spring Boot Starter.
+This document provides comprehensive information about all auto-configured beans, their dependencies, and configurable
+properties in the Auth Provider Spring Boot Starter.
 
 ## 🔧 Auto-Configuration Summary
 
 The Auth Provider automatically configures beans based on:
+
 - **Classpath dependencies** (JPA, Redis, PostgreSQL drivers)
 - **Configuration properties** (`ricardo.auth.*`)
 - **Conditional annotations** (`@ConditionalOnProperty`, `@ConditionalOnClass`, etc.)
@@ -24,9 +26,11 @@ All configuration is handled by `AuthAutoConfiguration.class`.
 **Condition**: Always created when auth is enabled
 
 **Dependencies**:
+
 - `AuthProperties authProperties` - JWT configuration (secret, expiration times)
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -37,6 +41,7 @@ ricardo:
 ```
 
 **Bean Creation**:
+
 ```java
 @Bean
 @ConditionalOnMissingBean
@@ -54,10 +59,12 @@ public JwtService jwtService(AuthProperties authProperties) {
 **Condition**: Always created when auth is enabled
 
 **Dependencies**:
+
 - `UserRepository<User, AppRole, UUID> userRepository` - Data access layer
 - `EventPublisher eventPublisher` - Domain event publishing
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -66,6 +73,7 @@ ricardo:
 ```
 
 **Bean Creation**:
+
 ```java
 @Bean
 @ConditionalOnMissingBean
@@ -85,11 +93,13 @@ public UserService<User, AppRole, UUID> userService(
 **Condition**: `ricardo.auth.refresh-tokens.enabled=true` (default: true)
 
 **Dependencies**:
+
 - `RefreshTokenRepository refreshTokenRepository` - Token storage
 - `UserService<User, AppRole, UUID> userService` - User operations
 - `AuthProperties authProperties` - Token configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -102,6 +112,7 @@ ricardo:
 ```
 
 **Bean Creation**:
+
 ```java
 @Bean
 @ConditionalOnMissingBean
@@ -123,11 +134,13 @@ public RefreshTokenService<User, AppRole, UUID> refreshTokenService(
 **Condition**: Always created when auth is enabled
 
 **Dependencies**:
+
 - `JwtService jwtService` - Token validation
 - `TokenBlocklist tokenBlocklist` - Token revocation checking
 - `AuthProperties authProperties` - Cookie and security configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -143,6 +156,7 @@ ricardo:
 ```
 
 **Bean Creation**:
+
 ```java
 @Bean
 @ConditionalOnMissingBean
@@ -163,9 +177,11 @@ public JwtAuthFilter jwtAuthFilter(
 **Condition**: Always created when auth is enabled
 
 **Dependencies**:
+
 - `AuthProperties authProperties` - Password policy configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -182,6 +198,7 @@ ricardo:
 ```
 
 **Bean Creation**:
+
 ```java
 @Bean
 @ConditionalOnMissingBean
@@ -199,13 +216,15 @@ public PasswordPolicyService passwordPolicyService(AuthProperties authProperties
 **Condition**: `ricardo.auth.repository.type=JPA` (default)
 
 **Auto-Created Beans**:
+
 - `DefaultUserJpaRepository` - JPA user repository
-- `DefaultJpaRefreshTokenRepository` - JPA refresh token repository  
+- `DefaultJpaRefreshTokenRepository` - JPA refresh token repository
 - `DefaultJpaPasswordResetTokenRepository` - JPA password reset repository
 
 **Dependencies**: Standard JPA/Hibernate setup
 
 **Configurable Properties**:
+
 ```yaml
 spring:
   datasource:
@@ -222,11 +241,13 @@ spring:
 **Condition**: `ricardo.auth.repository.type=POSTGRESQL`
 
 **Auto-Created Beans**:
+
 - `UserPostgreSQLRepository` - Direct SQL user repository
 - `PostgreSQLRefreshTokenRepository` - Direct SQL refresh token repository
 - `PostgreSqlPasswordResetTokenRepository` - Direct SQL password reset repository
 
 **Dependencies**:
+
 - `DataSource dataSource` - PostgreSQL connection
 - `UserRowMapper<User, AppRole, UUID> userRowMapper` - SQL result mapping
 - `UserSqlParameterMapper<User> userSqlParameterMapper` - Parameter mapping
@@ -234,6 +255,7 @@ spring:
 - `IdConverter<UUID> idConverter` - ID conversion
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -262,9 +284,11 @@ spring:
 **Condition**: `ricardo.auth.rate-limiter.type=memory` (default)
 
 **Dependencies**:
+
 - `AuthProperties authProperties` - Rate limiting configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -281,10 +305,12 @@ ricardo:
 **Condition**: `ricardo.auth.rate-limiter.type=redis` + Redis on classpath
 
 **Dependencies**:
+
 - `RedisTemplate<String, String> redisTemplate` - Redis operations
 - `AuthProperties authProperties` - Rate limiting configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -310,9 +336,11 @@ ricardo:
 **Condition**: Default when no other blocklist is configured
 
 **Dependencies**:
+
 - `AuthProperties authProperties` - Blocklist configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -327,10 +355,12 @@ ricardo:
 **Condition**: `ricardo.auth.token-blocklist.type=redis` + Redis on classpath
 
 **Dependencies**:
+
 - `RedisTemplate<String, String> redisTemplate` - Redis operations
 - `AuthProperties authProperties` - Blocklist configuration
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -355,6 +385,7 @@ ricardo:
 **Condition**: `ricardo.auth.controllers.auth.enabled=true` (default)
 
 **Dependencies**:
+
 - `JwtService jwtService` - Token operations
 - `AuthenticationManager authManager` - Spring Security authentication
 - `RefreshTokenService<User, AppRole, UUID> refreshTokenService` - Token refresh
@@ -362,6 +393,7 @@ ricardo:
 - `TokenBlocklist tokenBlocklist` - Token revocation
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -377,11 +409,13 @@ ricardo:
 **Condition**: `ricardo.auth.controllers.user.enabled=true` (default)
 
 **Dependencies**:
+
 - `UserService<User, AppRole, UUID> userService` - User operations
 - `AuthUserFactory<User, AppRole, UUID> userBuilder` - User creation
 - `IdConverter<UUID> idConverter` - ID conversion
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -397,6 +431,7 @@ ricardo:
 ### SecurityConfig Beans
 
 **Auto-Created Beans**:
+
 - `PasswordEncoder` - BCrypt password encoder
 - `AuthenticationManager` - Spring Security authentication manager
 - `AuthenticationEntryPoint` - Custom 401 response handler
@@ -406,6 +441,7 @@ ricardo:
 **Dependencies**: Spring Security framework
 
 **Configurable Properties**:
+
 ```yaml
 ricardo:
   auth:
@@ -448,6 +484,7 @@ spring:
 **Condition**: Always created when no custom factory exists
 
 **Dependencies**:
+
 - `PasswordPolicyService passwordPolicyService` - Password validation
 - `PasswordEncoder passwordEncoder` - Password hashing
 
@@ -560,6 +597,7 @@ management:
 ```
 
 Access via:
+
 - `GET /actuator/beans` - All Spring beans
 - `GET /actuator/conditions` - Auto-configuration conditions
 

@@ -5,7 +5,8 @@
 > - **Repository Types**: New `ricardo.auth.repositories.type` configuration (JPA or POSTGRESQL)
 > - **Enhanced Decoupling**: Factory pattern and helper classes for custom implementations
 > - **CSRF Protection**: Cross-Site Request Forgery protection now enabled by default (NEW)
-> - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and `SameSite` flags
+> - Authentication continues to use secure cookies (`access_token`, `refresh_token`) with `HttpOnly`, `Secure`, and
+    `SameSite` flags
 > - Database schema requires migration from Long IDs to UUID (see [Database Configuration](database.md))
 
 Get **Ricardo Auth running quickly** with minimal configuration. Perfect for development, prototyping, and getting
@@ -73,23 +74,27 @@ ricardo:
 ### What's New in v3.0.0
 
 **🚨 Breaking Changes:**
+
 - **UUID Primary Keys:** All entities now use UUID instead of Long for IDs
 - **Enhanced Decoupling:** New factory pattern for user creation
 - **PostgreSQL Support:** Native PostgreSQL implementation alongside JPA
 
 **New Features:**
+
 - **Repository Types:** Choose between JPA and PostgreSQL implementations
 - **Factory Pattern:** `AuthUserFactory` and `UserFactory` for custom user creation
 - **Helper Classes:** `UserRowMapper`, `UserSqlParameterMapper`, `IdConverter`
 - **Better Type Safety:** Enhanced generics with Role information
 
 **Repository Type Configuration:**
+
 ```properties
 # Choose your repository implementation
 ricardo.auth.repository.type=JPA    # Default - works with all databases
 # OR
 ricardo.auth.repository.type=POSTGRESQL  # Optimized for PostgreSQL
 ```
+
 - **HTTPS Redirect:** New `redirect-https` property to enforce HTTPS.
 
 ## Development Setup
@@ -384,7 +389,8 @@ export MAIL_USERNAME="your_smtp_username"
 export MAIL_PASSWORD="your_smtp_password"
 ```
 
-**Note:** All other configuration must be set in `application.yml` - they do **not** support environment variable override.
+**Note:** All other configuration must be set in `application.yml` - they do **not** support environment variable
+override.
 
 ### Setting Environment Variables
 

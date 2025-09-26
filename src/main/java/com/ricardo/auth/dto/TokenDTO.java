@@ -1,12 +1,10 @@
 package com.ricardo.auth.dto;
 
-import lombok.AllArgsConstructor;
 import lombok.NoArgsConstructor;
 
 /**
  * The type Token dto.
  */
-
 @NoArgsConstructor
 public class TokenDTO {
     private String token;

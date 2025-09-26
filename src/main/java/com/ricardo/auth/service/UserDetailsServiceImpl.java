@@ -7,13 +7,14 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
-import org.springframework.transaction.annotation.Transactional;
-
-import java.util.LinkedHashMap;
 
 /**
  * The type User details service.
  * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
  */
 public class UserDetailsServiceImpl<U extends AuthUser<ID, R>, R extends AppRole, ID> implements UserDetailsService {
 

@@ -134,10 +134,22 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
     Page<U> searchByQuery(@Param("query") String query, Pageable pageable);
 
 
+    /**
+     * Find by username with roles optional.
+     *
+     * @param username the username
+     * @return the optional
+     */
     @Query("SELECT u FROM #{#entityName} u LEFT JOIN FETCH u.roles WHERE u.username.username = :username")
     Optional<U> findByUsernameWithRoles(@Param("username") String username);
 
 
+    /**
+     * Find by email with roles optional.
+     *
+     * @param email the email
+     * @return the optional
+     */
     @Query("SELECT u FROM #{#entityName} u LEFT JOIN FETCH u.roles WHERE u.email.email = :email")
     Optional<U> findByEmailWithRoles(@Param("email") String email);
 

@@ -22,5 +22,11 @@ public interface UserRowMapper<T extends AuthUser<ID, R>, R extends Role, ID> {
      */
     T mapRow(ResultSet rs, int rowNum);
 
+    /**
+     * Map sort property string.
+     *
+     * @param property the property
+     * @return the string
+     */
     String mapSortProperty(String property);
 }

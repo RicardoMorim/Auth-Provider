@@ -12,7 +12,8 @@ minimal configuration required.
 > 🚀 **Zero-configuration setup** - Just add the dependency and you're ready to go!  
 > 🔐 **Production-ready security** - Built-in password policies, JWT tokens, CSRF protection, and role-based access  
 > 📚 **Complete documentation** - Comprehensive guides for setup, configuration, and deployment
-> 📈 **BenchMark results** - This library was stress tested with 100k users! Find the results [here](./benchmark_results/Conclusions.md)
+> 📈 **BenchMark results** - This library was stress tested with 100k users! Find the
+> results [here](./benchmark_results/Conclusions.md)
 
 ## ✨ What You Get
 
@@ -66,6 +67,7 @@ minimal configuration required.
 ### 1. Add Dependency
 
 ```xml
+
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
@@ -153,6 +155,7 @@ spring:
 ### 4. That's It! 🎉
 
 Your application now has:
+
 - ✅ JWT authentication with secure cookies
 - ✅ User registration and management
 - ✅ Password reset with email
@@ -176,25 +179,29 @@ Your application now has:
 **New Features in v4.0.0:**
 
 **What's New:**
+
 - **Password Reset System:** OWASP-compliant password reset with email integration
-- **Role Management API:** Full CRUD operations for roles with proper authorization  
+- **Role Management API:** Full CRUD operations for roles with proper authorization
 - **OpenAPI Documentation:** Complete Swagger/OpenAPI integration with interactive documentation
 - **Enhanced Input Sanitization:** Improved validation and sanitization for security
 - **Better Exception Handling:** Enhanced error responses and exception management
 - **Domain Events:** Comprehensive audit trail with domain event publishing
 
 **Previous Breaking Changes (Cookie Authentication):**
+
 - **Cookie Authentication (v2.0.0):** All endpoints use secure HTTP-only cookies (`access_token`, `refresh_token`)
 - **HTTPS Required (v2.0.0):** Secure cookies require HTTPS in production environments
 - **UUID Primary Keys (v3.0.0):** All entities now use UUID instead of Long for primary keys
 - **CSRF Protection (v3.0.0):** CSRF protection enabled by default for enhanced security
 
 **What You Need to Update for v4.0.0:**
+
 - **Email Configuration:** Configure SMTP settings for password reset functionality
 - **Role Management:** Update any custom role management code to use new API
 - **OpenAPI:** Interactive API documentation now available at `/swagger-ui.html`
 
-**Migration Guide:** See [Security Guide](docs/security-guide.md) and [Configuration Guide](docs/configuration/) for detailed migration steps.
+**Migration Guide:** See [Security Guide](docs/security-guide.md) and [Configuration Guide](docs/configuration/) for
+detailed migration steps.
 
 ## ⚡ Quick Start
 
@@ -372,9 +379,9 @@ ricardo:
     redirect-https: true
     # CORS configuration
     cors:
-      allowed-origins: ["http://localhost:3000", "https://yourdomain.com"]
-      allowed-methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"]
-      allowed-headers: ["*"]
+      allowed-origins: [ "http://localhost:3000", "https://yourdomain.com" ]
+      allowed-methods: [ "GET", "POST", "PUT", "DELETE", "OPTIONS" ]
+      allowed-headers: [ "*" ]
       allow-credentials: true
       max-age: 3600
     # Email configuration for password reset
@@ -413,7 +420,7 @@ ricardo:
       password: "senha"
       database: 0
     cors:
-      allowed-origins: ["https://yourdomain.com"]
+      allowed-origins: [ "https://yourdomain.com" ]
       allow-credentials: true
     email:
       enabled: true
@@ -627,6 +634,7 @@ Delete a user (requires ADMIN role or ownership).
 Get all available roles (requires authentication).
 
 **Response:**
+
 ```json
 [
   {
@@ -647,6 +655,7 @@ Get all available roles (requires authentication).
 Create a new role.
 
 **Request:**
+
 ```json
 {
   "name": "ROLE_MODERATOR",
@@ -841,6 +850,7 @@ logging:
 Create production environment files:
 
 **`.env.production`:**
+
 ```env
 # Only these 3 properties support .env override
 RICARDO_AUTH_JWT_SECRET=generate-a-secure-256-bit-secret-key-for-production-use
@@ -849,17 +859,18 @@ MAIL_PASSWORD=your_smtp_password
 ```
 
 **`application-prod.yml`:**
+
 ```yaml
 spring:
   profiles:
     active: prod
-  
+
   datasource:
     url: "jdbc:postgresql://your-db-host:5432/your_production_db"
     username: "your_db_user"
     password: "your_secure_db_password"
     driver-class-name: org.postgresql.Driver
-    
+
   jpa:
     hibernate:
       ddl-auto: validate  # Don't auto-create tables in production
@@ -867,7 +878,7 @@ spring:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
     show-sql: false
-    
+
   mail:
     host: "smtp.yourprovider.com"
     port: 587
@@ -879,7 +890,7 @@ spring:
           auth: true
           starttls:
             enable: true
-  
+
   data:
     redis:
       host: your-redis-host
@@ -892,23 +903,23 @@ ricardo:
       secret: ${RICARDO_AUTH_JWT_SECRET:generate-a-secure-256-bit-secret-key-for-production-use}
       access-token-expiration: 3600000    # 1 hour for production
       refresh-token-expiration: 604800000 # 7 days
-    
+
     email:
       from-address: "noreply@yourapp.com"
       from-name: "Your Application"
       host: "smtp.yourprovider.com"
       port: 587
-      
+
     rate-limiter:
       type: redis
       enabled: true
       max-requests: 50      # Lower for production
       time-window-ms: 60000
-      
+
     token-blocklist:
       type: redis
       enabled: true
-      
+
     cookies:
       access:
         secure: true        # Always true in production
@@ -916,7 +927,7 @@ ricardo:
       refresh:
         secure: true
         same-site: Strict
-        
+
     redirect-https: true    # Enforce HTTPS
 
 # Logging
@@ -931,6 +942,7 @@ logging:
 ### Docker Deployment
 
 **`Dockerfile`:**
+
 ```dockerfile
 FROM openjdk:17-jdk-slim
 
@@ -945,6 +957,7 @@ ENTRYPOINT ["java", "-jar", "-Dspring.profiles.active=prod", "app.jar"]
 ```
 
 **`docker-compose.yml`:**
+
 ```yaml
 version: '3.8'
 
@@ -988,7 +1001,7 @@ volumes:
 ### Production Checklist
 
 - [ ] **Security**: Generate secure JWT secret (256+ bit)
-- [ ] **HTTPS**: Configure SSL/TLS certificates  
+- [ ] **HTTPS**: Configure SSL/TLS certificates
 - [ ] **CORS**: Configure allowed origins for your frontend
 - [ ] **Database**: Use PostgreSQL or MySQL (not H2)
 - [ ] **Redis**: Configure Redis for distributed rate limiting/blocklist
@@ -1034,7 +1047,9 @@ We ran end-to-end benchmarks comparing the system with database indexes and cach
 - Writes: user creation performance was virtually identical in both scenarios (no meaningful regression with indexes).
 
 Notes:
-- One concurrent run with indexes hit a client-side TCP port exhaustion on Windows, which affected reported success rate, not server stability.
+
+- One concurrent run with indexes hit a client-side TCP port exhaustion on Windows, which affected reported success
+  rate, not server stability.
 - Full methodology, numbers, and raw results are documented here: [benchmarks](./benchmark_results/Conclusions.md).
 
 ## 🤝 Contributing

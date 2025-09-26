@@ -23,10 +23,10 @@ public class Username {
 
     // Reserved/system usernames that should not be allowed
     private static final List<String> RESERVED_USERNAMES = Arrays.asList(
-        "admin", "administrator", "root", "system", "sys", "daemon", "service",
-        "guest", "anonymous", "user", "test", "demo", "public", "null", "undefined",
-        "api", "www", "ftp", "mail", "email", "support", "help", "info", "contact",
-        "security", "auth", "login", "logout", "signin", "signup", "register"
+            "admin", "administrator", "root", "system", "sys", "daemon", "service",
+            "guest", "anonymous", "user", "test", "demo", "public", "null", "undefined",
+            "api", "www", "ftp", "mail", "email", "support", "help", "info", "contact",
+            "security", "auth", "login", "logout", "signin", "signup", "register"
     );
 
     // Error messages

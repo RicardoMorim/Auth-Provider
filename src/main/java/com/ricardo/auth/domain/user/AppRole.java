@@ -1,9 +1,6 @@
 package com.ricardo.auth.domain.user;
 
 import com.ricardo.auth.core.Role;
-import jakarta.persistence.*;
-
-import java.util.UUID;
 
 
 /**

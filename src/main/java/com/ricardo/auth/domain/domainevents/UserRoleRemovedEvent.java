@@ -5,5 +5,5 @@ import com.ricardo.auth.core.Role;
 /**
  * The type User role removed event.
  */
-public record UserRoleRemovedEvent (String username, String email, Role roleName) {
+public record UserRoleRemovedEvent(String username, String email, Role roleName) {
 }

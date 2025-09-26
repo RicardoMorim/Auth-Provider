@@ -5,7 +5,6 @@ import com.ricardo.auth.core.RoleService;
 import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.AuthUser;
-import com.ricardo.auth.domain.user.Username;
 import com.ricardo.auth.dto.AddRoleRequest;
 import com.ricardo.auth.dto.BulkRoleUpdateRequest;
 import com.ricardo.auth.dto.RemoveRoleRequest;
@@ -52,13 +51,27 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Instantiates a new Role management controller.
      *
-     * @param roleService the role service
-     * @param userService the user service
+     * @param roleService     the role service
+     * @param userService     the user service
+     * @param userVoConverter the user vo converter
      */
     public RoleManagementController(RoleService<U, R, ID> roleService, UserService<U, R, ID> userService, VoConverter userVoConverter) {
         this.roleService = roleService;
         this.userService = userService;
         this.voConverter = userVoConverter;
+    }
+
+    // --- LOG SANITIZATION HELPER ---
+    private static String sanitizeForLogging(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                .replace("\"", "\\\"")
+                .trim();
     }
 
     /**
@@ -69,8 +82,8 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
         try {
             return voConverter.usernameFromString(usernameStr).toString();
         } catch (IllegalArgumentException e) {
-            log.warn("Username validation failed for '{}': {}", usernameStr, e.getMessage());
-            throw e; // Re-throw with original message from Username VO
+            log.warn("Username validation failed for '{}': {}", sanitizeForLogging(usernameStr), e.getMessage());
+            throw e;
         }
     }
 
@@ -81,15 +94,14 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
         try {
             U user = userService.getUserByUserName(username);
             if (user == null) {
-                throw new ResourceNotFoundException("User not found: " + username);
+                throw new ResourceNotFoundException("User not found: " + sanitizeForLogging(username));
             }
-
             return user.getId();
         } catch (ResourceNotFoundException e) {
             throw e;
         } catch (Exception e) {
-            log.warn("User lookup failed for username: {}", username, e);
-            throw new IllegalArgumentException("User lookup failed: " + username, e);
+            log.warn("User lookup failed for username: {}", sanitizeForLogging(username), e);
+            throw new IllegalArgumentException("User lookup failed: " + sanitizeForLogging(username), e);
         }
     }
 
@@ -141,21 +153,20 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
 
             UserRolesResponse response = roleService.getUserRoles(userId);
 
-            log.debug("Retrieved roles for user: {}", validatedUsername);
+            log.debug("Retrieved roles for user: {}", sanitizeForLogging(validatedUsername));
             return ResponseEntity.ok(response);
 
         } catch (ResourceNotFoundException e) {
-            log.warn("User not found for username: {}: {}", username, e.getMessage());
+            log.warn("User not found for username: {}: {}", sanitizeForLogging(username), e.getMessage());
             return ResponseEntity.status(404).build();
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid request for user roles: {}", e.getMessage());
+            log.warn("Invalid request for user roles: {}", sanitizeForLogging(e.getMessage()));
             return ResponseEntity.badRequest().build();
         } catch (SecurityException e) {
-            log.warn("Security violation accessing user roles for username: {}", username);
+            log.warn("Security violation accessing user roles for username: {}", sanitizeForLogging(username));
             return ResponseEntity.status(403).build();
-
         } catch (Exception e) {
-            log.error("Error retrieving user roles for username: {}", username);
+            log.error("Error retrieving user roles for username: {}", sanitizeForLogging(username));
             return ResponseEntity.status(500).build();
         }
     }
@@ -213,7 +224,9 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             roleService.addRoleToUser(userId, request.getRoleName(), request.getReason());
 
             log.info("Role '{}' added to user {} with reason: {}",
-                    request.getRoleName(), validatedUsername, request.getReason());
+                    sanitizeForLogging(request.getRoleName()),
+                    sanitizeForLogging(validatedUsername),
+                    sanitizeForLogging(request.getReason()));
 
             return ResponseEntity.ok(Map.of(
                     "message", "Role added successfully.",
@@ -222,21 +235,19 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             ));
 
         } catch (ResourceNotFoundException e) {
-            log.warn("User or role not found for username: {}: {}", username, e.getMessage());
+            log.warn("User or role not found for username: {}: {}", sanitizeForLogging(username), e.getMessage());
             return ResponseEntity.status(404)
                     .body(Map.of("error", e.getMessage()));
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid role addition request for username {}: {}", username, e.getMessage());
+            log.warn("Invalid role addition request for username {}: {}", sanitizeForLogging(username), sanitizeForLogging(e.getMessage()));
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
-
         } catch (SecurityException e) {
-            log.warn("Security violation adding role to username: {}", username);
+            log.warn("Security violation adding role to username: {}", sanitizeForLogging(username));
             return ResponseEntity.status(403)
                     .body(Map.of("error", "Insufficient permissions."));
-
         } catch (Exception e) {
-            log.error("Error adding role to user: {}", username);
+            log.error("Error adding role to user: {}", sanitizeForLogging(username));
             return ResponseEntity.status(500)
                     .body(Map.of("error", "An error occurred while adding the role."));
         }
@@ -295,7 +306,9 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             roleService.removeRoleFromUser(userId, request.getRoleName(), request.getReason());
 
             log.info("Role '{}' removed from user {} with reason: {}",
-                    request.getRoleName(), validatedUsername, request.getReason());
+                    sanitizeForLogging(request.getRoleName()),
+                    sanitizeForLogging(validatedUsername),
+                    sanitizeForLogging(request.getReason()));
 
             return ResponseEntity.ok(Map.of(
                     "message", "Role removed successfully.",
@@ -304,17 +317,15 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             ));
 
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid role removal request for username {}: {}", username, e.getMessage());
+            log.warn("Invalid role removal request for username {}: {}", sanitizeForLogging(username), sanitizeForLogging(e.getMessage()));
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
-
         } catch (SecurityException e) {
-            log.warn("Security violation removing role from username: {}", username);
+            log.warn("Security violation removing role from username: {}", sanitizeForLogging(username));
             return ResponseEntity.status(403)
                     .body(Map.of("error", "Insufficient permissions."));
-
         } catch (Exception e) {
-            log.error("Error removing role from user: {}", username);
+            log.error("Error removing role from user: {}", sanitizeForLogging(username));
             return ResponseEntity.status(500)
                     .body(Map.of("error", "An error occurred while removing the role."));
         }
@@ -374,7 +385,9 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
                     request.getRolesToRemove(), request.getReason());
 
             log.info("Bulk role update completed for user {} - Added: {}, Removed: {}",
-                    validatedUsername, request.getRolesToAdd(), request.getRolesToRemove());
+                    sanitizeForLogging(validatedUsername),
+                    sanitizeForLogging(String.join(", ", request.getRolesToAdd())),
+                    sanitizeForLogging(String.join(", ", request.getRolesToRemove())));
 
             return ResponseEntity.ok(Map.of(
                     "message", "Roles updated successfully.",
@@ -384,17 +397,15 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             ));
 
         } catch (IllegalArgumentException e) {
-            log.warn("Invalid bulk role update request for username {}: {}", username, e.getMessage());
+            log.warn("Invalid bulk role update request for username {}: {}", sanitizeForLogging(username), sanitizeForLogging(e.getMessage()));
             return ResponseEntity.badRequest()
                     .body(Map.of("error", e.getMessage()));
-
         } catch (SecurityException e) {
-            log.warn("Security violation in bulk role update for username: {}", username);
+            log.warn("Security violation in bulk role update for username: {}", sanitizeForLogging(username));
             return ResponseEntity.status(403)
                     .body(Map.of("error", "Insufficient permissions."));
-
         } catch (Exception e) {
-            log.error("Error in bulk role update for user: {}", username);
+            log.error("Error in bulk role update for user: {}", sanitizeForLogging(username));
             return ResponseEntity.status(500)
                     .body(Map.of("error", "An error occurred while updating roles."));
         }

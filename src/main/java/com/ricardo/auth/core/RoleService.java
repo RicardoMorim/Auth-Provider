@@ -76,5 +76,5 @@ public interface RoleService<U extends AuthUser<ID, R>, R extends Role, ID> {
      * @throws SecurityException        if operation is not allowed
      */
     void bulkUpdateUserRoles(ID userId, List<String> rolesToAdd,
-                           List<String> rolesToRemove, String reason);
+                             List<String> rolesToRemove, String reason);
 }

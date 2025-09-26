@@ -7,7 +7,6 @@ import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import com.ricardo.auth.domain.user.*;
-import com.ricardo.auth.repository.PasswordResetToken.PasswordResetTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;

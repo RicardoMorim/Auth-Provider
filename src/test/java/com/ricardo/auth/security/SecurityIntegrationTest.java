@@ -397,7 +397,7 @@ class SecurityIntegrationTest {
         ) + "tampered";
 
         mockMvc.perform(get("/api/auth/me").with(csrf())
-                .cookie(new Cookie("access_token", tamperedToken)))
+                        .cookie(new Cookie("access_token", tamperedToken)))
                 .andExpect(status().isUnauthorized());
     }
 
