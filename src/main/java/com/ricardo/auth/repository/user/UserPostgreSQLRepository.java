@@ -479,10 +479,12 @@ public class UserPostgreSQLRepository<U extends AuthUser<ID, R>, R extends Role,
         }
 
         // Role filter
-        for (String role : roles) {
-            if (role != null && !role.trim().isEmpty()) {
-                whereClause.append(" AND EXISTS (SELECT 1 FROM user_roles ur2 WHERE ur2.user_id = u.id AND ur2.role = ?)");
-                params.add(role);
+        if (roles != null && !roles.isEmpty()) {
+            for (String role : roles) {
+                if (role != null && !role.trim().isEmpty()) {
+                    whereClause.append(" AND EXISTS (SELECT 1 FROM user_roles ur2 WHERE ur2.user_id = u.id AND ur2.role = ?)");
+                    params.add(role);
+                }
             }
         }
 
