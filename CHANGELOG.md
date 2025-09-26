@@ -232,13 +232,13 @@ If you need any of these features, please consider contributing! See [CONTRIBUTI
 - **Multi-Factor Authentication**: TOTP and SMS-based 2FA
 - ~~**Rate Limiting**: Built-in rate limiting for authentication endpoints~~ [Implemented in 2.0.0]
 - ~~**Token Revocation**: Enhanced token revocation with blocklist support~~ [Implemented in 2.0.0]
-- **Audit Logging**: Comprehensive security event logging
+- ~~**Audit Logging**: Comprehensive event logging~~ [Implemented in 4.0.0]
 - ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
 - ~~**Refresh Token Support**: Automatic token refresh mechanism~~ [Implemented in 1.2.0]
-- **Account Management**: Email verification, password reset, account locking
+- **Account Management**: Email verification, ~~password reset~~ [Implemented in 4.0.0], account locking
 - ~~**Redis Cache**: Caching integration for improved
   performance~~ [Implemented for both rate limiting and token revocation in 2.0.0]
-- **Metrics Integration**: Micrometer metrics for monitoring
+- ~~**Metrics Integration**: Micrometer metrics for monitoring~~ [Implemented in 4.0.0]
 
 ### Breaking Changes (Future Versions)
 
