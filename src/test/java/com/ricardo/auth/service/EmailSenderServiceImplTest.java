@@ -12,14 +12,13 @@ import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
 
 import static org.assertj.core.api.Assertions.assertThat;
-import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 /**
  * Tests for EmailSenderServiceImpl.
  * Tests email sending functionality and error handling.
- * 
+ *
  * @since 3.1.0
  */
 @ExtendWith(MockitoExtension.class)
@@ -31,12 +30,18 @@ class EmailSenderServiceImplTest {
     private AuthProperties authProperties;
     private EmailSenderServiceImpl emailService;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         authProperties = createAuthProperties();
         emailService = new EmailSenderServiceImpl(mailSender, authProperties);
     }
 
+    /**
+     * Send email with valid parameters should send successfully.
+     */
     @Test
     void sendEmail_WithValidParameters_ShouldSendSuccessfully() {
         // Given
@@ -49,10 +54,10 @@ class EmailSenderServiceImplTest {
 
         // Then
         assertThat(result).isTrue();
-        
+
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
-        
+
         SimpleMailMessage sentMessage = messageCaptor.getValue();
         assertThat(sentMessage.getTo()).containsExactly(to);
         assertThat(sentMessage.getSubject()).isEqualTo(subject);
@@ -61,7 +66,9 @@ class EmailSenderServiceImplTest {
     }
 
 
-
+    /**
+     * Send email with null to should return false.
+     */
     @Test
     void sendEmail_WithNullTo_ShouldReturnFalse() {
         // When
@@ -72,6 +79,9 @@ class EmailSenderServiceImplTest {
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * Send email with empty to should return false.
+     */
     @Test
     void sendEmail_WithEmptyTo_ShouldReturnFalse() {
         // When
@@ -82,6 +92,9 @@ class EmailSenderServiceImplTest {
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * Send email with null subject should return false.
+     */
     @Test
     void sendEmail_WithNullSubject_ShouldReturnFalse() {
         // When
@@ -92,6 +105,9 @@ class EmailSenderServiceImplTest {
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * Send email with null body should return false.
+     */
     @Test
     void sendEmail_WithNullBody_ShouldReturnFalse() {
         // When
@@ -102,11 +118,15 @@ class EmailSenderServiceImplTest {
         verify(mailSender, never()).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * Send email when mail sender throws exception should return false.
+     */
     @Test
     void sendEmail_WhenMailSenderThrowsException_ShouldReturnFalse() {
         // Given
-        doThrow(new MailException("SMTP server unavailable") {}).when(mailSender)
-            .send(any(SimpleMailMessage.class));
+        doThrow(new MailException("SMTP server unavailable") {
+        }).when(mailSender)
+                .send(any(SimpleMailMessage.class));
 
         // When
         boolean result = emailService.sendEmail("user@example.com", "Subject", "Body");
@@ -116,6 +136,9 @@ class EmailSenderServiceImplTest {
         verify(mailSender).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * Send email with invalid email format should still attempt to send.
+     */
     @Test
     void sendEmail_WithInvalidEmailFormat_ShouldStillAttemptToSend() {
         // Given
@@ -130,6 +153,9 @@ class EmailSenderServiceImplTest {
         verify(mailSender).send(any(SimpleMailMessage.class));
     }
 
+    /**
+     * Send email with long subject should send successfully.
+     */
     @Test
     void sendEmail_WithLongSubject_ShouldSendSuccessfully() {
         // Given
@@ -140,14 +166,17 @@ class EmailSenderServiceImplTest {
 
         // Then
         assertThat(result).isTrue();
-        
+
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
-        
+
         SimpleMailMessage sentMessage = messageCaptor.getValue();
         assertThat(sentMessage.getSubject()).isEqualTo(longSubject);
     }
 
+    /**
+     * Send email with special characters should send successfully.
+     */
     @Test
     void sendEmail_WithSpecialCharacters_ShouldSendSuccessfully() {
         // Given
@@ -158,22 +187,22 @@ class EmailSenderServiceImplTest {
 
         // Then
         assertThat(result).isTrue();
-        
+
         ArgumentCaptor<SimpleMailMessage> messageCaptor = ArgumentCaptor.forClass(SimpleMailMessage.class);
         verify(mailSender).send(messageCaptor.capture());
-        
+
         SimpleMailMessage sentMessage = messageCaptor.getValue();
         assertThat(sentMessage.getText()).isEqualTo(specialCharsBody);
     }
 
     private AuthProperties createAuthProperties() {
         AuthProperties properties = new AuthProperties();
-        
+
         AuthProperties.Email email = new AuthProperties.Email();
         email.setFromAddress("noreply@test.com");
         email.setFromName("Test App");
         properties.setEmail(email);
-        
+
         return properties;
     }
 }

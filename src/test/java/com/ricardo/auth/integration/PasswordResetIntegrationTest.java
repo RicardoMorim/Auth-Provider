@@ -66,12 +66,20 @@ class PasswordResetIntegrationTest {
     @Autowired
     private UserRepository<User, AppRole, UUID> userRepository;
 
+    /**
+     * Sets .
+     */
     @BeforeEach
     public void setup() {
         this.mockMvc = MockMvcBuilders.webAppContextSetup(webApplicationContext).build();
         rateLimiter.clearAll();
     }
 
+    /**
+     * Password reset flow with valid configuration should work correctly.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void passwordResetFlow_WithValidConfiguration_ShouldWorkCorrectly() throws Exception {
         // Verify configuration is loaded correctly
@@ -92,6 +100,11 @@ class PasswordResetIntegrationTest {
                 .andExpect(jsonPath("$.message").exists());
     }
 
+    /**
+     * Rate limiting should work with existing infrastructure.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void rateLimiting_ShouldWorkWithExistingInfrastructure() throws Exception {
         // Test that rate limiting is properly integrated
@@ -116,6 +129,11 @@ class PasswordResetIntegrationTest {
                 .andExpect(status().isTooManyRequests());
     }
 
+    /**
+     * Password reset complete with valid password should validate correctly.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void passwordResetComplete_WithValidPassword_ShouldValidateCorrectly() throws Exception {
         PasswordResetCompleteRequest completeRequest = new PasswordResetCompleteRequest();
@@ -130,6 +148,11 @@ class PasswordResetIntegrationTest {
                 .andExpect(jsonPath("$.error").value("Invalid or expired token."));
     }
 
+    /**
+     * Password reset complete with mismatched passwords should return error.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void passwordResetComplete_WithMismatchedPasswords_ShouldReturnError() throws Exception {
         PasswordResetCompleteRequest completeRequest = new PasswordResetCompleteRequest();

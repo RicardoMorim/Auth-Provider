@@ -2,6 +2,9 @@ package com.ricardo.auth.helper;
 
 import com.ricardo.auth.domain.user.User;
 
+/**
+ * The type User sql mapper.
+ */
 public class UserSqlMapper implements UserSqlParameterMapper<User> {
 
     @Override

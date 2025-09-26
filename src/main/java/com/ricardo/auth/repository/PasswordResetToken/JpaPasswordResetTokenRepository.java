@@ -1,7 +1,6 @@
 package com.ricardo.auth.repository.PasswordResetToken;
 
 import com.ricardo.auth.domain.passwordresettoken.PasswordResetToken;
-import com.ricardo.auth.domain.user.Email;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
@@ -12,9 +11,19 @@ import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
 
+/**
+ * The interface Jpa password reset token repository.
+ */
 @NoRepositoryBean
 public interface JpaPasswordResetTokenRepository extends PasswordResetTokenRepository, JpaRepository<PasswordResetToken, UUID> {
 
+    /**
+     * Find by token and not used optional.
+     *
+     * @param token the token
+     * @param now   the now
+     * @return the optional
+     */
     @Query("SELECT t FROM PasswordResetToken t WHERE t.token = :token AND t.used = false AND t.expiryDate > :now")
     Optional<PasswordResetToken> findByTokenAndNotUsed(@Param("token") String token, @Param("now") Instant now);
 
@@ -23,7 +32,13 @@ public interface JpaPasswordResetTokenRepository extends PasswordResetTokenRepos
     void invalidateTokensForUser(@Param("email") String email, @Param("now") Instant now);
 
 
-
+    /**
+     * Count reset attempts for email since internal int.
+     *
+     * @param email the email
+     * @param since the since
+     * @return the int
+     */
     @Query("SELECT COUNT(t) FROM PasswordResetToken t WHERE t.email = :email AND t.createdAt > :since")
     int countResetAttemptsForEmailSinceInternal(@Param("email") String email,
                                                 @Param("since") Instant since);
@@ -39,6 +54,13 @@ public interface JpaPasswordResetTokenRepository extends PasswordResetTokenRepos
     @Query("DELETE FROM PasswordResetToken t WHERE t.expiryDate < :before OR t.used = true")
     void deleteExpiredTokens(@Param("before") Instant before);
 
+    /**
+     * Exists by token and not used boolean.
+     *
+     * @param token the token
+     * @param now   the now
+     * @return the boolean
+     */
     @Query("SELECT COUNT(t) > 0 FROM PasswordResetToken t WHERE t.token = :token AND t.used = false AND t.expiryDate > :now")
     boolean existsByTokenAndNotUsed(@Param("token") String token, @Param("now") Instant now);
 

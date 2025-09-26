@@ -17,6 +17,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -41,30 +42,34 @@ import static org.mockito.Mockito.*;
 @ExtendWith(MockitoExtension.class)
 class PasswordResetServiceImplTest {
 
-    @Mock
-    private EmailSenderService emailSenderService;
-
-    @Mock
-    private UserService<TestUser, TestRole, UUID> userService;
-
-    @Mock
-    private PasswordResetTokenRepository tokenRepository;
-
-    @Mock
-    private PasswordEncoder passwordEncoder;
-
-    @Mock
-    private PasswordPolicyService passwordPolicyService;
-
-    @Mock
-    private Publisher eventPublisher;
-
+    /**
+     * The Id converter.
+     */
     @Mock
     IdConverter<UUID> idConverter;
-
+    /**
+     * The Cache manager.
+     */
+    @Mock
+    CacheManager cacheManager;
+    @Mock
+    private EmailSenderService emailSenderService;
+    @Mock
+    private UserService<TestUser, TestRole, UUID> userService;
+    @Mock
+    private PasswordResetTokenRepository tokenRepository;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private PasswordPolicyService passwordPolicyService;
+    @Mock
+    private Publisher eventPublisher;
     private AuthProperties authProperties;
     private PasswordResetServiceImpl<TestUser, TestRole, UUID> passwordResetService;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         authProperties = createAuthProperties();
@@ -76,10 +81,13 @@ class PasswordResetServiceImplTest {
                 passwordPolicyService,
                 authProperties,
                 eventPublisher,
-                idConverter, new AuthProperties()
+                idConverter, new AuthProperties(), cacheManager
         );
     }
 
+    /**
+     * Request password reset with valid email should process successfully.
+     */
     @Test
     void requestPasswordReset_WithValidEmail_ShouldProcessSuccessfully() {
         // Given
@@ -105,6 +113,9 @@ class PasswordResetServiceImplTest {
         assertThat(event.email()).isEqualTo(email);
     }
 
+    /**
+     * Request password reset with nonexistent email should not throw exception.
+     */
     @Test
     void requestPasswordReset_WithNonexistentEmail_ShouldNotThrowException() {
         // Given
@@ -119,6 +130,9 @@ class PasswordResetServiceImplTest {
         verify(emailSenderService, never()).sendEmail(anyString(), anyString(), anyString());
     }
 
+    /**
+     * Request password reset with invalid email should not throw exception.
+     */
     @Test
     void requestPasswordReset_WithInvalidEmail_ShouldNotThrowException() {
         // Given
@@ -131,6 +145,9 @@ class PasswordResetServiceImplTest {
         verify(tokenRepository, never()).saveToken(any());
     }
 
+    /**
+     * Request password reset with null email should not throw exception.
+     */
     @Test
     void requestPasswordReset_WithNullEmail_ShouldNotThrowException() {
         // When & Then - Should handle gracefully (OWASP requirement)
@@ -140,6 +157,9 @@ class PasswordResetServiceImplTest {
         verify(tokenRepository, never()).saveToken(any());
     }
 
+    /**
+     * Complete password reset with valid token should update password.
+     */
     @Test
     void completePasswordReset_WithValidToken_ShouldUpdatePassword() {
         // Given
@@ -164,7 +184,7 @@ class PasswordResetServiceImplTest {
 
         // Then
         verify(passwordEncoder).encode(newPassword);
-        verify(userService).updateUser(eq(userId), any(TestUser.class));
+        verify(userService).updatePassword(eq(userId), any(String.class));
         verify(tokenRepository).saveToken(argThat(PasswordResetToken::isUsed));
         verify(tokenRepository).invalidateTokensForUser(eq(user.getEmail()), any(Instant.class));
 
@@ -177,6 +197,9 @@ class PasswordResetServiceImplTest {
         assertThat(event.email()).isEqualTo(user.getEmail());
     }
 
+    /**
+     * Complete password reset with null token should throw exception.
+     */
     @Test
     void completePasswordReset_WithNullToken_ShouldThrowException() {
         // Given
@@ -188,6 +211,9 @@ class PasswordResetServiceImplTest {
                 .hasMessageContaining("Token is required");
     }
 
+    /**
+     * Complete password reset with empty token should throw exception.
+     */
     @Test
     void completePasswordReset_WithEmptyToken_ShouldThrowException() {
         // Given
@@ -199,6 +225,9 @@ class PasswordResetServiceImplTest {
                 .hasMessageContaining("Token is required");
     }
 
+    /**
+     * Complete password reset with invalid password should throw exception.
+     */
     @Test
     void completePasswordReset_WithInvalidPassword_ShouldThrowException() {
         // Given
@@ -212,6 +241,9 @@ class PasswordResetServiceImplTest {
                 .hasMessageContaining("Password does not meet security requirements");
     }
 
+    /**
+     * Complete password reset with expired token should throw exception.
+     */
     @Test
     void completePasswordReset_WithExpiredToken_ShouldThrowException() {
         // Given
@@ -231,6 +263,9 @@ class PasswordResetServiceImplTest {
                 .hasMessageContaining("Token has expired");
     }
 
+    /**
+     * Complete password reset with nonexistent token should throw exception.
+     */
     @Test
     void completePasswordReset_WithNonexistentToken_ShouldThrowException() {
         // Given
@@ -247,6 +282,9 @@ class PasswordResetServiceImplTest {
     }
 
 
+    /**
+     * Request password reset should ensure minimum processing time.
+     */
     @Test
     void requestPasswordReset_ShouldEnsureMinimumProcessingTime() {
         // Given
@@ -327,19 +365,13 @@ class PasswordResetServiceImplTest {
         }
 
         @Override
-        public void setRoles(Set<TestRole> roles) {
-            this.roles = roles;
+        public Long getVersion() {
+            return Version;
         }
-
 
         @Override
         public void setVersion(Long version) {
             this.Version = version;
-        }
-
-        @Override
-        public Long getVersion() {
-            return Version;
         }
 
         @Override
@@ -382,6 +414,11 @@ class PasswordResetServiceImplTest {
         @Override
         public java.util.Set<TestRole> getRoles() {
             return java.util.Set.of();
+        }
+
+        @Override
+        public void setRoles(Set<TestRole> roles) {
+            this.roles = roles;
         }
 
         @Override

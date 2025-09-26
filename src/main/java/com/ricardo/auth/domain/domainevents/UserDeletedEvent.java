@@ -1,4 +1,7 @@
 package com.ricardo.auth.domain.domainevents;
 
-public record UserDeletedEvent (String username, String email) {
+/**
+ * The type User deleted event.
+ */
+public record UserDeletedEvent(String username, String email) {
 }
