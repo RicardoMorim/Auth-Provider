@@ -144,7 +144,10 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
 
         // Find and validate token
         String hashedToken = hashToken(token);
+        long findTokenStartTime = System.currentTimeMillis();
+        log.debug("Attempting to find password reset token");
         Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenAndNotUsed(hashedToken);
+        log.info("Password reset token lookup completed in {}ms", System.currentTimeMillis() - findTokenStartTime);
 
         if (tokenOpt.isEmpty()) {
             log.warn("Invalid or expired password reset token used");
@@ -175,10 +178,16 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         // Mark token as used
         resetToken.setUsed(true);
         resetToken.setUsedAt(Instant.now());
+        long saveTokenStartTime = System.currentTimeMillis();
+        log.debug("Attempting to mark password reset token as used for user: {}", user.getEmail());
         tokenRepository.saveToken(resetToken);
+        log.info("Password reset token for user {} marked as used in {}ms", user.getEmail(), System.currentTimeMillis() - saveTokenStartTime);
 
         // Invalidate all other tokens for this user
+        long invalidateStartTime = System.currentTimeMillis();
+        log.debug("Attempting to invalidate other password reset tokens for user: {}", user.getEmail());
         tokenRepository.invalidateTokensForUser(user.getEmail(), Instant.now());
+        log.info("Other password reset tokens for user {} invalidated in {}ms", user.getEmail(), System.currentTimeMillis() - invalidateStartTime);
 
         log.info("Password reset completed for user: {}", user.getEmail());
 
@@ -204,13 +213,20 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         }
 
         String hashedToken = hashToken(token);
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to validate password reset token");
         Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenAndNotUsed(hashedToken);
-        return tokenOpt.isPresent() && !tokenOpt.get().isExpired();
+        boolean isValid = tokenOpt.isPresent() && !tokenOpt.get().isExpired();
+        log.info("Password reset token validation completed in {}ms. Is valid: {}", System.currentTimeMillis() - startTime, isValid);
+        return isValid;
     }
 
     private void processPasswordResetRequest(U user) {
         // Invalidate existing tokens
+        long invalidateStartTime = System.currentTimeMillis();
+        log.debug("Attempting to invalidate existing password reset tokens for user: {}", user.getEmail());
         tokenRepository.invalidateTokensForUser(user.getEmail(), Instant.now());
+        log.info("Existing password reset tokens for user {} invalidated in {}ms", user.getEmail(), System.currentTimeMillis() - invalidateStartTime);
 
         // Generate new raw token (only ever emailed to the user)
         String token = generateSecureToken();
@@ -223,7 +239,10 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
                 Instant.now().plusSeconds(authProperties.getPasswordReset().getTokenExpiryHours() * 3600L)
         );
 
+        long saveTokenStartTime = System.currentTimeMillis();
+        log.debug("Attempting to save new password reset token for user: {}", user.getEmail());
         tokenRepository.saveToken(resetToken);
+        log.info("New password reset token for user {} saved in {}ms", user.getEmail(), System.currentTimeMillis() - saveTokenStartTime);
 
         // Send email
         sendPasswordResetEmail(user, token);
@@ -331,3 +350,4 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         }
     }
 }
+

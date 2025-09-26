@@ -7,6 +7,7 @@ import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.util.LinkedHashMap;
 
@@ -35,8 +36,11 @@ public class UserDetailsServiceImpl<U extends AuthUser<ID, R>, R extends AppRole
      * @throws UsernameNotFoundException the username not found exception
      */
     @Override
-    @Cacheable(cacheNames = "userByEmail", key = "#email")
+    @Cacheable(cacheNames = "userByEmail", key = "#email", condition = "#email != null")
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
+        if (email == null || email.isBlank()) {
+            throw new UsernameNotFoundException("Email cannot be null or blank");
+        }
         return userService.getUserByEmail(email);
     }
 }

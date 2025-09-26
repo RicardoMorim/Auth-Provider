@@ -11,6 +11,7 @@ import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -52,19 +53,25 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     @Override
     @Transactional
     public RefreshToken createRefreshToken(U user) {
-        cleanupOldestTokensForUser(user.getEmail());
-
         RefreshToken token = new RefreshToken(
                 generateSecureToken(),
                 user.getEmail(),
                 calculateExpiry()
         );
 
-        return refreshTokenRepository.saveToken(token);
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to save refresh token for user: {}", user.getEmail());
+        RefreshToken savedToken = refreshTokenRepository.saveToken(token);
+        log.info("Refresh token for user {} saved successfully in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
+        log.debug("Starting cleanup of oldest tokens for user: {}", user.getEmail());
+        startTime = System.currentTimeMillis();
+        cleanupOldestTokensForUser(user.getEmail());
+        log.debug("Cleanup of oldest tokens for user {} completed. in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
+        return savedToken;
     }
 
     @Override
-    @Cacheable(value = "userByEmail", key = "#refreshToken.userEmail")
+    @Cacheable(value = "userByEmail", key = "#refreshToken.userEmail", condition = "#refreshToken != null")
     public U getUserFromRefreshToken(RefreshToken refreshToken) {
         String userEmail = refreshToken.getUserEmail();
 
@@ -80,29 +87,49 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     }
 
     @Override
+    @CacheEvict(value = "refreshToken", key = "#tokenValue", condition = "#tokenValue != null")
     public void revokeToken(String tokenValue) {
         RefreshToken token = findByToken(tokenValue);
         token.setRevoked(true);
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to revoke refresh token for user: {}", token.getUserEmail());
         refreshTokenRepository.saveToken(token);
+        log.info("Refresh token for user {} revoked successfully in {}ms", token.getUserEmail(), System.currentTimeMillis() - startTime);
         log.info("Refresh token revoked for user: {}", token.getUserEmail());
     }
 
     @Override
+    @CacheEvict(value = "userByEmail", key = "#user.email", condition = "#user != null")
     public void revokeAllUserTokens(U user) {
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to revoke all refresh tokens for user: {}", user.getEmail());
         refreshTokenRepository.revokeAllUserTokens(user.getEmail());
+        log.info("All refresh tokens for user {} revoked successfully in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
     }
 
     @Override
-    @Cacheable(value = "refreshToken", key = "#tokenValue")
+    @Cacheable(value = "refreshToken", key = "#tokenValue", condition = "#tokenValue != null")
     public RefreshToken findByToken(String tokenValue) {
-        return refreshTokenRepository.findByToken(tokenValue)
-                .orElseThrow(() -> new ResourceNotFoundException("Token not found"));
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to find refresh token by value");
+        try {
+            RefreshToken token = refreshTokenRepository.findByToken(tokenValue)
+                    .orElseThrow(() -> new ResourceNotFoundException("Token not found"));
+            log.info("Refresh token found successfully in {}ms", System.currentTimeMillis() - startTime);
+            return token;
+        } catch (Exception e) {
+            log.error("Failed to find refresh token after {}ms. Error: {}", System.currentTimeMillis() - startTime, e.getMessage());
+            throw e;
+        }
     }
 
     @Override
     public void cleanupExpiredTokens() {
         Instant now = Instant.now();
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to clean up expired refresh tokens");
         refreshTokenRepository.deleteExpiredTokens(now);
+        log.info("Expired refresh tokens cleaned up successfully in {}ms", System.currentTimeMillis() - startTime);
     }
 
     /**
@@ -135,7 +162,10 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
         }
 
         try {
+            long startTime = System.currentTimeMillis();
+            log.debug("Starting cleanup of oldest tokens for user: {}", userEmail);
             int deletedCount = refreshTokenRepository.deleteOldestTokensForUser(userEmail, maxTokens);
+            log.info("Cleanup of oldest tokens for user {} completed in {}ms", userEmail, System.currentTimeMillis() - startTime);
 
             if (deletedCount > 0) {
                 log.info("Cleaned up {} oldest tokens for user: {} (exceeded limit of {})",
@@ -144,5 +174,13 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
         } catch (Exception e) {
             log.error("Error cleaning up oldest tokens for user: {}", userEmail, e);
         }
+    }
+
+    @Override
+    public void deleteAllTokens() {
+        log.info("Deleting all refresh tokens");
+        long startTime = System.currentTimeMillis();
+        refreshTokenRepository.deleteAll();
+        log.info("All refresh tokens deleted successfully in {}ms", System.currentTimeMillis() - startTime);
     }
 }

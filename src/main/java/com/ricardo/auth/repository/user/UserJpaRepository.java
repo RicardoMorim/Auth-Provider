@@ -2,8 +2,6 @@ package com.ricardo.auth.repository.user;
 
 import com.ricardo.auth.core.Role;
 import com.ricardo.auth.domain.user.AuthUser;
-import com.ricardo.auth.helper.RoleMapper;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -32,6 +30,7 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
      * @param email the email
      * @return the optional
      */
+    @Query("SELECT u FROM #{#entityName} u LEFT JOIN FETCH u.roles WHERE u.email.email = :email")
     Optional<U> findByEmail_Email(String email);
 
     /**
@@ -40,6 +39,7 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
      * @param username the username
      * @return the optional
      */
+    @Query("SELECT u FROM #{#entityName} u LEFT JOIN FETCH u.roles WHERE u.username.username = :username")
     Optional<U> findByUsername_Username(String username);
 
     /**
@@ -59,14 +59,15 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
     boolean existsByUsername_Username(String username);
 
     @Override
-    default Optional<U> findByEmail(String email) {
-        return findByEmail_Email(email);
+    default Optional<U> findByUsername(String username) {
+        return findByUsernameWithRoles(username);
     }
 
     @Override
-    default Optional<U> findByUsername(String username) {
-        return findByUsername_Username(username);
+    default Optional<U> findByEmail(String email) {
+        return findByEmailWithRoles(email);
     }
+
 
     @Override
     default boolean existsByEmail(String email) {
@@ -114,9 +115,9 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
 
     @Override
     @Query("SELECT u FROM #{#entityName} u LEFT JOIN u.roles r WHERE " +
-            "(:username IS NULL OR u.username.username LIKE %:username%) AND " +
-            "(:email IS NULL OR u.email.email LIKE %:email%) AND " +
-            "(:role IS NULL OR r IN :roleList) AND " +
+            "(:username IS NULL OR u.username.username LIKE CONCAT('%', :username, '%')) AND " +
+            "(:email IS NULL OR u.email.email LIKE CONCAT('%', :email, '%')) AND " +
+            "(:roleList IS NULL OR r IN :roleList) AND " +
             "(:createdAfter IS NULL OR u.createdAt >= :createdAfter) AND " +
             "(:createdBefore IS NULL OR u.createdAt <= :createdBefore)")
     Page<U> findAllWithFilters(
@@ -131,5 +132,13 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
     @Query("SELECT u FROM #{#entityName} u WHERE " +
             "u.username.username LIKE %:query% OR u.email.email LIKE %:query%")
     Page<U> searchByQuery(@Param("query") String query, Pageable pageable);
+
+
+    @Query("SELECT u FROM #{#entityName} u LEFT JOIN FETCH u.roles WHERE u.username.username = :username")
+    Optional<U> findByUsernameWithRoles(@Param("username") String username);
+
+
+    @Query("SELECT u FROM #{#entityName} u LEFT JOIN FETCH u.roles WHERE u.email.email = :email")
+    Optional<U> findByEmailWithRoles(@Param("email") String email);
 
 }

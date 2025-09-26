@@ -189,7 +189,7 @@ class PasswordResetServiceImplTest {
 
         // Then
         verify(passwordEncoder).encode(newPassword);
-        verify(userService).updateEmailAndUsername(eq(userId), any(String.class), any(String.class));
+        verify(userService).updatePassword(eq(userId), any(String.class));
         verify(tokenRepository).saveToken(argThat(PasswordResetToken::isUsed));
         verify(tokenRepository).invalidateTokensForUser(eq(user.getEmail()), any(Instant.class));
 

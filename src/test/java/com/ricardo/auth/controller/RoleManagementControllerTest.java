@@ -79,7 +79,7 @@ class RoleManagementControllerTest {
     @BeforeEach
     void setUp() throws Exception {
         // Clear database
-        userRepository.deleteAll();
+        userService.deleteAllUsers();
 
         // Create test user with basic USER role
         testUser = new User(
@@ -503,6 +503,8 @@ class RoleManagementControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(addRequest)))
                 .andExpect(status().isOk());
+
+        Thread.sleep(300);
 
         // Step 3: Verify role was added
         mockMvc.perform(get("/api/users/{username}/roles", testUser.getUsername())

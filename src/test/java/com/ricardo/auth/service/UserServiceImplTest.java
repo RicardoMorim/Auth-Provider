@@ -9,7 +9,10 @@ import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.autoconfigure.data.web.SpringDataWebProperties;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
@@ -228,7 +231,9 @@ class UserServiceImplTest {
         userRepository.save(secondUser);
 
         // Act
-        List<User> users = userService.getAllUsers();
+        Pageable pageable = PageRequest.of(0,10);
+
+        List<User> users = userService.getAllUsers(pageable, null, null, null, null, null);
 
         // Assert
         assertEquals(2, users.size());

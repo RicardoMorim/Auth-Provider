@@ -9,6 +9,7 @@ import com.ricardo.auth.domain.domainevents.UserRoleAddedEvent;
 import com.ricardo.auth.domain.domainevents.UserRoleRemovedEvent;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.UserRolesResponse;
+import com.ricardo.auth.helper.CacheHelper;
 import com.ricardo.auth.helper.IdConverter;
 import com.ricardo.auth.helper.RoleMapper;
 import lombok.extern.slf4j.Slf4j;
@@ -41,6 +42,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     private final AuthProperties authProperties;
     private final Publisher eventPublisher;
     private final IdConverter<ID> idConverter;
+    private final CacheHelper<U, R, ID> cacheHelper;
 
     /**
      * Instantiates a new Role service.
@@ -54,12 +56,13 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public RoleServiceImpl(UserService<U, R, ID> userService,
                            RoleMapper<R> roleMapper,
                            AuthProperties authProperties,
-                           Publisher eventPublisher, IdConverter<ID> idConverter) {
+                           Publisher eventPublisher, IdConverter<ID> idConverter, CacheHelper<U, R, ID> cacheHelper) {
         this.userService = userService;
         this.roleMapper = roleMapper;
         this.authProperties = authProperties;
         this.eventPublisher = eventPublisher;
         this.idConverter = idConverter;
+        this.cacheHelper = cacheHelper;
     }
 
     @Override
@@ -78,6 +81,11 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             // Convert string to role type
             R role = roleMapper.mapRole(roleName.trim().toUpperCase());
 
+            if (role == null) {
+                log.warn("Invalid role name: {}", roleName);
+                throw new IllegalArgumentException("Invalid role: " + roleName);
+            }
+
             // Check if user already has this role
             if (user.getRoles().contains(role)) {
                 log.warn("User {} already has role {}", userId, roleName);
@@ -86,10 +94,12 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
 
             // Add role to user
             user.addRole(role);
-            userService.updateEmailAndUsername(userId, user.getEmail(), user.getUsername());
+            userService.updateUser(userId, user);
 
             log.info("Role {} added to user {} by admin {} with reason: {}",
                     roleName, userId, getCurrentUsername(), reason);
+
+            this.cacheHelper.evictUserCache(user);
 
             // Publish event if enabled
             if (authProperties.getRoleManagement().isEnableRoleEvents()) {
@@ -138,7 +148,9 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             log.info("Role {} removed from user {} by admin {} with reason: {}",
                     roleName, userId, getCurrentUsername(), reason);
 
-            // Publish event if enabled
+
+            this.cacheHelper.evictUserCache(user);
+
             if (authProperties.getRoleManagement().isEnableRoleEvents()) {
                 eventPublisher.publishEvent(new UserRoleRemovedEvent(
                         user.getUsername(),
@@ -154,7 +166,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
-    @Cacheable(value = "userHasRoleCache", key = "#roleName")
+    @Cacheable(value = "userHasRoleCache", key = "#userId + '::' + #roleName")
     public boolean userHasRole(ID userId, String roleName) {
         try {
             U user = userService.getUserById(userId);
@@ -170,7 +182,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
-    @Cacheable(value = "getUserRolesCache", key = "#userId")
+    @Cacheable(value = "getUserRolesCache", key = "#userId", condition = "#userId != null")
     public Set<R> getSetUserRoles(ID userId) {
         U user = userService.getUserById(userId);
 
@@ -178,8 +190,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('USER_READ')")
-    @Cacheable(value = "getUserRolesCache", key = "#userId")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Cacheable(value = "getUserRolesCache", key = "#userId", condition = "#userId != null")
     public UserRolesResponse getUserRoles(ID userId) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID cannot be null");
@@ -237,6 +249,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
                 removeRoleFromUser(userId, roleName, reason);
             }
         }
+
+        cacheHelper.evictUserCache(userService.getUserById(userId));
 
         log.info("Bulk role update completed for user {}", userId);
     }

@@ -224,10 +224,10 @@ class RoleServiceImplTest {
      * Gets user roles with null user id should throw exception.
      */
     @Test
-    @WithMockUser(roles = {"ADMIN", "USER_READ"})
+    @WithMockUser(roles = {"ADMIN"})
     void getUserRoles_WithNullUserId_ShouldThrowException() {
         // When & Then
-        assertThatThrownBy(() -> roleService.getUserRoles((UUID) null))
+        assertThatThrownBy(() -> roleService.getUserRoles(null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessageContaining("User ID cannot be null");
     }

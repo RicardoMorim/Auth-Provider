@@ -2,7 +2,6 @@ package com.ricardo.auth.controller;
 
 import com.ricardo.auth.core.Role;
 import com.ricardo.auth.core.UserService;
-import com.ricardo.auth.domain.DatabaseOperation;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.dto.UpdateUserRequestDTO;
@@ -10,7 +9,6 @@ import com.ricardo.auth.dto.UserDTO;
 import com.ricardo.auth.dto.UserDTOMapper;
 import com.ricardo.auth.factory.AuthUserFactory;
 import com.ricardo.auth.helper.IdConverter;
-import com.ricardo.auth.service.UserMetricsService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -19,7 +17,6 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -39,13 +36,10 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
     private final AuthUserFactory<U, R, ID> userBuilder;
     private final IdConverter<ID> idConverter;
 
-    private final UserMetricsService metricsCollector;
-
-    public UserController(UserService<U, R, ID> userService, AuthUserFactory<U, R, ID> userBuilder, IdConverter<ID> idConverter, UserMetricsService metricsCollector) {
+    public UserController(UserService<U, R, ID> userService, AuthUserFactory<U, R, ID> userBuilder, IdConverter<ID> idConverter) {
         this.userService = userService;
         this.userBuilder = userBuilder;
         this.idConverter = idConverter;
-        this.metricsCollector = metricsCollector;
     }
 
     @PostMapping("/create")
@@ -95,11 +89,7 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
     @DeleteMapping("/delete/{username}")
     @PreAuthorize("hasRole('ADMIN') or @userSecurityService.isOwnerUsername(authentication.name, #username)")
     public ResponseEntity<Void> deleteUser(@PathVariable String username, Authentication authentication) {
-        U user = userService.getUserByUserName(username);
-        if (user == null) {
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
-        }
-        userService.deleteUser(user.getId());
+        userService.deleteUserByUsername(username);
         return ResponseEntity.noContent().build();
     }
 
@@ -182,12 +172,6 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
         Page<UserDTO> pagedUserDTOs = new PageImpl<>(userDTOs, pageable, users.size());
 
         return ResponseEntity.ok(pagedUserDTOs);
-    }
-
-    // TODO - REMOVE THIS
-    @GetMapping("/metrics/db-operations")
-    public List<DatabaseOperation> getDatabaseOperations() {
-        return metricsCollector.getOperations();
     }
 
 

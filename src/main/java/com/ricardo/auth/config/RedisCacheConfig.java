@@ -1,7 +1,9 @@
+// Java
 package com.ricardo.auth.config;
 
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.hibernate6.Hibernate6Module;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import org.springframework.cache.annotation.EnableCaching;
 import org.springframework.context.annotation.Bean;
@@ -22,6 +24,10 @@ public class RedisCacheConfig {
     private ObjectMapper redisObjectMapper() {
         ObjectMapper mapper = new ObjectMapper();
         mapper.registerModule(new JavaTimeModule());
+
+        Hibernate6Module hbm = new Hibernate6Module();
+        hbm.enable(Hibernate6Module.Feature.REPLACE_PERSISTENT_COLLECTIONS);
+        mapper.registerModule(hbm);
 
         mapper.activateDefaultTyping(
                 mapper.getPolymorphicTypeValidator(),

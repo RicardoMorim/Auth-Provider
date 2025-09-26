@@ -1,6 +1,8 @@
 package com.ricardo.auth.domain.user;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.UuidGenerator;
@@ -53,6 +55,8 @@ public class User implements AuthUser<UUID, AppRole> {
     )
     @Column(name = "role")
     @BatchSize(size = 25)
+    @JsonSerialize(as = java.util.Set.class)
+    @JsonDeserialize(as = java.util.HashSet.class)
     private Set<AppRole> roles = new HashSet<>();
 
     private Instant createdAt;
@@ -83,7 +87,7 @@ public class User implements AuthUser<UUID, AppRole> {
         this.password = password;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
-        this.roles = new HashSet<>(); // dont add any roles, let the service handle it so any custom role can be added
+        this.roles = new HashSet<>(); // don't add any roles, let the service handle it so any custom role can be added
     }
 
     @Override

@@ -12,6 +12,7 @@ minimal configuration required.
 > 🚀 **Zero-configuration setup** - Just add the dependency and you're ready to go!  
 > 🔐 **Production-ready security** - Built-in password policies, JWT tokens, CSRF protection, and role-based access  
 > 📚 **Complete documentation** - Comprehensive guides for setup, configuration, and deployment
+> 📈 **BenchMark results** - This library was stress tested with 100k users! Find the results [here](./benchmark_results/Conclusions.md)
 
 ## ✨ What You Get
 
@@ -1021,6 +1022,20 @@ This project is **production-ready** for its current feature set:
 
 **Future enhancements** are planned based on community needs and contributions. See [CHANGELOG.md](CHANGELOG.md) for
 details.
+
+## 📈 Benchmarks
+
+We ran end-to-end benchmarks comparing the system with database indexes and cache enabled vs. without indexes.
+
+- Read-heavy operations: with indexes, throughput improved by ~21% and average latency dropped ~22% in sequential reads.
+- Listing/pagination: without indexes, getAllUsers-style queries were up to ~73x slower on large datasets.
+- Concurrent load: per-request latency roughly doubled without indexes; with indexes the system sustained higher RPS.
+- Database view: aggregate DB latency increased from ~0.8 ms to ~6 ms on average without indexes (P99: ~6 ms → ~46 ms).
+- Writes: user creation performance was virtually identical in both scenarios (no meaningful regression with indexes).
+
+Notes:
+- One concurrent run with indexes hit a client-side TCP port exhaustion on Windows, which affected reported success rate, not server stability.
+- Full methodology, numbers, and raw results are documented here: [benchmarks](./benchmark_results/Conclusions.md).
 
 ## 🤝 Contributing
 

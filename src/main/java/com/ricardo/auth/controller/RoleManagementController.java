@@ -10,6 +10,7 @@ import com.ricardo.auth.dto.AddRoleRequest;
 import com.ricardo.auth.dto.BulkRoleUpdateRequest;
 import com.ricardo.auth.dto.RemoveRoleRequest;
 import com.ricardo.auth.dto.UserRolesResponse;
+import com.ricardo.auth.helper.VoConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -46,6 +47,7 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
 
     private final RoleService<U, R, ID> roleService;
     private final UserService<U, R, ID> userService;
+    private final VoConverter voConverter;
 
     /**
      * Instantiates a new Role management controller.
@@ -53,9 +55,10 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
      * @param roleService the role service
      * @param userService the user service
      */
-    public RoleManagementController(RoleService<U, R, ID> roleService, UserService<U, R, ID> userService) {
+    public RoleManagementController(RoleService<U, R, ID> roleService, UserService<U, R, ID> userService, VoConverter userVoConverter) {
         this.roleService = roleService;
         this.userService = userService;
+        this.voConverter = userVoConverter;
     }
 
     /**
@@ -64,9 +67,7 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
      */
     private String validateUsername(String usernameStr) {
         try {
-            // Let Username VO handle all validation logic
-            Username username = Username.valueOf(usernameStr);
-            return username.getUsername();
+            return voConverter.usernameFromString(usernameStr).toString();
         } catch (IllegalArgumentException e) {
             log.warn("Username validation failed for '{}': {}", usernameStr, e.getMessage());
             throw e; // Re-throw with original message from Username VO

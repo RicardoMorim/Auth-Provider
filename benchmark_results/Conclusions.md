@@ -1,100 +1,100 @@
-# Benchmark Comparison: Com Índices vs. Sem Índices
+# Benchmark Comparison: With Indexes vs. Without Indexes
 
-Este documento compara os resultados de dois benchmarks executados no projeto Auth Provider, um com índices de banco de
-dados e cache ativos, e outro sem eles.
+This document compares the results of two benchmarks run on the Auth Provider project, one with database indexes and
+cache active, and another without them.
 
-## Visão Geral dos Testes
+## Test Overview
 
-Ambos os testes seguiram o mesmo plano:
+Both tests followed the same plan:
 
-- **Criação de Dataset:** 100.000 usuários
-- **Teste Sequencial:** 60.000 requisições
-- **Teste Concorrente:** 100.000 requisições, 4 threads
-- **Teste de Consulta/Atualização:** 120.000 requisições (60.000 `exists`, 60.000 `update`)
+- **Dataset Creation:** 100,000 users
+- **Sequential Test:** 60,000 requests
+- **Concurrent Test:** 100,000 requests, 4 threads
+- **Query/Update Test:** 120,000 requests (60,000 `exists`, 60,000 `update`)
 
-## Comparação dos Resultados
+## Results Comparison
 
-### 1. Estabilidade e Taxa de Sucesso
+### 1. Stability and Success Rate
 
-| Métrica                   | Com Índices & Cache | Sem Índices |
-|---------------------------|---------------------|-------------|
-| **Taxa de Sucesso Geral** | **88,16%**          | **73,69%**  |
-| **Erros 500 (Servidor)**  | 0                   | 0           |
-| **Erros Concorrentes**    | ~45.000 (Cliente)   | 0 (Cliente) |
+| Metric                   | With Indexes & Cache | Without Indexes |
+|--------------------------|----------------------|-----------------|
+| **Overall Success Rate** | **88.16%**           | **73.69%**      |
+| **500 Errors (Server)**  | 0                    | 0               |
+| **Concurrent Errors**    | ~45,000 (Client)     | 0 (Client)      |
 
-**Observação:** O teste "com índices" teve um gargalo no cliente Python (esgotamento de portas TCP no Windows), causando
-muitas falhas. O teste "sem índices" não apresentou esse problema no cliente.
+**Note:** The "with indexes" test had a bottleneck in the Python client (Windows TCP port exhaustion), causing many
+failures. The "without indexes" test did not have this client issue, perhaps due to it being slower, which allowed 
+windows to have more time to clean up the TCP ports.
 
-### 2. Desempenho de Criação de Usuários (Escrita)
+### 2. User Creation Performance (Write)
 
-| Métrica                                    | Com Índices & Cache | Sem Índices |
-|--------------------------------------------|---------------------|-------------|
-| **Latência Média (ms)**                    | ~145 ms             | ~145 ms     |
-| **Latência Mediana (ms)**                  | ~144 ms             | ~143 ms     |
-| **Tempo Total (aproximado, s)**            | ~3639 s             | ~3639 s     |
-| **Write RPS**                              | ~27,5 req/s         | ~27,5 req/s |
-| **Latência Média `createUser` no DB (ms)** | ~1,42 ms            | ~1,46 ms    |
+| Metric                               | With Indexes & Cache | Without Indexes |
+|--------------------------------------|----------------------|-----------------|
+| **Average Latency (ms)**             | ~145 ms              | ~145 ms         |
+| **Median Latency (ms)**              | ~144 ms              | ~143 ms         |
+| **Total Time (approx., s)**          | ~3639 s              | ~3639 s         |
+| **Write RPS**                        | ~27.5 req/s          | ~27.5 req/s     |
+| **Avg `createUser` DB Latency (ms)** | ~1.42 ms             | ~1.46 ms        |
 
-**Resultado:** O desempenho de criação foi **praticamente idêntico**. A ausência de índices não trouxe um ganho
-significativo de velocidade para a escrita pura neste benchmark.
+**Result:** Creation performance was **virtually identical**. The absence of indexes did not bring a significant speed
+gain for pure write operations in this benchmark.
 
-### 3. Desempenho de Leitura (Sequencial)
+### 3. Read Performance (Sequential)
 
-| Métrica                                     | Com Índices & Cache | Sem Índices     |
-|---------------------------------------------|---------------------|-----------------|
-| **Latência Média (ms)**                     | **~21 ms**          | **~27 ms**      |
-| **Latência Mediana (ms)**                   | **~23 ms**          | **~31 ms**      |
-| **Read RPS (Sequencial)**                   | **~46,7 req/s**     | **~36,7 req/s** |
-| **Latência Média `userExists` no DB (ms)**  | **~0,29 ms**        | **~0,30 ms**    |
-| **Latência Média `getUserById` no DB (ms)** | **~0,24 ms**        | **~0,19 ms**    |
-| **Latência Média `getAllUsers` no DB (ms)** | **~0,38 ms**        | **~28 ms**      |
+| Metric                                | With Indexes & Cache | Without Indexes |
+|---------------------------------------|----------------------|-----------------|
+| **Average Latency (ms)**              | **~21 ms**           | **~27 ms**      |
+| **Median Latency (ms)**               | **~23 ms**           | **~31 ms**      |
+| **Sequential Read RPS**               | **~46.7 req/s**      | **~36.7 req/s** |
+| **Avg `userExists` DB Latency (ms)**  | **~0.29 ms**         | **~0.30 ms**    |
+| **Avg `getUserById` DB Latency (ms)** | **~0.24 ms**         | **~0.19 ms**    |
+| **Avg `getAllUsers` DB Latency (ms)** | **~0.38 ms**         | **~28 ms**      |
 
-**Resultado:** O desempenho de leitura foi **significativamente pior** sem os índices. A latência média aumentou ~22% e
-o throughput caiu ~21%. A operação de listagem/paginação (`getAllUsers`) ficou **~73 vezes mais lenta**.
+**Result:** Read performance was **significantly worse** without indexes. Average latency increased by ~22% and
+throughput dropped by ~21%. The listing/pagination operation (`getAllUsers`) became **~73 times slower**.
 
-### 4. Desempenho de Consulta/Atualização Mista
+### 4. Mixed Query/Update Performance
 
-| Métrica                 | Com Índices & Cache | Sem Índices     |
-|-------------------------|---------------------|-----------------|
-| **Latência Média (ms)** | ~30 ms              | **~24 ms**      |
-| **Throughput (RPS)**    | ~33,3 req/s         | **~41,4 req/s** |
+| Metric                   | With Indexes & Cache | Without Indexes |
+|--------------------------|----------------------|-----------------|
+| **Average Latency (ms)** | ~30 ms               | **~24 ms**      |
+| **Throughput (RPS)**     | ~33.3 req/s          | **~41.4 req/s** |
 
-**Resultado:** Curiosamente, este teste mostrou uma leve **melhora** em latência e throughput. Isso pode estar
-relacionado a outros fatores ou ao perfil específico deste teste.
+**Result:** Interestingly, this test showed a slight **improvement** in latency and throughput. This might be related to
+other factors or the specific profile of this test.
 
-### 5. Desempenho Sob Carga Concorrente (Stress Test)
+### 5. Performance Under Concurrent Load (Stress Test)
 
-| Métrica                             | Com Índices & Cache     | Sem Índices      |
-|-------------------------------------|-------------------------|------------------|
-| **Taxa de Sucesso**                 | 55% (devido ao cliente) | **100%**         |
-| **Throughput de Sucessos (RPS)**    | ~139 req/s              | **~122,8 req/s** |
-| **Latência Média de Sucessos (ms)** | ~16 ms                  | **~32 ms**       |
+| Metric                                   | With Indexes & Cache | Without Indexes  |
+|------------------------------------------|----------------------|------------------|
+| **Success Rate**                         | 55% (due to client)  | **100%**         |
+| **Successful Requests Throughput (RPS)** | ~139 req/s           | **~122.8 req/s** |
+| **Avg Successful Request Latency (ms)**  | ~16 ms               | **~32 ms**       |
 
-**Resultado:** Sem o gargalo do cliente, o teste concorrente completo mostrou que o backend sem índices é *
-*significativamente mais lento** para processar requisições individuais sob carga.
+**Result:** Without the client bottleneck, the full concurrent test showed that the backend without indexes is *
+*significantly slower** at processing individual requests under load.
 
-### 6. Métricas Gerais do Banco de Dados
+### 6. Overall Database Metrics
 
-| Métrica                    | Com Índices & Cache | Sem Índices |
-|----------------------------|---------------------|-------------|
-| **Latência Média DB (ms)** | **~0,8 ms**         | **~6,0 ms** |
-| **Latência P99 DB (ms)**   | **~6 ms**           | **~46 ms**  |
+| Metric                  | With Indexes & Cache | Without Indexes |
+|-------------------------|----------------------|-----------------|
+| **Avg DB Latency (ms)** | **~0.8 ms**          | **~6.0 ms**     |
+| **DB P99 Latency (ms)** | **~6 ms**            | **~46 ms**      |
 
-**Resultado:** O desempenho agregado do banco de dados foi **substancialmente degradado** sem os índices, tanto na média
-quanto nas operações mais lentas.
+**Result:** Overall database performance was **substantially degraded** without indexes, both in average latency and for
+slower operations.
 
-## Conclusão
+## Conclusion
 
-A comparação dos benchmarks confirma claramente o trade-off clássico de índices de banco de dados:
+The benchmark comparison clearly confirms the classic database index trade-off:
 
-- **Não houve melhora significativa no desempenho de escrita (criação de usuário)**. Na verdade, foi praticamente igual.
-- **Houve uma degradação catastrófica no desempenho de consultas que exigem varredura ou ordenação de grandes conjuntos
-  de dados** (como paginação/listagem), tornando-as dezenas de vezes mais lentas.
-- Isso impactou negativamente o desempenho geral das operações de leitura sequencial.
-- Sob carga concorrente, o backend sem índices ficou significativamente mais lento para responder a cada requisição
-  individual.
-- O desempenho agregado do banco de dados piorou consideravelmente.
+- **There was no significant improvement in write performance (user creation)**. It was virtually identical.
+- **There was a catastrophic degradation in performance for queries requiring scans or sorts on large datasets** (like
+  pagination/listing), making them dozens of times slower.
+- This negatively impacted the overall performance of sequential read operations.
+- Under concurrent load, the backend without indexes was significantly slower to respond to individual requests.
+- Overall database performance was considerably worse.
 
-Portanto, os índices de banco de dados são **críticos** para a performance de leitura em grandes conjuntos de dados,
-mesmo que o ganho esperado na velocidade bruta de `INSERT` não tenha sido dramaticamente observado nas métricas finais
-do benchmark. A estabilidade do throughput e a latência sob carga são claramente prejudicadas pela ausência dos índices.
+Therefore, database indexes are **critical** for read performance on large datasets, even though the expected speed gain
+for raw `INSERT` speed was not dramatically observed in the final benchmark metrics. The stability of throughput and
+latency under load is clearly impaired by the absence of indexes.

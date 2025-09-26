@@ -18,6 +18,8 @@ import java.util.Optional;
  */
 public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
 
+    void deleteAllUsers();
+
     /**
      * Gets user by id.
      *
@@ -70,6 +72,7 @@ public interface UserService<U extends AuthUser<ID, R>, R extends Role, ID> {
      */
     void deleteUser(ID id);
 
+    void deleteUserByUsername(String username);
     /**
      * User exists boolean.
      *

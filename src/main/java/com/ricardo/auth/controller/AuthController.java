@@ -30,6 +30,7 @@ import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
@@ -123,6 +124,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             )
     })
     @PostMapping(value = "/login", consumes = MediaType.APPLICATION_JSON_VALUE)
+    @Transactional
     public ResponseEntity<?> login(
             @Parameter(description = "Login credentials", required = true)
             @Valid @RequestBody LoginRequestDTO request,

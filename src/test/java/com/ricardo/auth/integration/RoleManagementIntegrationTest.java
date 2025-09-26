@@ -78,7 +78,7 @@ class RoleManagementIntegrationTest {
     @BeforeEach
     void setUp() throws Exception {
         // Clear database
-        userRepository.deleteAll();
+        userService.deleteAllUsers();
 
         // Create test user with basic USER role
         testUser = new User(
@@ -87,7 +87,7 @@ class RoleManagementIntegrationTest {
                 Password.valueOf("TestPassword123!", passwordEncoder, passwordPolicyService)
         );
         testUser.addRole(AppRole.USER);
-        testUser = userRepository.saveUser(testUser);
+        testUser = userService.createUser(testUser);
 
         // Create admin user
         adminUser = new User(
@@ -96,7 +96,7 @@ class RoleManagementIntegrationTest {
                 Password.valueOf("AdminPassword123!", passwordEncoder, passwordPolicyService)
         );
         adminUser.addRole(AppRole.ADMIN);
-        adminUser = userRepository.saveUser(adminUser);
+        adminUser = userService.createUser(adminUser);
 
         // Generate admin access token for authentication
         String adminToken = jwtService.generateAccessToken(
@@ -428,7 +428,7 @@ class RoleManagementIntegrationTest {
                 Password.valueOf("VipPassword123!", passwordEncoder, passwordPolicyService)
         );
         vipUser.addRole(AppRole.VIP);
-        vipUser = userRepository.saveUser(vipUser);
+        vipUser = userService.createUser(vipUser);
 
         String vipToken = jwtService.generateAccessToken(
                 vipUser.getEmail(),

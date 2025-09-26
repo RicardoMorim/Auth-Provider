@@ -1,5 +1,7 @@
 package com.ricardo.auth.repository;
 
+import com.ricardo.auth.autoconfig.AuthAutoConfiguration;
+import com.ricardo.auth.config.SecurityConfig;
 import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.helper.*;
@@ -10,18 +12,14 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.context.annotation.Import;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import javax.sql.DataSource;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
@@ -36,29 +34,15 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @Testcontainers
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:postgresql://localhost:5432/AuthLibraryTest",
-        "spring.datasource.username=postgres",
-        "spring.datasource.password=8080",
-        "spring.datasource.driver-class-name=org.postgresql.Driver",
         "ricardo.auth.repository.type=POSTGRESQL",
-        // Disable JPA/Hibernate completely when using PostgreSQL
-        "spring.jpa.hibernate.ddl-auto=none",
+        "ricardo.auth.repository.database.url=jdbc:postgresql://localhost:5432/AuthLibraryTest",
+        "ricardo.auth.repository.database.username=postgres",
+        "ricardo.auth.repository.database.password=8080",
+        "ricardo.auth.repository.database.driver-class-name=org.postgresql.Driver",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
 })
-@Transactional
 class PostgreSQLUserRepositoryTest {
 
-    /**
-     * The constant postgres.
-     */
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18beta3")
-            .withDatabaseName("AuthLibraryTest")
-            .withUsername("postgres")
-            .withPassword("8080");
-
-    @Autowired
-    private DataSource dataSource;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -66,39 +50,26 @@ class PostgreSQLUserRepositoryTest {
     @Autowired
     private PasswordPolicyService passwordPolicyService;
 
+    @Autowired
     private IdConverter<UUID> idConverter;
-    private UserRepository<User, AppRole, UUID> repository;
-    private UserRowMapper<User, AppRole, UUID> userRowMapper;
-    private UserSqlParameterMapper<User> userSqlParameterMapper;
-    private RoleMapper<AppRole> roleMapper;
 
-    /**
-     * Configure properties.
-     *
-     * @param registry the registry
-     */
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
-    }
+    @Autowired
+    private UserRepository<User, AppRole, UUID> repository;
+
+    @Autowired
+    private UserRowMapper<User, AppRole, UUID> userRowMapper;
+
+    @Autowired
+    private UserSqlParameterMapper<User> userSqlParameterMapper;
+
+    @Autowired
+    private RoleMapper<AppRole> roleMapper;
 
     /**
      * Sets up.
      */
     @BeforeEach
     void setUp() {
-        idConverter = new UUIDConverter();
-        userRowMapper = new UserRowMapperImpl(idConverter);
-        userSqlParameterMapper = new UserSqlMapper();
-        roleMapper = new AppRoleMapper();
-
-        repository = new UserPostgreSQLRepository<>(userRowMapper, userSqlParameterMapper, roleMapper, idConverter, dataSource);
-
         // Clean up any existing data
         repository.deleteAll();
     }
@@ -520,7 +491,7 @@ class PostgreSQLUserRepositoryTest {
      */
     @Test
     @DisplayName("Should handle PostgreSQL timestamp operations correctly")
-    void shouldHandlePostgreSQLTimestampOperations() {
+    void shouldHandlePostgreSQLTimestampOperations() throws InterruptedException {
         // Arrange
         User user = createTestUser("timestampuser", "timestamp@example.com");
 
@@ -532,6 +503,8 @@ class PostgreSQLUserRepositoryTest {
         assertThat(savedUser.getUpdatedAt()).isNotNull();
         assertThat(savedUser.getCreatedAt()).isBeforeOrEqualTo(Instant.now());
         assertThat(savedUser.getUpdatedAt()).isBeforeOrEqualTo(Instant.now());
+
+        Thread.sleep(100);
 
         // Test update timestamp
         Instant originalUpdatedAt = savedUser.getUpdatedAt();
@@ -702,12 +675,12 @@ class PostgreSQLUserRepositoryTest {
      */
     @Test
     @DisplayName("Should preserve creation timestamp on update")
-    void shouldPreserveCreationTimestampOnUpdate() {
+    void shouldPreserveCreationTimestampOnUpdate() throws InterruptedException {
         // Arrange
         User user = createTestUser("timestamptest", "timestamp@example.com");
         User savedUser = repository.saveUser(user);
         Instant originalCreatedAt = savedUser.getCreatedAt();
-
+        Thread.sleep(100);
         // Act - Update user
         savedUser.setUsername("updated");
         User updatedUser = repository.saveUser(savedUser);

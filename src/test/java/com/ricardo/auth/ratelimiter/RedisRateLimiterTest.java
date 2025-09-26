@@ -4,6 +4,7 @@ import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.TestPropertySource;
@@ -26,6 +27,7 @@ class RedisRateLimiterTest {
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
     @Autowired
+    @Qualifier("redisRateLimiter")
     private RedisRateLimiter rateLimiter;
 
     /**
