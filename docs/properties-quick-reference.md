@@ -207,7 +207,6 @@ ricardo:
       reset-template: "default"              # Email template name
 ```
 
-
 ## 🔧 Environment-Specific Examples
 
 ### application-dev.yml

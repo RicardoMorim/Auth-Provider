@@ -1,4 +1,7 @@
 package com.ricardo.auth.repository.PasswordResetToken;
 
-public interface DefaultJpaPasswordResetTokenRepository extends JpaPasswordResetTokenRepository{
+/**
+ * The interface Default jpa password reset token repository.
+ */
+public interface DefaultJpaPasswordResetTokenRepository extends JpaPasswordResetTokenRepository {
 }

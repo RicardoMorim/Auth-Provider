@@ -8,13 +8,13 @@ import com.ricardo.auth.domain.user.AppRole;
  *
  */
 public class AppRoleMapper implements RoleMapper<AppRole> {
-    
+
     @Override
     public AppRole mapRole(String roleString) throws RoleMappingException {
         if (roleString == null || roleString.trim().isEmpty()) {
             throw new IllegalArgumentException("Role string cannot be null or empty");
         }
-        
+
         try {
             return AppRole.valueOf(roleString.trim().toUpperCase());
         } catch (IllegalArgumentException e) {

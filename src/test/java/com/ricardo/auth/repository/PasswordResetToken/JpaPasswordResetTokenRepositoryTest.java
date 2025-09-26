@@ -30,6 +30,9 @@ class JpaPasswordResetTokenRepositoryTest {
     @Autowired
     private JpaPasswordResetTokenRepository repository;
 
+    /**
+     * Save token should persist token.
+     */
     @Test
     void saveToken_ShouldPersistToken() {
         // Given
@@ -52,6 +55,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(saved.isUsed()).isFalse();
     }
 
+    /**
+     * Find by token and not used with valid token should return token.
+     */
     @Test
     void findByTokenAndNotUsed_WithValidToken_ShouldReturnToken() {
         // Given
@@ -72,6 +78,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(found.get().isUsed()).isFalse();
     }
 
+    /**
+     * Find by token and not used with used token should return empty.
+     */
     @Test
     void findByTokenAndNotUsed_WithUsedToken_ShouldReturnEmpty() {
         // Given
@@ -92,6 +101,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    /**
+     * Find by token and not used with nonexistent token should return empty.
+     */
     @Test
     void findByTokenAndNotUsed_WithNonexistentToken_ShouldReturnEmpty() {
         // When
@@ -101,6 +113,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    /**
+     * Invalidate tokens for user should mark tokens as used.
+     */
     @Test
     void invalidateTokensForUser_ShouldMarkTokensAsUsed() {
         // Given
@@ -130,6 +145,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(updated2.getUsedAt()).isNotNull();
     }
 
+    /**
+     * Count reset attempts for email since should count correctly.
+     */
     @Test
     void countResetAttemptsForEmailSince_ShouldCountCorrectly() {
         // Given
@@ -174,6 +192,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(count).isGreaterThanOrEqualTo(0);
     }
 
+    /**
+     * Save token with existing token should update token.
+     */
     @Test
     void saveToken_WithExistingToken_ShouldUpdateToken() {
         // Given
@@ -198,6 +219,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(updated.getUsedAt()).isNotNull();
     }
 
+    /**
+     * Find by token and not used with expired token should return empty.
+     */
     @Test
     void findByTokenAndNotUsed_WithExpiredToken_ShouldReturnEmpty() {
         // Given - The repository DOES check expiration in the JPA implementation
@@ -216,6 +240,9 @@ class JpaPasswordResetTokenRepositoryTest {
         assertThat(found).isEmpty();
     }
 
+    /**
+     * Invalidate tokens for user with no tokens should not throw exception.
+     */
     @Test
     void invalidateTokensForUser_WithNoTokens_ShouldNotThrowException() {
         // Given

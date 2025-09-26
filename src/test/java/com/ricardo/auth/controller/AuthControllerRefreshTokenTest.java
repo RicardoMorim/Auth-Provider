@@ -392,6 +392,11 @@ class AuthControllerRefreshTokenTest {
     }
 
 
+    /**
+     * Test logout with csrf should return ok.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void testLogout_WithCsrf_ShouldReturnOk() throws Exception {
         mockMvc.perform(post("/api/auth/logout")

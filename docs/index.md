@@ -29,22 +29,22 @@ Welcome to the Ricardo Auth Spring Boot Starter documentation! This index helps 
 
 ### 🛠 **Setting Up & Configuring**
 
-| Guide                                                                 | What You'll Learn                                                      | Time Needed |
-|-----------------------------------------------------------------------|------------------------------------------------------------------------|-------------|
-| **[Configuration Overview](configuration/index.md)**                  | All configuration options and guides                                   | 5 min       |
-| **[Basic Configuration](configuration/basic.md)**                     | Quick setup and common settings                                        | 10 min      |
-| **[Database Configuration](configuration/database.md)**               | H2, PostgreSQL, MySQL setup                                            | 15 min      |
-| **[Password Policy Configuration](configuration/password-policy.md)** | Password rules and validation                                          | 10 min      |
+| Guide                                                                 | What You'll Learn                                                        | Time Needed |
+|-----------------------------------------------------------------------|--------------------------------------------------------------------------|-------------|
+| **[Configuration Overview](configuration/index.md)**                  | All configuration options and guides                                     | 5 min       |
+| **[Basic Configuration](configuration/basic.md)**                     | Quick setup and common settings                                          | 10 min      |
+| **[Database Configuration](configuration/database.md)**               | H2, PostgreSQL, MySQL setup                                              | 15 min      |
+| **[Password Policy Configuration](configuration/password-policy.md)** | Password rules and validation                                            | 10 min      |
 | **[Security Guide](security-guide.md)**                               | Production security, HTTPS, cookies, CORS, password reset, rate limiting | 20 min      |
 
 ### 🔗 **Using the API & Examples**
 
-| Guide                                                       | What You'll Learn                                              | Time Needed |
-|-------------------------------------------------------------|----------------------------------------------------------------|-------------|
+| Guide                                                       | What You'll Learn                                             | Time Needed |
+|-------------------------------------------------------------|---------------------------------------------------------------|-------------|
 | **[API Reference](api-reference.md)**                       | All endpoints, cookie auth, password reset, role management   | 15 min      |
-| **[Examples Overview](examples/index.md)**                  | Browse all available examples                                  | 5 min       |
+| **[Examples Overview](examples/index.md)**                  | Browse all available examples                                 | 5 min       |
 | **[Basic Web App](examples/basic-web-app.md)**              | Simple Spring Boot web application with cookie authentication | 20 min      |
-| **[Mobile API Backend](examples/mobile-api.md)**            | REST API for mobile apps with CORS configuration             | 30 min      |
+| **[Mobile API Backend](examples/mobile-api.md)**            | REST API for mobile apps with CORS configuration              | 30 min      |
 | **[Microservices Architecture](examples/microservices.md)** | Enterprise distributed systems                                | 45 min      |
 | **[E-commerce Platform](examples/ecommerce.md)**            | Complete online shopping platform                             | 35 min      |
 | **[Multi-Tenant Application](examples/multi-tenant.md)**    | SaaS platform with tenant isolation                           | 50 min      |

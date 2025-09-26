@@ -1,0 +1,123 @@
+{
+  "Dataset": {
+    "total_requests": 100000,
+    "successful_requests": 0,
+    "success_rate_percent": 0.0,
+    "throughput_rps": 0,
+    "avg_latency_ms": 0,
+    "min_latency_ms": 0,
+    "max_latency_ms": 0,
+    "p50_latency_ms": 0,
+    "p90_latency_ms": 0,
+    "p95_latency_ms": 0,
+    "p99_latency_ms": 0
+  },
+  "Varied": {
+    "total_requests": 160000,
+    "successful_requests": 160000,
+    "success_rate_percent": 100.0,
+    "throughput_rps": 65.06656189518738,
+    "avg_latency_ms": 30.180412239373954,
+    "min_latency_ms": 4.817499999262509,
+    "max_latency_ms": 2111.5029000002323,
+    "p50_latency_ms": 30.680849999953352,
+    "p90_latency_ms": 55.419500000243715,
+    "p95_latency_ms": 62.28825999965011,
+    "p99_latency_ms": 74.05407599956561
+  },
+  "Query/Update": {
+    "total_requests": 120000,
+    "successful_requests": 120000,
+    "success_rate_percent": 100.0,
+    "throughput_rps": 41.38842464680964,
+    "avg_latency_ms": 23.95640959166579,
+    "min_latency_ms": 5.249599999842758,
+    "max_latency_ms": 1998.9881999999852,
+    "p50_latency_ms": 30.810400000063964,
+    "p90_latency_ms": 32.40319999977146,
+    "p95_latency_ms": 32.791300000099,
+    "p99_latency_ms": 34.97699199935596
+  },
+  "Public": {
+    "total_requests": 20,
+    "successful_requests": 20,
+    "success_rate_percent": 100.0,
+    "throughput_rps": 138.08340237503452,
+    "avg_latency_ms": 7.222640000145475,
+    "min_latency_ms": 3.9743000015732832,
+    "max_latency_ms": 54.1360999995959,
+    "p50_latency_ms": 4.281650000848458,
+    "p90_latency_ms": 54.1360999995959,
+    "p95_latency_ms": 54.1360999995959,
+    "p99_latency_ms": 54.1360999995959
+  },
+  "Authenticated": {
+    "total_requests": 20,
+    "successful_requests": 20,
+    "success_rate_percent": 100.0,
+    "throughput_rps": 14.874818612960226,
+    "avg_latency_ms": 20.856689999891387,
+    "min_latency_ms": 5.42929999937769,
+    "max_latency_ms": 32.601400000203284,
+    "p50_latency_ms": 22.454150000157824,
+    "p90_latency_ms": 32.601400000203284,
+    "p95_latency_ms": 32.601400000203284,
+    "p99_latency_ms": 32.601400000203284
+  },
+  "CSRF": {
+    "total_requests": 3,
+    "successful_requests": 1,
+    "success_rate_percent": 33.33333333333333,
+    "throughput_rps": 1,
+    "avg_latency_ms": 17.13999999992666,
+    "min_latency_ms": 17.13999999992666,
+    "max_latency_ms": 17.13999999992666,
+    "p50_latency_ms": 17.13999999992666,
+    "p90_latency_ms": 17.13999999992666,
+    "p95_latency_ms": 17.13999999992666,
+    "p99_latency_ms": 17.13999999992666
+  },
+  "Database_Metrics": {
+    "total_operations": 419617,
+    "successful_operations": 419616,
+    "failed_operations": 1,
+    "db_success_rate_percent": 99.99976168744354,
+    "avg_db_duration_ms": 5.97913091969801,
+    "min_db_duration_ms": 0,
+    "max_db_duration_ms": 1909,
+    "p50_db_duration_ms": 1.0,
+    "p90_db_duration_ms": 28.0,
+    "p95_db_duration_ms": 35.0,
+    "p99_db_duration_ms": 46.0,
+    "operation_types": {
+      "createUser": {
+        "count": 99886,
+        "avg_duration_ms": 1.4588430811124682
+      },
+      "getUserByEmail": {
+        "count": 2,
+        "avg_duration_ms": 25
+      },
+      "getAllUsers": {
+        "count": 79725,
+        "avg_duration_ms": 28.010498588899342
+      },
+      "userExists": {
+        "count": 60000,
+        "avg_duration_ms": 0.29873333333333335
+      },
+      "getUserByUserName": {
+        "count": 60001,
+        "avg_duration_ms": 0.44425926234562757
+      },
+      "getUserById": {
+        "count": 60001,
+        "avg_duration_ms": 0.19324677922034633
+      },
+      "updateEmailAndUsername": {
+        "count": 60001,
+        "avg_duration_ms": 1.2309628172863785
+      }
+    }
+  }
+}

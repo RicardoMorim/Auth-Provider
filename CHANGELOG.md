@@ -2,252 +2,322 @@
 
 All notable changes to the Ricardo Auth Spring Boot Starter will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
+and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
+## [4.0.0] - 2025-09-26
 
+### 🔐 New Authentication Features
 
-## [1.0.0] - 2025-06-24
+**Password Reset System**
 
-### Added
+- **OWASP Compliant**: Secure password reset with time-limited tokens
+- **Email Integration**: Full email support with customizable templates
+- **Rate Limiting**: Protection against password reset abuse
+- **Secure Tokens**: Cryptographically secure reset tokens with expiration
 
-- **Initial Release** of Ricardo Auth Spring Boot Starter
-- **JWT Authentication**: Complete JWT token generation, validation, and management
-- **User Management**: CRUD operations for user entities with domain-driven design
-- **Auto-Configuration**: Spring Boot auto-configuration for zero-setup experience
-- **Security Integration**: Built-in Spring Security configuration with sensible defaults
-- **REST API Endpoints**: Pre-built authentication and user management endpoints
-- **Role-Based Access Control**: Support for USER and ADMIN roles with extensible role system
-- **Password Security**: BCrypt password hashing with automatic salt generation
-- **Configuration Properties**: Comprehensive configuration options via `ricardo.auth` prefix
-- **Domain Objects**: Clean domain entities with value objects (Username, Email, Password)
-- **Exception Handling**: Global exception handling with proper error responses
-- **Validation**: Input validation with Bean Validation (JSR-303)
-- **Documentation**: Comprehensive documentation with examples and guides
+**Role Management API**
 
-### Security Features
+- **Full CRUD**: Complete role management with proper authorization
+- **Admin Controls**: ADMIN-only role creation, modification, and deletion
+- **Role Validation**: Prevention of role deletion if assigned to users
+- **RESTful Design**: Consistent REST API patterns
 
-- **JWT Token Security**: HMAC SHA-256 signing with configurable secrets
-- **Password Encryption**: BCrypt with secure defaults
-- **Input Validation**: Protection against malicious input
-- **CORS Support**: Configurable cross-origin resource sharing
-- **Authorization**: Method-level security with `@PreAuthorize`
+### Domain Event System
 
-### API Endpoints
+- **Event Publishing**: Spring application events for audit logging and for you to use as you wish!
+- **Extensible**: Easy to add custom event listeners for monitoring.
 
-- `POST /api/auth/login` - User authentication with JWT token response
-- `GET /api/auth/me` - Get current authenticated user information
-- `POST /api/users/create` - Create new user account
-- `GET /api/users/{id}` - Get user by ID
-- `GET /api/users/email/{email}` - Get user by email
-- `GET /api/users/exists/{email}` - Check if user exists
-- `PUT /api/users/update/{id}` - Update user information
-- `DELETE /api/users/delete/{id}` - Delete user account
+**OpenAPI Documentation Integration**
 
-### Configuration Options
+- **Complete Swagger Integration**: Full OpenAPI 3.0 documentation with security schemes
+- **Interactive Documentation**: Swagger UI available at `/swagger-ui.html`
+- **Cookie Authentication**: OpenAPI configured for cookie-based auth (consistent with v2.0.0 authentication system)
+- **Comprehensive Endpoints**: All endpoints documented with examples and security requirements
 
-- `ricardo.auth.enabled` - Enable/disable auth module
-- `ricardo.auth.jwt.secret` - JWT signing secret (required)
-- `ricardo.auth.jwt.expiration` - Token expiration time in milliseconds
-- `ricardo.auth.controllers.auth.enabled` - Enable/disable auth endpoints
-- `ricardo.auth.controllers.user.enabled` - Enable/disable user endpoints
+### 🛡️ Enhanced Security Measures
 
-### Dependencies
+**Enhanced Input Validation**
 
-- **Spring Boot**: 3.5.3
-- **Spring Security**: 6.x
-- **Spring Data JPA**: 3.x
-- **JWT**: io.jsonwebtoken:jjwt-api:0.12.6
-- **Java**: 21+ (compatible with 17+)
+- **Sanitization**: Input sanitization to prevent injection attacks
+- **Enhanced Validation**: Comprehensive validation with detailed error messages
+- **Security Headers**: Additional security headers for XSS and clickjacking protection
 
-### Build and Distribution
+**Better Exception Handling**
 
-- **Maven Central**: Available at `io.github.ricardomorim:auth-spring-boot-starter:1.0.0`
-- **GitHub Packages**: Alternative distribution channel
-- **License**: MIT License
-- **Source Code**: Available on [GitHub](https://github.com/RicardoMorim/Auth-Provider)
+- **Comprehensive Error Responses**: Improved error handling with detailed, user-friendly messages
+- **Security-Aware Errors**: Exception responses that don't leak sensitive information
+- **Standardized Error Format**: Consistent error response structure across all endpoints
 
-### Documentation
+### 📚 Complete Documentation Overhaul
 
-- Comprehensive README with quick start guide
-- [Configuration Guide](docs/configuration-guide.md) - Detailed configuration options
-- [API Reference](docs/api-reference.md) - Complete API documentation
-- [Security Guide](docs/security-guide.md) - Security best practices
-- [Examples](docs/examples.md) - Real-world usage examples
-- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+**Developer Documentation**
 
-### Testing
+- **Bean Lifecycle**: Complete documentation of all beans and their dependencies
+- **Configuration Reference**: Comprehensive properties documentation
+- **Architecture Guide**: Domain-driven design patterns and structure
+- **Integration Examples**: Real-world integration patterns
 
-- **Unit Tests**: Complete test coverage for core functionality
-- **Integration Tests**: End-to-end authentication flow testing
-- **Security Tests**: Authentication and authorization testing
-- **Test Utilities**: Helper classes for testing applications using the starter
+**Enhanced API Documentation**
 
-### Performance
-
-- **Stateless Design**: JWT-based stateless authentication
-- **Database Optimization**: Indexed queries for user lookups
-- **Connection Pooling**: HikariCP integration for database connections
-- **Caching**: Prepared for future caching enhancements
-
-### Compatibility
-
-- **Spring Boot**: 3.4.x - 3.5.x
-- **Java**: 17, 21
-- **Databases**: H2, PostgreSQL, MySQL, MariaDB (via JPA)
-- **Build Tools**: Maven 3.6+
-
-## [1.0.1] - 2025-06-24
-
-### Added
-
-- **Comprehensive Documentation Suite**: Complete documentation overhaul with detailed guides
-    - [Configuration Guide](docs/configuration-guide.md) - Complete configuration reference with examples
-    - [API Reference](docs/api-reference.md) - Detailed REST API documentation with examples
-    - [Security Guide](docs/security-guide.md) - Security best practices and implementation guidelines
-    - [Examples](docs/examples.md) - Real-world usage examples for different application types
-    - [Troubleshooting Guide](docs/troubleshooting.md) - Common issues and debugging solutions
-    - [Documentation Index](docs/index.md) - Navigation and organization of all documentation
-- **Spring Boot Auto-Configuration**: Enhanced auto-configuration with `AuthAutoConfiguration` and `AuthProperties`
-    - `AuthAutoConfiguration` class for automatic bean configuration and component scanning
-    - `AuthProperties` class for comprehensive configuration property management
-    - Conditional bean creation based on configuration properties
-- **Configurable Controllers**: Ability to enable/disable auth and user management endpoints independently
-- **User Security Service**: Custom authorization logic with `UserSecurityService` for fine-grained access control
-- **Enhanced Error Handling**: Improved global exception handling with detailed error responses
-- **Maven Central Publishing**: Proper configuration for publishing to Maven Central with GPG signing
-- **GitHub Packages Support**: Alternative distribution channel configuration
-
-### Improved
-
-- **Code Documentation**: Added comprehensive JavaDoc comments to all public classes and methods
-    - Complete JavaDoc coverage for all public APIs in main source code
-    - Detailed parameter and return value documentation
-    - Usage examples and security considerations in documentation
-- **Test Coverage**: Enhanced test suite with detailed JavaDoc and improved test organization
-    - Improved `GlobalExceptionHandlerTest` with comprehensive error scenario testing (25+ test methods)
-    - Enhanced `AuthControllerTest` with better authentication flow testing
-    - Improved `UserControllerTest` with validation and error handling tests
-    - Added `DomainObjectsTest` for comprehensive domain validation testing (40+ test methods)
-    - Added `DtoAndMappingTest` for DTO validation and mapping testing
-    - Enhanced `JwtAuthFilterTest` with comprehensive filter testing scenarios
-    - Improved `SecurityIntegrationTest` with end-to-end security testing
-    - Enhanced `UserServiceImplTest` and `UserDetailsServiceImplTest` with comprehensive service layer testing
-    - Better test documentation with descriptive JavaDoc comments
-- **Domain Value Objects**: Better validation and error messages for `Email`, `Username`, and `Password`
-- **Security Configuration**: Enhanced security setup with proper authentication entry points
-- **Project Structure**: Better organization with auto-configuration package and cleaner separation of concerns
-
-### Fixed
-
-- **POM Configuration**: Corrected SCM URLs and improved Maven publishing configuration
-    - Fixed GitHub repository URL in SCM section
-    - Enhanced Maven publishing configuration with profiles for GitHub Packages and Maven Central
-    - Improved dependency management and exclusion configuration
-- **Import Organization**: Cleaned up imports and removed unused dependencies across all source files
-- **Authentication Flow**: Fixed security configuration for proper JWT authentication
-- **Exception Handling**: Improved error message formatting and status code consistency
-
-### Documentation
-
-- **README Enhancement**: Updated with comprehensive installation, configuration, and usage examples
-- **CONTRIBUTING Guide**: Detailed contribution guidelines with development setup and coding standards
-- **LICENSE**: Added MIT License for clear usage rights
-- **CHANGELOG**: Structured changelog following semantic versioning principles
-
-### Development Experience
-
-- **Better Testing**: Comprehensive test examples for integration and unit testing
-- **Development Setup**: Improved local development configuration with H2 database support
-- **Environment Configuration**: Better separation of development, testing, and production configurations
-- **Debug Support**: Enhanced logging configuration and debugging tools
-
-### Technical Debt Reduction
-
-- **Code Quality**: Consistent code formatting and style across all source files
-- **Test Organization**: Better test structure with clear separation of concerns
-- **Documentation Consistency**: Standardized documentation format and style
-- **Build Process**: Improved Maven configuration for reliable builds and publishing
-
-### Breaking Changes
-
-- None. This release maintains full backward compatibility with v1.0.0
-
-### Migration Notes
-
-- No migration required from v1.0.0
-- New configuration options are optional and have sensible defaults
-- Existing applications will continue to work without changes
-
-## [1.0.2] - 2025-06-24
-
-### Added
-
-- **Fixed errors for proper Maven publishing**: Corrected SCM URLs and improved POM configuration
-
-### Migration Notes
-
-- No migration required from v1.0.1
-- Existing applications will continue to work without changes
--
-
-## [1.1.0] - 2025-06-30
-
-### 🔒 Added - Password Policy System
-
-- **Comprehensive Password Validation**: Configurable password strength requirements
-    - Minimum/maximum length validation
-    - Character type requirements (uppercase, lowercase, digits, special characters)
-    - Customizable special character sets
-    - Common password prevention with built-in protection list
-- **Password Policy Configuration**: Full control over password requirements via `ricardo.auth.password-policy`
-- **Enhanced Error Messages**: Detailed validation feedback for password policy violations
-- **Environment-Specific Policies**: Different password requirements for development vs production
-
-### 📚 Documentation Improvements
-
-- **Restructured README**: Clearer quick start guide with step-by-step instructions
-- **Improved Navigation**: Better organized documentation index with role-based guides
-- **Enhanced Examples**: More practical, real-world usage examples with complete code
-- **Better Troubleshooting**: Emergency quick fixes section with searchable error messages
-- **Configuration Clarity**: Simplified configuration guide with quick setup options
-- **Password Policy Guide**: Comprehensive documentation for new password policy features
-
-### 🔧 Technical Improvements
-
-- **Bean Configuration**: Improved auto-configuration to prevent bean creation conflicts
-- **Repository Architecture**: Better separation with `@NoRepositoryBean` annotations
-- **Test Coverage**: Updated all tests to use password policy compliant passwords
-- **Error Handling**: Enhanced error responses for password policy violations
-
-### 🏗 Breaking Changes
-
-- **Password Requirements**: Existing passwords may need to meet new policy requirements
-- **Default Password Policy**: Minimum 8 characters with character type requirements enabled by default
+- **OpenAPI Integration**: Complete API documentation with interactive examples
+- **Security Schemes**: Detailed authentication and authorization documentation
+- **Error Responses**: Comprehensive error code and message documentation
 
 ### ⚙️ New Configuration Options
 
 ```yaml
 ricardo:
   auth:
-    password-policy:
-      min-length: 8                    # Default minimum length
-      max-length: 128                  # Default maximum length
-      require-uppercase: true          # Require A-Z characters
-      require-lowercase: true          # Require a-z characters
-      require-digits: true             # Require 0-9 characters
-      require-special-chars: true      # Require special characters
-      special-characters: "!@#$%^&*"   # Allowed special characters
-      prevent-common-passwords: true   # Block common passwords
-      common-passwords-file: "/commonpasswords.txt" # Custom password list
+    # Email Configuration (NEW in v4.0.0)
+    email:
+      fromAddress: "noreply@example.com"
+      password: PASSWORD // YOU MAY USE A ENV VARIABLE INSTEAD OF PROPERTIES FOR THIS ONE. Make sure this is a App-Password and not a normal password.
+      host: "smtp.gmail.com"
+      port: 587
+      fromName: "Auth Service"
+      resetSubject: "Password Reset Request"
+
+
+    # Password Reset (NEW in v4.0.0)
+    password-reset:
+      enabled: true
+      tokenExpiryHours: 1
+      maxAttempts: 3
+      timeWindowMs: 3600000
+      enableCleanup: true
+      cleanupIntervalHours: 24
+      tokenLength: 32
+      requireHttps: true
 ```
+
+### 🔄 New API Endpoints
+
+**Password Reset** (NEW in v4.0.0)
+
+- `POST /api/auth/password-reset/request` - Request password reset via email
+- `POST /api/auth/password-reset/confirm` - Confirm password reset with token
+
+**Role Management** (NEW in v4.0.0) - ADMIN only
+
+- `GET /api/roles` - List all roles
+- `POST /api/roles` - Create new role
+- `PUT /api/roles/{id}` - Update existing role
+- `DELETE /api/roles/{id}` - Delete role (if not assigned)
+
+### 🏗️ Breaking Changes
+
+**Role Management Requirements**
+
+- **NEW**: ADMIN role required for all role management operations
+- **ENHANCED**: Role validation prevents deletion of roles assigned to users
+
+**Email Configuration Requirements** (for Password Reset)
+
+- **REQUIRED**: Email configuration must be provided for password reset functionality
+- **NEW**: Email templates can be customized via configuration properties
+
+**OpenAPI Integration**
+
+- **NEW**: OpenAPI endpoints are publicly accessible by default
+- **CONFIGURABLE**: Can be disabled via `ricardo.auth.openapi.enabled: false`
 
 ### 🔄 Migration Guide
 
-- **Existing Users**: Current users with weak passwords can still log in but will need to update passwords on next
-  change
-- **New Users**: All new user registrations must meet the configured password policy
-- **Custom Policies**: Configure `ricardo.auth.password-policy.min-length: 6` for backwards compatibility
+**From 3.x to 4.0**
+
+1. **Configure Email Settings**: Set up email configuration for password reset functionality
+2. **Review Role Assignments**: Ensure proper ADMIN roles are assigned for role management
+3. **Update API Documentation**: Integrate with new OpenAPI/Swagger endpoints if needed
+4. **Test Password Reset**: Verify email configuration and password reset flow
+5. **Update Dependencies**: Ensure OpenAPI dependencies are included if using documentation features
+
+**New Features Integration**
+
+```yaml
+# Add to your application.yml
+ricardo:
+  auth:
+    email:
+      fromAddress: "noreply@example.com";
+      password: "password"; // YOU MAY USE A ENV VARIABLE INSTEAD OF PROPERTIES FOR THIS ONE
+      host: "smtp.gmail.com";
+      port: 587;
+      fromName: "Auth Service";
+      resetSubject: "Password Reset Request";
+    password-reset:
+      enabled: true;
+      tokenExpiryHours: 1;
+      maxAttempts: 3;
+      timeWindowMs: 3600000;
+      enableCleanup: true;
+      cleanupIntervalHours: 24;
+      tokenLength: 32;
+      requireHttps: true;
+}
+
+```
+
+### 🧪 Testing Enhancements
+
+**Comprehensive Test Suite**
+
+- **Password Reset Tests**: Complete end-to-end testing of email and token-based reset flow
+- **Role Management Tests**: Full testing of CRUD operations and authorization
+- **OpenAPI Tests**: Validation of API documentation generation and accuracy
+- **Input Validation Tests**: Enhanced testing of sanitization and validation logic
+- **Exception Handling Tests**: Comprehensive testing of new error handling patterns
+
+### 📊 Monitoring and Observability
+
+**Enhanced Logging**
+
+- **Password Reset Events**: Comprehensive audit logging for password reset attempts
+- **Role Management Events**: Enhanced logging for role creation, modification, and deletion
+- **Input Validation Events**: Security event logging for validation failures and potential attacks
+- **OpenAPI Metrics**: API documentation access and usage tracking
+
+### 🌟 Production Ready Features
+
+**Security Hardening**
+
+- **Input Sanitization**: Production-ready input sanitization and validation
+- **Exception Handling**: Enhanced error handling that doesn't leak sensitive information
+- **Password Reset Security**: OWASP-compliant password reset implementation
+- **Role-Based Security**: Enhanced authorization controls for administrative functions
+
+**Performance Optimizations**
+
+- **OpenAPI Caching**: Optimized API documentation generation and caching
+- **Email Performance**: Efficient email queuing and delivery for password resets
+- **Database Optimization**: Enhanced queries for role and password reset operations
+- **Validation Performance**: Optimized input validation and sanitization performance
+- **Caching Enhancements**: Caching improvements for frequently accessed configuration and metadata
+
+### 📖 Documentation Updates
+
+**Complete Documentation Refresh**
+
+- **Password Reset Guide**: Comprehensive password reset implementation and configuration guide
+- **Role Management Guide**: Detailed role management API documentation and best practices
+- **OpenAPI Integration**: Complete OpenAPI configuration and customization documentation
+- **Security Guide**: Updated security best practices including new validation and exception handling
+- **Migration Guide**: Detailed 3.x to 4.0 migration instructions focusing on new features
+
+### 🔒 Security Improvements
+
+**Enhanced Protection**
+
+- **Input Sanitization**: Comprehensive input sanitization to prevent injection attacks
+- **Exception Security**: Improved exception handling that doesn't expose sensitive system information
+- **Password Reset Security**: OWASP-compliant password reset tokens with proper expiration and cleanup
+- **Role-Based Authorization**: Enhanced authorization controls ensuring only ADMIN users can manage roles
+
+### Future Considerations
+
+> **Note**: The following features are planned for future development as the project evolves and based on community
+> feedback. They are not actively being developed at this time.
+
+> Anyone who liked this project and wants to contribute is more than welcome to implement any of these features.
+> Simply code them, test them, and sumbit a PR to the `dev` branch. For more information check out [contributing] (
+> CONTRIBUTING.md).
+
+### Contributing
+
+If you need any of these features, please consider contributing! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+
+### Planned Features
+
+- **Social Login**: OAuth2 integration with Google, GitHub, Facebook
+- **Multi-Factor Authentication**: TOTP and SMS-based 2FA
+- ~~**Rate Limiting**: Built-in rate limiting for authentication endpoints~~ [Implemented in 2.0.0]
+- ~~**Token Revocation**: Enhanced token revocation with blocklist support~~ [Implemented in 2.0.0]
+- **Audit Logging**: Comprehensive security event logging
+- ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
+- ~~**Refresh Token Support**: Automatic token refresh mechanism~~ [Implemented in 1.2.0]
+- **Account Management**: Email verification, password reset, account locking
+- ~~**Redis Cache**: Caching integration for improved
+  performance~~ [Implemented for both rate limiting and token revocation in 2.0.0]
+- **Metrics Integration**: Micrometer metrics for monitoring
+
+### Breaking Changes (Future Versions)
+
+> No breaking changes planned for 3.x series. Major version increments will be used for breaking changes.
+
+---
+
+## [3.0.2] - 2025-08-13
+
+### Added
+
+- Added a findByUsername method to the UserService interface for better user lookup by username.
+
+## [3.0.1] - 2025-08-12
+
+### HotFix
+
+- Fixed wrong name of a path variable in the `update/{id}` endpoint of the `UserController` class. It was previously
+  named `id` but should be `stringId` to match the method signature and documentation.
+
+## [3.0.0] - 2025-08-11
+
+### Added
+
+- **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
+- **Repository Type Configuration**: Choose between JPA and PostgreSQL implementations
+- **Factory Pattern**: New `AuthUserFactory` and `UserFactory` for enhanced decoupling
+- **Helper Classes**: Added `UserRowMapper`, `UserSqlParameterMapper`, and `IdConverter`
+- **Enhanced Generics**: Improved type safety with explicit Role type parameters
+- **PostgreSQL Native Support**: Optimized PostgreSQL implementation alongside JPA
+- **CSRF Protection**: Enabled CSRF protection by default for all non public endpoints
+
+### Changed
+
+- **BREAKING**: All user IDs changed from `Long` to `UUID`
+- **BREAKING**: Enhanced service generics: `UserService<U,R,ID>` with Role information
+- **BREAKING**: Database schema requires migration to UUID primary keys
+- **Repository Configuration**: New `ricardo.auth.repository.type` property (JPA/POSTGRESQL)
+
+### Migration
+
+- Update your database schema to use UUID columns for primary keys
+- Change all ID references in your code from `Long` to `UUID`
+- Update API responses to expect UUID format
+- See [Database Configuration](docs/configuration/database.md) for detailed migration steps
+- Update the front end to handle csrf tokens in requests
+
+## [2.0.0] - 2025-08-01
+
+### Added
+
+- **Token Blocklist**: Support for token blocklist (in-memory and Redis) for instant revocation of access/refresh
+  tokens.
+- **Rate Limiting**: Request limiting per IP/user, with in-memory and Redis implementations.
+- **Endpoint `/api/auth/revoke`**: New protected (ADMIN) route to revoke access or refresh tokens.
+- **Secure Cookies for Tokens**: Tokens are now sent via HTTP-only cookies, with configurable security flags (Secure,
+  SameSite, Path).
+- **Option to Enforce HTTPS**: New `redirect-https` property to require HTTPS in production.
+
+### Changed
+
+- Documentation updated to reflect new properties and configuration examples for blocklist, rate limiting, cookies, and
+  HTTPS.
+
+### Breaking Changes
+
+- **Tokens via Cookies**: Access and refresh tokens are now sent exclusively via secure cookies. The frontend must read
+  and send cookies automatically. This may impact existing integrations that expected tokens in the response body or
+  header.
+- **HTTPS Required by Default**: The starter now enforces HTTPS by default. For development environments, disable with
+  `redirect-https: false`.
+- **Authorization Header Deprecated**: The Authorization header is no longer used for authentication (except for legacy
+  user endpoints). All authentication is now cookie-based.
+
+### Migration Notes
+
+- Update frontend to work with HTTP-only cookies.
+- Review environment settings to ensure HTTPS in production.
+- See configuration examples in the README.md.
 
 ## [1.2.0] - 2025-07-16
 
@@ -367,289 +437,247 @@ ricardo:
 - **Health Checks**: Endpoint for checking refresh token system health
 - **Grafana Dashboards**: Example dashboard configurations for monitoring
 
----
+## [1.1.0] - 2025-06-30
 
-## [2.0.0] - 2025-08-01
+### 🔒 Added - Password Policy System
 
-### Added
+- **Comprehensive Password Validation**: Configurable password strength requirements
+    - Minimum/maximum length validation
+    - Character type requirements (uppercase, lowercase, digits, special characters)
+    - Customizable special character sets
+    - Common password prevention with built-in protection list
+- **Password Policy Configuration**: Full control over password requirements via `ricardo.auth.password-policy`
+- **Enhanced Error Messages**: Detailed validation feedback for password policy violations
+- **Environment-Specific Policies**: Different password requirements for development vs production
 
-- **Token Blocklist**: Support for token blocklist (in-memory and Redis) for instant revocation of access/refresh
-  tokens.
-- **Rate Limiting**: Request limiting per IP/user, with in-memory and Redis implementations.
-- **Endpoint `/api/auth/revoke`**: New protected (ADMIN) route to revoke access or refresh tokens.
-- **Secure Cookies for Tokens**: Tokens are now sent via HTTP-only cookies, with configurable security flags (Secure,
-  SameSite, Path).
-- **Option to Enforce HTTPS**: New `redirect-https` property to require HTTPS in production.
+### 📚 Documentation Improvements
 
-### Changed
+- **Restructured README**: Clearer quick start guide with step-by-step instructions
+- **Improved Navigation**: Better organized documentation index with role-based guides
+- **Enhanced Examples**: More practical, real-world usage examples with complete code
+- **Better Troubleshooting**: Emergency quick fixes section with searchable error messages
+- **Configuration Clarity**: Simplified configuration guide with quick setup options
+- **Password Policy Guide**: Comprehensive documentation for new password policy features
 
-- Documentation updated to reflect new properties and configuration examples for blocklist, rate limiting, cookies, and
-  HTTPS.
+### 🔧 Technical Improvements
 
-### Breaking Changes
+- **Bean Configuration**: Improved auto-configuration to prevent bean creation conflicts
+- **Repository Architecture**: Better separation with `@NoRepositoryBean` annotations
+- **Test Coverage**: Updated all tests to use password policy compliant passwords
+- **Error Handling**: Enhanced error responses for password policy violations
 
-- **Tokens via Cookies**: Access and refresh tokens are now sent exclusively via secure cookies. The frontend must read
-  and send cookies automatically. This may impact existing integrations that expected tokens in the response body or
-  header.
-- **HTTPS Required by Default**: The starter now enforces HTTPS by default. For development environments, disable with
-  `redirect-https: false`.
-- **Authorization Header Deprecated**: The Authorization header is no longer used for authentication (except for legacy
-  user endpoints). All authentication is now cookie-based.
+### 🏗 Breaking Changes
 
-### Migration Notes
-
-- Update frontend to work with HTTP-only cookies.
-- Review environment settings to ensure HTTPS in production.
-- See configuration examples in the README.md.
-
-## [3.0.0] - 2025-08-11
-
-### Added
-
-- **UUID Primary Keys**: All entities now use UUID instead of Long for primary keys
-- **Repository Type Configuration**: Choose between JPA and PostgreSQL implementations
-- **Factory Pattern**: New `AuthUserFactory` and `UserFactory` for enhanced decoupling
-- **Helper Classes**: Added `UserRowMapper`, `UserSqlParameterMapper`, and `IdConverter`
-- **Enhanced Generics**: Improved type safety with explicit Role type parameters
-- **PostgreSQL Native Support**: Optimized PostgreSQL implementation alongside JPA
-- **CSRF Protection**: Enabled CSRF protection by default for all non public endpoints
-
-### Changed
-
-- **BREAKING**: All user IDs changed from `Long` to `UUID`
-- **BREAKING**: Enhanced service generics: `UserService<U,R,ID>` with Role information
-- **BREAKING**: Database schema requires migration to UUID primary keys
-- **Repository Configuration**: New `ricardo.auth.repository.type` property (JPA/POSTGRESQL)
-
-### Migration
-
-- Update your database schema to use UUID columns for primary keys
-- Change all ID references in your code from `Long` to `UUID`
-- Update API responses to expect UUID format
-- See [Database Configuration](docs/configuration/database.md) for detailed migration steps
-- Update the front end to handle csrf tokens in requests
-
-## [3.0.1] - 2025-08-12
-
-### HotFix
-
-- Fixed wrong name of a path variable in the `update/{id}` endpoint of the `UserController` class. It was previously
-  named `id` but should be `stringId` to match the method signature and documentation.
-
-## [3.0.2] - 2025-08-13
-
-### Added
-- Added a findByUsername method to the UserService interface for better user lookup by username.
-
-
-
-## [4.0.0] - 2025-09-14
-
-### 🔐 New Authentication Features
-
-**Password Reset System**
-- **OWASP Compliant**: Secure password reset with time-limited tokens
-- **Email Integration**: Full email support with customizable templates
-- **Rate Limiting**: Protection against password reset abuse
-- **Secure Tokens**: Cryptographically secure reset tokens with expiration
-
-**Role Management API**
-- **Full CRUD**: Complete role management with proper authorization
-- **Admin Controls**: ADMIN-only role creation, modification, and deletion
-- **Role Validation**: Prevention of role deletion if assigned to users
-- **RESTful Design**: Consistent REST API patterns
-
-### Domain Event System
-
-- **Event Publishing**: Spring application events for audit logging and for you to use as you wish!
-- **Extensible**: Easy to add custom event listeners for monitoring.
-
-**OpenAPI Documentation Integration**
-- **Complete Swagger Integration**: Full OpenAPI 3.0 documentation with security schemes
-- **Interactive Documentation**: Swagger UI available at `/swagger-ui.html`
-- **Cookie Authentication**: OpenAPI configured for cookie-based auth (consistent with v2.0.0 authentication system)
-- **Comprehensive Endpoints**: All endpoints documented with examples and security requirements
-
-### 🛡️ Enhanced Security Measures
-**Enhanced Input Validation**
-- **Sanitization**: Input sanitization to prevent injection attacks
-- **Enhanced Validation**: Comprehensive validation with detailed error messages
-- **Security Headers**: Additional security headers for XSS and clickjacking protection
-
-**Better Exception Handling**
-- **Comprehensive Error Responses**: Improved error handling with detailed, user-friendly messages
-- **Security-Aware Errors**: Exception responses that don't leak sensitive information
-- **Standardized Error Format**: Consistent error response structure across all endpoints
-
-### 📚 Complete Documentation Overhaul
-
-**Developer Documentation**
-- **Bean Lifecycle**: Complete documentation of all beans and their dependencies
-- **Configuration Reference**: Comprehensive properties documentation
-- **Architecture Guide**: Domain-driven design patterns and structure
-- **Integration Examples**: Real-world integration patterns
-
-**Enhanced API Documentation**
-- **OpenAPI Integration**: Complete API documentation with interactive examples
-- **Security Schemes**: Detailed authentication and authorization documentation
-- **Error Responses**: Comprehensive error code and message documentation
+- **Password Requirements**: Existing passwords may need to meet new policy requirements
+- **Default Password Policy**: Minimum 8 characters with character type requirements enabled by default
 
 ### ⚙️ New Configuration Options
 
 ```yaml
 ricardo:
   auth:
-    # Email Configuration (NEW in v4.0.0)
-    email:
-      enabled: true
-      from: "noreply@yourdomain.com"
-      reset-url-template: "https://yourdomain.com/reset-password?token={token}"
-    
-    # Password Reset (NEW in v4.0.0)
-    password-reset:
-      enabled: true
-      token-expiration: 3600000 # 1 hour
-      max-attempts: 3
-      cleanup-interval: 3600000
-    
-    # OpenAPI Documentation (NEW in v4.0.0)
-    openapi:
-      enabled: true
-      title: "Your API"
-      description: "API documentation with Ricardo Auth"
-      version: "1.0.0"
-      contact:
-        name: "Your Team"
-        email: "support@yourdomain.com"
+    password-policy:
+      min-length: 8                    # Default minimum length
+      max-length: 128                  # Default maximum length
+      require-uppercase: true          # Require A-Z characters
+      require-lowercase: true          # Require a-z characters
+      require-digits: true             # Require 0-9 characters
+      require-special-chars: true      # Require special characters
+      special-characters: "!@#$%^&*"   # Allowed special characters
+      prevent-common-passwords: true   # Block common passwords
+      common-passwords-file: "/commonpasswords.txt" # Custom password list
 ```
-
-### 🔄 New API Endpoints
-
-**Password Reset** (NEW in v4.0.0)
-- `POST /api/auth/password-reset/request` - Request password reset via email
-- `POST /api/auth/password-reset/confirm` - Confirm password reset with token
-
-**Role Management** (NEW in v4.0.0) - ADMIN only
-- `GET /api/roles` - List all roles
-- `POST /api/roles` - Create new role
-- `PUT /api/roles/{id}` - Update existing role
-- `DELETE /api/roles/{id}` - Delete role (if not assigned)
-
-
-### 🏗️ Breaking Changes
-
-**Role Management Requirements**
-- **NEW**: ADMIN role required for all role management operations
-- **ENHANCED**: Role validation prevents deletion of roles assigned to users
-
-**Email Configuration Requirements** (for Password Reset)
-- **REQUIRED**: Email configuration must be provided for password reset functionality
-- **NEW**: Email templates can be customized via configuration properties
-
-**OpenAPI Integration**
-- **NEW**: OpenAPI endpoints are publicly accessible by default
-- **CONFIGURABLE**: Can be disabled via `ricardo.auth.openapi.enabled: false`
 
 ### 🔄 Migration Guide
 
-**From 3.x to 4.0**
-1. **Configure Email Settings**: Set up email configuration for password reset functionality
-2. **Review Role Assignments**: Ensure proper ADMIN roles are assigned for role management
-3. **Update API Documentation**: Integrate with new OpenAPI/Swagger endpoints if needed
-4. **Test Password Reset**: Verify email configuration and password reset flow
-5. **Update Dependencies**: Ensure OpenAPI dependencies are included if using documentation features
+- **Existing Users**: Current users with weak passwords can still log in but will need to update passwords on next
+  change
+- **New Users**: All new user registrations must meet the configured password policy
+- **Custom Policies**: Configure `ricardo.auth.password-policy.min-length: 6` for backwards compatibility
 
-**New Features Integration**
-```yaml
-# Add to your application.yml
-ricardo:
-  auth:
-    email:
-      enabled: true
-      from: "noreply@yourdomain.com"
-    password-reset:
-      enabled: true
-    openapi:
-      enabled: true # Set to false if you don't want API documentation
-```
+## [1.0.2] - 2025-06-24
 
-### 🧪 Testing Enhancements
+### Added
 
-**Comprehensive Test Suite**
-- **Password Reset Tests**: Complete end-to-end testing of email and token-based reset flow
-- **Role Management Tests**: Full testing of CRUD operations and authorization
-- **OpenAPI Tests**: Validation of API documentation generation and accuracy
-- **Input Validation Tests**: Enhanced testing of sanitization and validation logic
-- **Exception Handling Tests**: Comprehensive testing of new error handling patterns
+- **Fixed errors for proper Maven publishing**: Corrected SCM URLs and improved POM configuration
 
-### 📊 Monitoring and Observability
+### Migration Notes
 
-**Enhanced Logging**
-- **Password Reset Events**: Comprehensive audit logging for password reset attempts
-- **Role Management Events**: Enhanced logging for role creation, modification, and deletion
-- **Input Validation Events**: Security event logging for validation failures and potential attacks
-- **OpenAPI Metrics**: API documentation access and usage tracking
+- No migration required from v1.0.1
+- Existing applications will continue to work without changes
 
-### 🌟 Production Ready Features
+## [1.0.1] - 2025-06-24
 
-**Security Hardening**
-- **Input Sanitization**: Production-ready input sanitization and validation
-- **Exception Handling**: Enhanced error handling that doesn't leak sensitive information
-- **Password Reset Security**: OWASP-compliant password reset implementation
-- **Role-Based Security**: Enhanced authorization controls for administrative functions
+### Added
 
-**Performance Optimizations**
-- **OpenAPI Caching**: Optimized API documentation generation and caching
-- **Email Performance**: Efficient email queuing and delivery for password resets
-- **Database Optimization**: Enhanced queries for role and password reset operations
-- **Validation Performance**: Optimized input validation and sanitization performance
+- **Comprehensive Documentation Suite**: Complete documentation overhaul with detailed guides
+    - [Configuration Guide](docs/configuration-guide.md) - Complete configuration reference with examples
+    - [API Reference](docs/api-reference.md) - Detailed REST API documentation with examples
+    - [Security Guide](docs/security-guide.md) - Security best practices and implementation guidelines
+    - [Examples](docs/examples.md) - Real-world usage examples for different application types
+    - [Documentation Index](docs/index.md) - Navigation and organization of all documentation
+- **Spring Boot Auto-Configuration**: Enhanced auto-configuration with `AuthAutoConfiguration` and `AuthProperties`
+    - `AuthAutoConfiguration` class for automatic bean configuration and component scanning
+    - `AuthProperties` class for comprehensive configuration property management
+    - Conditional bean creation based on configuration properties
+- **Configurable Controllers**: Ability to enable/disable auth and user management endpoints independently
+- **User Security Service**: Custom authorization logic with `UserSecurityService` for fine-grained access control
+- **Enhanced Error Handling**: Improved global exception handling with detailed error responses
+- **Maven Central Publishing**: Proper configuration for publishing to Maven Central with GPG signing
+- **GitHub Packages Support**: Alternative distribution channel configuration
 
-### 📖 Documentation Updates
+### Improved
 
-**Complete Documentation Refresh**
-- **Password Reset Guide**: Comprehensive password reset implementation and configuration guide
-- **Role Management Guide**: Detailed role management API documentation and best practices
-- **OpenAPI Integration**: Complete OpenAPI configuration and customization documentation
-- **Security Guide**: Updated security best practices including new validation and exception handling
-- **Migration Guide**: Detailed 3.x to 4.0 migration instructions focusing on new features
+- **Code Documentation**: Added comprehensive JavaDoc comments to all public classes and methods
+    - Complete JavaDoc coverage for all public APIs in main source code
+    - Detailed parameter and return value documentation
+    - Usage examples and security considerations in documentation
+- **Test Coverage**: Enhanced test suite with detailed JavaDoc and improved test organization
+    - Improved `GlobalExceptionHandlerTest` with comprehensive error scenario testing (25+ test methods)
+    - Enhanced `AuthControllerTest` with better authentication flow testing
+    - Improved `UserControllerTest` with validation and error handling tests
+    - Added `DomainObjectsTest` for comprehensive domain validation testing (40+ test methods)
+    - Added `DtoAndMappingTest` for DTO validation and mapping testing
+    - Enhanced `JwtAuthFilterTest` with comprehensive filter testing scenarios
+    - Improved `SecurityIntegrationTest` with end-to-end security testing
+    - Enhanced `UserServiceImplTest` and `UserDetailsServiceImplTest` with comprehensive service layer testing
+    - Better test documentation with descriptive JavaDoc comments
+- **Domain Value Objects**: Better validation and error messages for `Email`, `Username`, and `Password`
+- **Security Configuration**: Enhanced security setup with proper authentication entry points
+- **Project Structure**: Better organization with auto-configuration package and cleaner separation of concerns
 
-### 🔒 Security Improvements
+### Fixed
 
-**Enhanced Protection**
-- **Input Sanitization**: Comprehensive input sanitization to prevent injection attacks
-- **Exception Security**: Improved exception handling that doesn't expose sensitive system information
-- **Password Reset Security**: OWASP-compliant password reset tokens with proper expiration and cleanup
-- **Role-Based Authorization**: Enhanced authorization controls ensuring only ADMIN users can manage roles
+- **POM Configuration**: Corrected SCM URLs and improved Maven publishing configuration
+    - Fixed GitHub repository URL in SCM section
+    - Enhanced Maven publishing configuration with profiles for GitHub Packages and Maven Central
+    - Improved dependency management and exclusion configuration
+- **Import Organization**: Cleaned up imports and removed unused dependencies across all source files
+- **Authentication Flow**: Fixed security configuration for proper JWT authentication
+- **Exception Handling**: Improved error message formatting and status code consistency
 
-### Future Considerations
+### Documentation
 
-> **Note**: The following features are planned for future development as the project evolves and based on community
-> feedback. They are not actively being developed at this time.
+- **README Enhancement**: Updated with comprehensive installation, configuration, and usage examples
+- **CONTRIBUTING Guide**: Detailed contribution guidelines with development setup and coding standards
+- **LICENSE**: Added MIT License for clear usage rights
+- **CHANGELOG**: Structured changelog following semantic versioning principles
 
-> Anyone who liked this project and wants to contribute is more than welcome to implement any of these features.
-> Simply code them, test them, and sumbit a PR to the `dev` branch. For more information check out [contributing] (
-> CONTRIBUTING.md).
+### Development Experience
 
-### Contributing
+- **Better Testing**: Comprehensive test examples for integration and unit testing
+- **Development Setup**: Improved local development configuration with H2 database support
+- **Environment Configuration**: Better separation of development, testing, and production configurations
+- **Debug Support**: Enhanced logging configuration and debugging tools
 
-If you need any of these features, please consider contributing! See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
+### Technical Debt Reduction
 
-### Planned Features
+- **Code Quality**: Consistent code formatting and style across all source files
+- **Test Organization**: Better test structure with clear separation of concerns
+- **Documentation Consistency**: Standardized documentation format and style
+- **Build Process**: Improved Maven configuration for reliable builds and publishing
 
-- **Social Login**: OAuth2 integration with Google, GitHub, Facebook
-- **Multi-Factor Authentication**: TOTP and SMS-based 2FA
-- ~~**Rate Limiting**: Built-in rate limiting for authentication endpoints~~ [Implemented in 2.0.0]
-- ~~**Token Revocation**: Enhanced token revocation with blocklist support~~ [Implemented in 2.0.0]
-- **Audit Logging**: Comprehensive security event logging
-- ~~**Password Policy**: Configurable password complexity requirements~~ [Implemented in 1.1.0]
-- ~~**Refresh Token Support**: Automatic token refresh mechanism~~ [Implemented in 1.2.0]
-- **Account Management**: Email verification, password reset, account locking
-- ~~**Redis Cache**: Caching integration for improved performance~~ [Implemented for both rate limiting and token revocation in 2.0.0]
-- **Metrics Integration**: Micrometer metrics for monitoring
+### Breaking Changes
 
-### Breaking Changes (Future Versions)
+- None. This release maintains full backward compatibility with v1.0.0
 
-> No breaking changes planned for 3.x series. Major version increments will be used for breaking changes.
+### Migration Notes
+
+- No migration required from v1.0.0
+- New configuration options are optional and have sensible defaults
+- Existing applications will continue to work without changes
+
+## [1.0.0] - 2025-06-24
+
+### Added
+
+- **Initial Release** of Ricardo Auth Spring Boot Starter
+- **JWT Authentication**: Complete JWT token generation, validation, and management
+- **User Management**: CRUD operations for user entities with domain-driven design
+- **Auto-Configuration**: Spring Boot auto-configuration for zero-setup experience
+- **Security Integration**: Built-in Spring Security configuration with sensible defaults
+- **REST API Endpoints**: Pre-built authentication and user management endpoints
+- **Role-Based Access Control**: Support for USER and ADMIN roles with extensible role system
+- **Password Security**: BCrypt password hashing with automatic salt generation
+- **Configuration Properties**: Comprehensive configuration options via `ricardo.auth` prefix
+- **Domain Objects**: Clean domain entities with value objects (Username, Email, Password)
+- **Exception Handling**: Global exception handling with proper error responses
+- **Validation**: Input validation with Bean Validation (JSR-303)
+- **Documentation**: Comprehensive documentation with examples and guides
+
+### Security Features
+
+- **JWT Token Security**: HMAC SHA-256 signing with configurable secrets
+- **Password Encryption**: BCrypt with secure defaults
+- **Input Validation**: Protection against malicious input
+- **CORS Support**: Configurable cross-origin resource sharing
+- **Authorization**: Method-level security with `@PreAuthorize`
+
+### API Endpoints
+
+- `POST /api/auth/login` - User authentication with JWT token response
+- `GET /api/auth/me` - Get current authenticated user information
+- `POST /api/users/create` - Create new user account
+- `GET /api/users/{id}` - Get user by ID
+- `GET /api/users/email/{email}` - Get user by email
+- `GET /api/users/exists/{email}` - Check if user exists
+- `PUT /api/users/update/{id}` - Update user information
+- `DELETE /api/users/delete/{id}` - Delete user account
+
+### Configuration Options
+
+- `ricardo.auth.enabled` - Enable/disable auth module
+- `ricardo.auth.jwt.secret` - JWT signing secret (required)
+- `ricardo.auth.jwt.expiration` - Token expiration time in milliseconds
+- `ricardo.auth.controllers.auth.enabled` - Enable/disable auth endpoints
+- `ricardo.auth.controllers.user.enabled` - Enable/disable user endpoints
+
+### Dependencies
+
+- **Spring Boot**: 3.5.3
+- **Spring Security**: 6.x
+- **Spring Data JPA**: 3.x
+- **JWT**: io.jsonwebtoken:jjwt-api:0.12.6
+- **Java**: 21+ (compatible with 17+)
+
+### Build and Distribution
+
+- **Maven Central**: Available at `io.github.ricardomorim:auth-spring-boot-starter:1.0.0`
+- **GitHub Packages**: Alternative distribution channel
+- **License**: MIT License
+- **Source Code**: Available on [GitHub](https://github.com/RicardoMorim/Auth-Provider)
+
+### Documentation
+
+- Comprehensive README with quick start guide
+- [Configuration Guide](docs/configuration-guide.md) - Detailed configuration options
+- [API Reference](docs/api-reference.md) - Complete API documentation
+- [Security Guide](docs/security-guide.md) - Security best practices
+- [Examples](docs/examples.md) - Real-world usage examples
+- [Troubleshooting](docs/troubleshooting.md) - Common issues and solutions
+
+### Testing
+
+- **Unit Tests**: Complete test coverage for core functionality
+- **Integration Tests**: End-to-end authentication flow testing
+- **Security Tests**: Authentication and authorization testing
+- **Test Utilities**: Helper classes for testing applications using the starter
+
+### Performance
+
+- **Stateless Design**: JWT-based stateless authentication
+- **Database Optimization**: Indexed queries for user lookups
+- **Connection Pooling**: HikariCP integration for database connections
+- **Caching**: Prepared for future caching enhancements
+
+### Compatibility
+
+- **Spring Boot**: 3.4.x - 3.5.x
+- **Java**: 17, 21
+- **Databases**: H2, PostgreSQL, MySQL, MariaDB (via JPA)
+- **Build Tools**: Maven 3.6+
+
+---
 
 ## Version Support Policy
 

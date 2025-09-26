@@ -1,5 +1,8 @@
 package com.ricardo.auth.domain.user;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import jakarta.persistence.*;
 import org.hibernate.annotations.BatchSize;
 import org.hibernate.annotations.UuidGenerator;
@@ -13,7 +16,6 @@ import java.util.stream.Collectors;
 /**
  * The type User.
  */
-
 @Table(
         name = "users",
         indexes = {
@@ -53,10 +55,18 @@ public class User implements AuthUser<UUID, AppRole> {
     )
     @Column(name = "role")
     @BatchSize(size = 25)
+    @JsonSerialize(as = java.util.Set.class)
+    @JsonDeserialize(as = java.util.HashSet.class)
     private Set<AppRole> roles = new HashSet<>();
 
     private Instant createdAt;
     private Instant updatedAt;
+
+    private boolean accountNonExpired = true;
+    private boolean accountNonLocked = true;
+    private boolean credentialsNonExpired = true;
+
+    private boolean enabled = true;
 
     /**
      * Instantiates a new User.
@@ -77,7 +87,7 @@ public class User implements AuthUser<UUID, AppRole> {
         this.password = password;
         this.createdAt = Instant.now();
         this.updatedAt = Instant.now();
-        this.roles = new HashSet<>(); // dont add any roles, let the service handle it so any custom role can be added
+        this.roles = new HashSet<>(); // don't add any roles, let the service handle it so any custom role can be added
     }
 
     @Override
@@ -85,6 +95,14 @@ public class User implements AuthUser<UUID, AppRole> {
         return id;
     }
 
+    @Override
+    public void setId(UUID id) {
+        if (id != null) {
+            this.id = id;
+        } else {
+            throw new IllegalArgumentException("ID cannot be null");
+        }
+    }
 
     @Override
     public String getEmail() {
@@ -102,6 +120,7 @@ public class User implements AuthUser<UUID, AppRole> {
      * @return the authorities
      */
     @Override
+    @JsonIgnore
     public Collection<? extends GrantedAuthority> getAuthorities() {
         return roles.stream()
                 .map(role -> new SimpleGrantedAuthority(role.getAuthority()))
@@ -165,7 +184,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isAccountNonExpired() {
-        return true;
+        return accountNonExpired;
     }
 
     /**
@@ -175,7 +194,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isAccountNonLocked() {
-        return true;
+        return accountNonLocked;
     }
 
     /**
@@ -185,7 +204,7 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isCredentialsNonExpired() {
-        return true;
+        return credentialsNonExpired;
     }
 
     /**
@@ -195,12 +214,24 @@ public class User implements AuthUser<UUID, AppRole> {
      */
     @Override
     public boolean isEnabled() {
-        return true;
+        return enabled;
     }
 
     @Override
     public Set<AppRole> getRoles() {
         return roles;
+    }
+
+    @Override
+    public void setRoles(Set<AppRole> roles) {
+        if (roles == null || roles.isEmpty()) {
+            this.roles = new HashSet<>();
+            return;
+        }
+        // Defensive copy and null-filter
+        this.roles = roles.stream()
+                .filter(Objects::nonNull)
+                .collect(Collectors.toCollection(HashSet::new));
     }
 
     @Override
@@ -217,42 +248,19 @@ public class User implements AuthUser<UUID, AppRole> {
         }
     }
 
-
-    @Override
-    public void setId(UUID id) {
-        if (id != null) {
-            this.id = id;
-        } else {
-            throw new IllegalArgumentException("ID cannot be null");
-        }
-    }
-
-
-    @Override
-    public void setRoles(Set<AppRole> roles) {
-        if (roles == null || roles.isEmpty()) {
-            this.roles = new HashSet<>();
-            return;
-        }
-        // Defensive copy and null-filter
-        this.roles = roles.stream()
-                .filter(Objects::nonNull)
-                .collect(Collectors.toCollection(HashSet::new));
-    }
-
     @Override
     public Instant getCreatedAt() {
         return createdAt;
     }
 
     @Override
-    public Instant getUpdatedAt() {
-        return updatedAt;
+    public void setCreatedAt(Instant createdAt) {
+        this.createdAt = createdAt != null ? createdAt : Instant.now();
     }
 
     @Override
-    public void setCreatedAt(Instant createdAt) {
-        this.createdAt = createdAt != null ? createdAt : Instant.now();
+    public Instant getUpdatedAt() {
+        return updatedAt;
     }
 
     @Override

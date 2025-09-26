@@ -3,7 +3,7 @@ name: Release to Maven Central
 on:
   workflow_dispatch:
   release:
-    types: [published]
+    types: [ published ]
 
 jobs:
   deploy:
@@ -20,6 +20,22 @@ jobs:
           --health-timeout 5s
           --health-retries 5
 
+      postgres:
+        image: postgres:17
+        ports:
+          - 5432:5432
+        env:
+          POSTGRES_USER: postgres
+          POSTGRES_PASSWORD: 8080
+          POSTGRES_DB: testdb
+        options: >-
+          --health-cmd "pg_isready -U postgres"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+
+
     steps:
       - name: Checkout source
         uses: actions/checkout@v4
@@ -29,6 +45,11 @@ jobs:
           echo MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} >> .env
           echo RICARDO_AUTH_JWT_SECRET=${{ secrets.RICARDO_AUTH_JWT_SECRET }} >> .env
 
+      - name: Create test database
+        run: |
+          psql -h localhost -U postgres -c 'CREATE DATABASE "AuthLibraryTest";'
+        env:
+          PGPASSWORD: 8080
 
       - name: Set up Java, Maven Central credentials, and GPG signing
         uses: actions/setup-java@v4
@@ -39,7 +60,7 @@ jobs:
           server-username: CENTRAL_USERNAME
           server-password: CENTRAL_TOKEN
           gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
-          gpg-passphrase:  ${{ secrets.GPG_PASSPHRASE }}
+          gpg-passphrase: ${{ secrets.GPG_PASSPHRASE }}
 
       - name: (Optional) List GPG keys to verify import
         run: gpg --list-secret-keys --keyid-format LONG
@@ -48,4 +69,4 @@ jobs:
         run: mvn -B clean deploy -Pcentral -Dgpg.passphrase="${{ secrets.GPG_PASSPHRASE }}"
         env:
           CENTRAL_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
-          CENTRAL_TOKEN:    ${{ secrets.CENTRAL_TOKEN }}
+          CENTRAL_TOKEN: ${{ secrets.CENTRAL_TOKEN }}

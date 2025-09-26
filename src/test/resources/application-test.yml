@@ -43,8 +43,6 @@ ricardo:
       refresh:
         secure: false
         http-only: false
-    password-reset:
-      max-attempts-per-hour: 10
 
 
 

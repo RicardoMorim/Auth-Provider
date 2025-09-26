@@ -1,8 +1,10 @@
 package com.ricardo.auth.ratelimiter;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
+import com.ricardo.auth.core.RateLimiter;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.test.context.TestPropertySource;
 
@@ -21,11 +23,15 @@ import static org.junit.jupiter.api.Assertions.*;
 })
 class InMemoryRateLimiterTest {
     @Autowired
-    private InMemoryRateLimiter rateLimiter;
+    @Qualifier("generalRateLimiter")
+    private RateLimiter rateLimiter;
 
     @Autowired
     private AuthProperties properties;
 
+    /**
+     * Test rate limiter initialization.
+     */
     @Test
     void testRateLimiterInitialization() {
         assertNotNull(rateLimiter);
@@ -76,7 +82,7 @@ class InMemoryRateLimiterTest {
         String key = "user3";
         rateLimiter.allowRequest(key);
         Thread.sleep(2100);
-        rateLimiter.cleanupOldEntries();
+        rateLimiter.clearAll();
         // After cleanup, should allow again
         assertTrue(rateLimiter.allowRequest(key));
     }

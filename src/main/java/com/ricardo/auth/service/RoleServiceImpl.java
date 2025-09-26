@@ -9,9 +9,11 @@ import com.ricardo.auth.domain.domainevents.UserRoleAddedEvent;
 import com.ricardo.auth.domain.domainevents.UserRoleRemovedEvent;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.UserRolesResponse;
+import com.ricardo.auth.helper.CacheHelper;
 import com.ricardo.auth.helper.IdConverter;
 import com.ricardo.auth.helper.RoleMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +28,9 @@ import java.util.Set;
  * Implementation of RoleService that provides secure role management.
  * Follows OWASP security guidelines and your decoupled architecture.
  *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
  * @since 3.1.0
  */
 @Service
@@ -37,16 +42,45 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     private final AuthProperties authProperties;
     private final Publisher eventPublisher;
     private final IdConverter<ID> idConverter;
+    private final CacheHelper<U, R, ID> cacheHelper;
 
+    /**
+     * Instantiates a new Role service.
+     *
+     * @param userService    the user service
+     * @param roleMapper     the role mapper
+     * @param authProperties the auth properties
+     * @param eventPublisher the event publisher
+     * @param idConverter    the id converter
+     * @param cacheHelper    the cache helper
+     */
     public RoleServiceImpl(UserService<U, R, ID> userService,
                            RoleMapper<R> roleMapper,
                            AuthProperties authProperties,
-                           Publisher eventPublisher, IdConverter<ID> idConverter) {
+                           Publisher eventPublisher, IdConverter<ID> idConverter, CacheHelper<U, R, ID> cacheHelper) {
         this.userService = userService;
         this.roleMapper = roleMapper;
         this.authProperties = authProperties;
         this.eventPublisher = eventPublisher;
         this.idConverter = idConverter;
+        this.cacheHelper = cacheHelper;
+    }
+
+    private static String sanitizeForLogging(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                .replace("\"", "\\\"")
+                .trim();
+    }
+
+    private static String sanitizeIdForLogging(Object id) {
+        if (id == null) return "null";
+        return sanitizeForLogging(id.toString());
     }
 
     @Override
@@ -56,29 +90,37 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         validateRoleOperation(userId, roleName);
 
         log.info("Adding role {} to user {} by admin {} with reason: {}",
-                roleName, userId, getCurrentUsername(), reason);
+                sanitizeForLogging(roleName),
+                sanitizeIdForLogging(userId),
+                sanitizeForLogging(getCurrentUsername()),
+                sanitizeForLogging(reason));
 
-        // Get user first to validate existence
         U user = userService.getUserById(userId);
 
         try {
-            // Convert string to role type
             R role = roleMapper.mapRole(roleName.trim().toUpperCase());
 
-            // Check if user already has this role
+            if (role == null) {
+                log.warn("Invalid role name: {}", sanitizeForLogging(roleName));
+                throw new IllegalArgumentException("Invalid role: " + sanitizeForLogging(roleName));
+            }
+
             if (user.getRoles().contains(role)) {
-                log.warn("User {} already has role {}", userId, roleName);
+                log.warn("User {} already has role {}", sanitizeIdForLogging(userId), sanitizeForLogging(roleName));
                 return;
             }
 
-            // Add role to user
             user.addRole(role);
             userService.updateUser(userId, user);
 
             log.info("Role {} added to user {} by admin {} with reason: {}",
-                    roleName, userId, getCurrentUsername(), reason);
+                    sanitizeForLogging(roleName),
+                    sanitizeIdForLogging(userId),
+                    sanitizeForLogging(getCurrentUsername()),
+                    sanitizeForLogging(reason));
 
-            // Publish event if enabled
+            this.cacheHelper.evictUserCache(user);
+
             if (authProperties.getRoleManagement().isEnableRoleEvents()) {
                 eventPublisher.publishEvent(new UserRoleAddedEvent(
                         user.getUsername(),
@@ -88,8 +130,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             }
 
         } catch (RoleMapper.RoleMappingException e) {
-            log.error("Invalid role name: {}", roleName);
-            throw new IllegalArgumentException("Invalid role: " + roleName, e);
+            log.error("Invalid role name: {}", sanitizeForLogging(roleName));
+            throw new IllegalArgumentException("Invalid role: " + sanitizeForLogging(roleName), e);
         }
     }
 
@@ -99,33 +141,32 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public void removeRoleFromUser(ID userId, String roleName, String reason) {
         validateRoleOperation(userId, roleName);
 
-        // Get user first to validate existence
         U user = userService.getUserById(userId);
 
         try {
-            // Convert string to role type
             R role = roleMapper.mapRole(roleName.trim().toUpperCase());
 
-            // Check if user has this role
             if (!user.getRoles().contains(role)) {
-                log.warn("User {} does not have role {}", userId, roleName);
+                log.warn("User {} does not have role {}", sanitizeIdForLogging(userId), sanitizeForLogging(roleName));
                 return;
             }
 
-            // Prevent removing the last admin role
             R adminRole = roleMapper.mapRole("ADMIN");
             if (role.equals(adminRole) && isLastAdminRole(user, role)) {
                 throw new SecurityException("Cannot remove the last admin role");
             }
 
-            // Remove role from user
             user.removeRole(role);
             userService.updateUser(userId, user);
 
             log.info("Role {} removed from user {} by admin {} with reason: {}",
-                    roleName, userId, getCurrentUsername(), reason);
+                    sanitizeForLogging(roleName),
+                    sanitizeIdForLogging(userId),
+                    sanitizeForLogging(getCurrentUsername()),
+                    sanitizeForLogging(reason));
 
-            // Publish event if enabled
+            this.cacheHelper.evictUserCache(user);
+
             if (authProperties.getRoleManagement().isEnableRoleEvents()) {
                 eventPublisher.publishEvent(new UserRoleRemovedEvent(
                         user.getUsername(),
@@ -135,34 +176,41 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             }
 
         } catch (RoleMapper.RoleMappingException e) {
-            log.error("Invalid role name: {}", roleName);
-            throw new IllegalArgumentException("Invalid role: " + roleName, e);
+            log.error("Invalid role name: {}", sanitizeForLogging(roleName));
+            throw new IllegalArgumentException("Invalid role: " + sanitizeForLogging(roleName), e);
         }
     }
 
     @Override
+    @Cacheable(value = "userHasRoleCache", key = "#userId + '::' + #roleName")
     public boolean userHasRole(ID userId, String roleName) {
         try {
             U user = userService.getUserById(userId);
             R role = roleMapper.mapRole(roleName.trim().toUpperCase());
             return user.getRoles().contains(role);
         } catch (RoleMapper.RoleMappingException e) {
-            log.error("Invalid role name: {}", roleName);
-            throw new IllegalArgumentException("Invalid role: " + roleName, e);
+            log.error("Invalid role name: {}", sanitizeForLogging(roleName));
+            throw new IllegalArgumentException("Invalid role: " + sanitizeForLogging(roleName), e);
         } catch (RuntimeException e) {
-            log.error("Error checking role {} for user {}: {}", roleName, userId, e.getMessage());
+            log.error("Error checking role {} for user {}: {}",
+                    sanitizeForLogging(roleName),
+                    sanitizeIdForLogging(userId),
+                    sanitizeForLogging(e.getMessage()));
             throw e;
         }
     }
 
     @Override
+    @Cacheable(value = "getUserRolesCache", key = "#userId", condition = "#userId != null")
     public Set<R> getSetUserRoles(ID userId) {
         U user = userService.getUserById(userId);
+
         return user.getRoles();
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('USER_READ')")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Cacheable(value = "getUserRolesCache", key = "#userId", condition = "#userId != null")
     public UserRolesResponse getUserRoles(ID userId) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID cannot be null");
@@ -204,24 +252,25 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         }
 
         log.info("Bulk role update for user {} by admin {} with reason: {}",
-                userId, getCurrentUsername(), reason);
+                sanitizeIdForLogging(userId),
+                sanitizeForLogging(getCurrentUsername()),
+                sanitizeForLogging(reason));
 
-
-        // Add roles
-        if (rolesToAdd != null && !rolesToAdd.isEmpty()) {
+        if (rolesToAdd != null) {
             for (String roleName : rolesToAdd) {
                 addRoleToUser(userId, roleName, reason);
             }
         }
 
-        // Remove roles
-        if (rolesToRemove != null && !rolesToRemove.isEmpty()) {
+        if (rolesToRemove != null) {
             for (String roleName : rolesToRemove) {
                 removeRoleFromUser(userId, roleName, reason);
             }
         }
 
-        log.info("Bulk role update completed for user {}", userId);
+        cacheHelper.evictUserCache(userService.getUserById(userId));
+
+        log.info("Bulk role update completed for user {}", sanitizeIdForLogging(userId));
     }
 
     private void validateRoleOperation(ID userId, String roleName) {

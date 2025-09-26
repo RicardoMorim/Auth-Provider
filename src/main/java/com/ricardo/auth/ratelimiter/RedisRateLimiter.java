@@ -16,6 +16,9 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * The type Redis rate limiter.
+ */
 @Component
 @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
 @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "redis")
@@ -33,6 +36,12 @@ public class RedisRateLimiter implements RateLimiter {
     private final boolean enabled;
     private final AtomicInteger ttlSeconds; // make TTL dynamic with settings changes
 
+    /**
+     * Instantiates a new Redis rate limiter.
+     *
+     * @param redisTemplate the redis template
+     * @param properties    the properties
+     */
     public RedisRateLimiter(RedisTemplate<String, String> redisTemplate,
                             AuthProperties properties) {
         this.redisTemplate = redisTemplate;
@@ -40,6 +49,11 @@ public class RedisRateLimiter implements RateLimiter {
         this.windowMillis = new AtomicLong(properties.getRateLimiter().getTimeWindowMs());
         this.enabled = properties.getRateLimiter().isEnabled();
         this.ttlSeconds = new AtomicInteger(toTtlSeconds(this.windowMillis.get()));
+    }
+
+    private static int toTtlSeconds(long windowMillis) {
+        // Round up so we don't expire too early
+        return (int) Math.ceil(windowMillis / 1000.0);
     }
 
     @Override
@@ -53,11 +67,6 @@ public class RedisRateLimiter implements RateLimiter {
         this.maxRequests.set(maxRequests);
         this.windowMillis.set(windowMillis);
         this.ttlSeconds.set(toTtlSeconds(windowMillis));
-    }
-
-    private static int toTtlSeconds(long windowMillis) {
-        // Round up so we don't expire too early
-        return (int) Math.ceil(windowMillis / 1000.0);
     }
 
     /**

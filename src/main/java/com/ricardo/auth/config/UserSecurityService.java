@@ -9,6 +9,10 @@ import org.springframework.stereotype.Service;
 
 /**
  * The type User security service.
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
  */
 @Service
 public class UserSecurityService<U extends AuthUser<ID, R>, R extends Role, ID> {
@@ -20,6 +24,7 @@ public class UserSecurityService<U extends AuthUser<ID, R>, R extends Role, ID> 
      * Instantiates a new User security service.
      *
      * @param userService the user service
+     * @param idConverter the id converter
      */
     public UserSecurityService(UserService<U, R, ID> userService, IdConverter<ID> idConverter) {
         this.userService = userService;
@@ -43,6 +48,13 @@ public class UserSecurityService<U extends AuthUser<ID, R>, R extends Role, ID> 
         }
     }
 
+    /**
+     * Is owner username boolean.
+     *
+     * @param email    the email
+     * @param username the username
+     * @return the boolean
+     */
     public boolean isOwnerUsername(String email, String username) {
         try {
             U user = userService.getUserByUserName(username);

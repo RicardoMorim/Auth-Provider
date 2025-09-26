@@ -1,6 +1,10 @@
 package com.ricardo.auth.dto;
 
 import com.ricardo.auth.core.AuthenticatedUser;
+import jakarta.validation.constraints.NotBlank;
+import lombok.AllArgsConstructor;
+import lombok.NoArgsConstructor;
+import lombok.NonNull;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.util.Collection;
@@ -10,19 +14,28 @@ import java.util.stream.Collectors;
 /**
  * The type Authenticated user dto.
  */
+@NoArgsConstructor
+@AllArgsConstructor
 public class AuthenticatedUserDTO implements AuthenticatedUser {
 
-    private final String email;
-    private final List<String> roles;
+    @NonNull
+    @NotBlank
+    private String email;
+    private List<String> roles;
 
     /**
      * Instantiates a new Authenticated user dto.
      *
-     * @param email        the email
+     * @param email       the email
      * @param authorities the authorities
      */
     public AuthenticatedUserDTO(String email, Collection<? extends GrantedAuthority> authorities) {
         this.email = java.util.Objects.requireNonNull(email, "email must not be null");
+
+        if (email.isBlank()) {
+            throw new IllegalArgumentException("Email cannot be blank");
+        }
+
         final java.util.Collection<? extends GrantedAuthority> safeAuthorities =
                 authorities != null ? authorities : java.util.Collections.emptyList();
         this.roles = java.util.Collections.unmodifiableList(
@@ -34,6 +47,7 @@ public class AuthenticatedUserDTO implements AuthenticatedUser {
                         .collect(Collectors.toList())
         );
     }
+
     @Override
     public String getEmail() {
         return email;
