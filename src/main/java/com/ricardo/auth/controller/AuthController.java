@@ -87,7 +87,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         this.userService = userService;
     }
 
-    // --- LOG SANITIZATION HELPER ---
     private static String sanitizeForLogging(String input) {
         if (input == null) {
             return "null";
@@ -406,7 +405,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         return ResponseEntity.ok().body(Map.of("message", "Token revoked successfully"));
     }
 
-    // --- Cookie helpers (unchanged) ---
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
         setAccessCookie(response, accessToken);
         setRefreshCookie(response, refreshToken);
