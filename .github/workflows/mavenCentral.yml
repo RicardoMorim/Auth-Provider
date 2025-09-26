@@ -49,7 +49,7 @@ jobs:
         run: |
           psql -h localhost -U postgres -c 'CREATE DATABASE "AuthLibraryTest";'
         env:
-          PGPASSWORD: postgres
+          PGPASSWORD: 8080
 
       - name: Set up Java, Maven Central credentials, and GPG signing
         uses: actions/setup-java@v4

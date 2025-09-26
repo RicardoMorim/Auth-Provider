@@ -45,7 +45,7 @@ jobs:
         run: |
           psql -h localhost -U postgres -c 'CREATE DATABASE "AuthLibraryTest";'
         env:
-          PGPASSWORD: postgres
+          PGPASSWORD: 8080
 
       - name: Create .env file from secrets
         run: |
