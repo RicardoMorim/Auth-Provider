@@ -89,6 +89,19 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         this.userService = userService;
     }
 
+    // --- LOG SANITIZATION HELPER ---
+    private static String sanitizeForLogging(String input) {
+        if (input == null) {
+            return "null";
+        }
+        return input
+                .replace("\n", "\\n")
+                .replace("\r", "\\r")
+                .replace("\t", "\\t")
+                .replace("\"", "\\\"")
+                .trim();
+    }
+
     /**
      * Login endpoint that works with any AuthUser implementation
      *
@@ -135,7 +148,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
             Object principal = authentication.getPrincipal();
             if (principal == null) {
-                logger.warn("Authentication failed: no principal for email: {}", request.getEmail());
+                logger.warn("Authentication failed: no principal for email: {}", sanitizeForLogging(request.getEmail()));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(new ErrorResponse("Authentication failed: no principal"));
             }
@@ -143,39 +156,35 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @SuppressWarnings("unchecked")
             U userDetails = (U) principal;
 
-            // Log successful login (without sensitive data)
-            logger.info("Successful login for user: {}", userDetails.getEmail());
+            logger.info("Successful login for user: {}", sanitizeForLogging(userDetails.getEmail()));
 
-            // Publish authentication success event
             eventPublisher.publishEvent(new UserAuthenticatedEvent(
-                    userDetails.getUsername(),
-                    userDetails.getEmail(),
+                    sanitizeForLogging(userDetails.getUsername()),
+                    sanitizeForLogging(userDetails.getEmail()),
                     userDetails.getRoles()
             ));
 
             String accessToken = jwtService.generateAccessToken(
-                    userDetails.getEmail(), // Using AuthUser's getEmail() method
+                    userDetails.getEmail(),
                     userDetails.getAuthorities()
             );
 
             if (refreshTokenService != null) {
-                // Generate both access and refresh tokens
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails);
                 setAuthCookies(response, accessToken, refreshToken.getToken());
             } else {
-                // Legacy behavior - single token
                 setAccessCookie(response, accessToken);
             }
 
             return ResponseEntity.ok().build();
 
         } catch (Exception e) {
-            // Log failed login attempt (without sensitive data)
-            logger.warn("Failed login attempt for email: {} - {}", request.getEmail(), e.getMessage());
+            logger.warn("Failed login attempt for email: {} - {}",
+                    sanitizeForLogging(request.getEmail()),
+                    sanitizeForLogging(e.getMessage()));
 
-            // Publish authentication failure event
             eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
-                    request.getEmail(),
+                    sanitizeForLogging(request.getEmail()),
                     AuthenticationFailedReason.INVALID_CREDENTIALS
             ));
 
@@ -240,21 +249,17 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                         .body(new ErrorResponse("Authentication failed"));
             }
 
-            // Find and verify the refresh token
             RefreshToken refreshToken = refreshTokenService.findByToken(refreshTokenCookie);
             refreshToken = refreshTokenService.verifyExpiration(refreshToken);
 
-            // Get the user from the refresh token - this is now generic
             U user = refreshTokenService.getUserFromRefreshToken(refreshToken);
 
-            // Generate new access token
             String newAccessToken = jwtService.generateAccessToken(
-                    user.getEmail(), // Using AuthUser's getEmail() method
+                    user.getEmail(),
                     user.getAuthorities()
             );
 
-            // Optional: Rotate refresh token
-            String newRefreshToken = refreshToken.getToken(); // Keep same token by default
+            String newRefreshToken = refreshToken.getToken();
             if (shouldRotateRefreshToken()) {
                 RefreshToken newRefreshTokenObj = refreshTokenService.createRefreshToken(user);
                 refreshTokenService.revokeToken(refreshToken.getToken());
@@ -341,7 +346,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @Parameter(description = "Refresh token from HTTP-only cookie", hidden = true)
             @CookieValue(value = "refresh_token", required = false) String refreshToken) {
 
-        // Revoke access token if present and valid
         if (StringUtils.hasText(accessToken)) {
             try {
                 if (jwtService.isTokenValid(accessToken)) {
@@ -350,7 +354,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 }
             } catch (Exception e) {
                 logger.debug("Failed to validate/revoke access token during logout", e);
-                // Continue with logout even if revocation fails
             }
         }
 
@@ -358,27 +361,36 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
         if (email == null) {
             logger.info("Logging out user with unknown email");
+        } else {
+            logger.info("Logging out user: {}", sanitizeForLogging(email));
         }
-        // Revoke refresh token if present and refresh service is available
+
         if (StringUtils.hasText(refreshToken) && refreshTokenService != null) {
             try {
-                // Add to blocklist for immediate effect
                 blocklist.revoke(refreshToken);
-
-                // Also revoke in the refresh token service
                 refreshTokenService.revokeToken(refreshToken);
                 logger.debug("Refresh token revoked during logout");
             } catch (Exception e) {
                 logger.debug("Failed to revoke refresh token during logout", e);
-                // Continue with logout even if revocation fails
             }
         }
 
-        U user = userService.getUserByEmail(email);
-
+        U user = null;
+        if (email != null) {
+            try {
+                user = userService.getUserByEmail(email);
+            } catch (Exception e) {
+                logger.warn("Could not find user during logout for email: {}", sanitizeForLogging(email));
+            }
+        }
 
         clearAuthCookies(response);
-        eventPublisher.publishEvent(new UserLoggedOutEvent(user.getUsername(), user.getEmail()));
+        if (user != null) {
+            eventPublisher.publishEvent(new UserLoggedOutEvent(
+                    sanitizeForLogging(user.getUsername()),
+                    sanitizeForLogging(user.getEmail())
+            ));
+        }
         return ResponseEntity.ok().build();
     }
 
@@ -391,21 +403,17 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     @PostMapping("/revoke")
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<?> revokeToken(@RequestBody String token) {
+        // Sanitize only if used in logs — not used here, but safe to sanitize if logged later
         blocklist.revoke(token);
         return ResponseEntity.ok().body(Map.of("message", "Token revoked successfully"));
     }
 
-    /**
-     * Set both access and refresh token cookies
-     */
+    // --- Cookie helpers (unchanged) ---
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
         setAccessCookie(response, accessToken);
         setRefreshCookie(response, refreshToken);
     }
 
-    /**
-     * Set access token cookie
-     */
     private void setAccessCookie(HttpServletResponse response, String accessToken) {
         AuthProperties.Cookies.AccessCookie accessCfg = authProperties.getCookies().getAccess();
 
@@ -420,9 +428,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
     }
 
-    /**
-     * Set refresh token cookie
-     */
     private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
         AuthProperties.Cookies.RefreshCookie refreshCfg = authProperties.getCookies().getRefresh();
 
@@ -437,9 +442,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
     }
 
-    /**
-     * Clear both access and refresh token cookies
-     */
     private void clearAuthCookies(HttpServletResponse response) {
         AuthProperties.Cookies.AccessCookie accessCfg = authProperties.getCookies().getAccess();
         AuthProperties.Cookies.RefreshCookie refreshCfg = authProperties.getCookies().getRefresh();
@@ -449,7 +451,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 .secure(accessCfg.isSecure())
                 .sameSite(accessCfg.getSameSite().getValue())
                 .path(accessCfg.getPath())
-                .maxAge(0) // Expire immediately
+                .maxAge(0)
                 .build();
 
         ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", "")
@@ -457,20 +459,17 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 .secure(refreshCfg.isSecure())
                 .sameSite(refreshCfg.getSameSite().getValue())
                 .path(refreshCfg.getPath())
-                .maxAge(0) // Expire immediately
+                .maxAge(0)
                 .build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
     }
 
-    /**
-     * Determines whether refresh tokens should be rotated on each use
-     */
     private boolean shouldRotateRefreshToken() {
         if (authProperties != null && authProperties.getRefreshTokens() != null) {
             return authProperties.getRefreshTokens().isRotateOnRefresh();
         }
-        return true; // Default to rotating for better security
+        return true;
     }
 }

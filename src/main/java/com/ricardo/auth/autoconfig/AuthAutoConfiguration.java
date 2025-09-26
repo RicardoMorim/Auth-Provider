@@ -899,7 +899,7 @@ public class AuthAutoConfiguration {
                                     )
                     """, tableName);
             jdbcTemplate.execute(createTableSql);
-            logger.debug("Table '{}' created or already exists", tableName);
+            logger.debug("Reset Password token Table created or already exists");
         }
 
         private void createPasswordResetTokenIndexes(JdbcTemplate jdbcTemplate) {
