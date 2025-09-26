@@ -10,7 +10,6 @@ import org.springframework.jdbc.core.RowMapper;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.transaction.annotation.Transactional;
 
-import javax.sql.DataSource;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -32,11 +31,11 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     /**
      * Instantiates a new Postgre sql refresh token repository.
      *
-     * @param dataSource     the data source
+     * @param jdbcTemplate   the data source
      * @param authProperties the auth properties
      */
-    public PostgreSQLRefreshTokenRepository(DataSource dataSource, AuthProperties authProperties) {
-        this.jdbcTemplate = new JdbcTemplate(dataSource);
+    public PostgreSQLRefreshTokenRepository(JdbcTemplate jdbcTemplate, AuthProperties authProperties) {
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
@@ -99,7 +98,7 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
             refreshToken.setId(uuid);
         } else if (generatedId instanceof String uuidStr) {
             refreshToken.setId(UUID.fromString(uuidStr));
-        }else{
+        } else {
             throw new IllegalArgumentException("Invalid ID type returned");
         }
 
@@ -125,8 +124,8 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
 
         if (rowsAffected == 0) {
             throw new ObjectOptimisticLockingFailureException(RefreshToken.class,
-                "RefreshToken with id " + refreshToken.getId() + " and version " + refreshToken.getVersion() +
-                " was not found or has been modified by another transaction"
+                    "RefreshToken with id " + refreshToken.getId() + " and version " + refreshToken.getVersion() +
+                            " was not found or has been modified by another transaction"
             );
         }
 
@@ -211,27 +210,32 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
     public int deleteOldestTokensForUser(String userEmail, int maxTokens) {
         if (userEmail == null || userEmail.trim().isEmpty())
             return 0;
-        // Use a simpler approach with OFFSET
         String sql = String.format("""
-                WITH to_delete AS (
+                WITH to_keep AS (
                     SELECT id FROM %s
                     WHERE user_email = ?
                     ORDER BY created_at DESC
-                    OFFSET ?
+                    LIMIT ? 
                 ),
                 deleted AS (
                     DELETE FROM %s
-                    WHERE id IN (SELECT id FROM to_delete)
+                    WHERE user_email = ? AND id NOT IN (SELECT id FROM to_keep)
                     RETURNING id
                 )
                 SELECT count(*) FROM deleted
                 """, tableName, tableName);
 
         Integer deletedCount = jdbcTemplate.queryForObject(sql, Integer.class,
-                userEmail, maxTokens);
+                userEmail, maxTokens, userEmail);
         return deletedCount != null ? deletedCount : 0;
     }
 
+    /**
+     * Save all tokens list.
+     *
+     * @param tokens the tokens
+     * @return the list
+     */
     @Transactional
     public List<RefreshToken> saveAllTokens(List<RefreshToken> tokens) {
         List<RefreshToken> toInsert = new ArrayList<>();
@@ -274,14 +278,14 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
                 """, tableName));
 
         List<Object> parameters = new ArrayList<>();
-        
+
         // Add VALUES clauses for each token
         for (int i = 0; i < tokens.size(); i++) {
             if (i > 0) {
                 sqlBuilder.append(", ");
             }
             sqlBuilder.append("(?, ?, ?, ?, ?, 0)");
-            
+
             RefreshToken token = tokens.get(i);
             parameters.add(token.getToken());
             parameters.add(token.getUserEmail());
@@ -289,9 +293,9 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
             parameters.add(token.isRevoked());
             parameters.add(Timestamp.from(token.getCreatedAt()));
         }
-        
+
         sqlBuilder.append(" RETURNING id, token");
-        
+
         // Execute the query and map returned IDs back to tokens
         List<TokenIdMapping> idMappings = jdbcTemplate.query(
                 sqlBuilder.toString(),
@@ -301,7 +305,7 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
                         rs.getString("token")
                 )
         );
-        
+
         // Map returned IDs back to the original tokens by matching token values
         for (RefreshToken token : tokens) {
             TokenIdMapping mapping = idMappings.stream()
@@ -309,16 +313,17 @@ public class PostgreSQLRefreshTokenRepository implements RefreshTokenRepository 
                     .findFirst()
                     .orElseThrow(() -> new IllegalStateException(
                             "Could not find returned ID for token: " + token.getToken()));
-            
+
             token.setId(mapping.id());
             token.setVersion(0L);
         }
 
         return tokens;
     }
-    
+
     // Helper record for mapping returned IDs to tokens
-    private record TokenIdMapping(UUID id, String token) {}
+    private record TokenIdMapping(UUID id, String token) {
+    }
 
     @Override
     public int countActiveTokensByUser(String userEmail) {

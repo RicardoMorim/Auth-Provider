@@ -34,4 +34,6 @@ build/
 
 .env
 
+./out/*
+
 pom.xml.asc

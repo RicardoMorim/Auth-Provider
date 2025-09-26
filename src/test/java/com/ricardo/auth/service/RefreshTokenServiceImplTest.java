@@ -7,6 +7,7 @@ import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import com.ricardo.auth.domain.user.*;
+import com.ricardo.auth.repository.PasswordResetToken.PasswordResetTokenRepository;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -46,6 +47,7 @@ class RefreshTokenServiceImplTest {
     private DefaultUserJpaRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+
     private User testUser;
 
     /**
@@ -54,7 +56,8 @@ class RefreshTokenServiceImplTest {
     @BeforeEach
     void setUp() {
         // Clean database
-        userRepository.deleteAll();
+        refreshTokenService.deleteAllTokens();
+        userService.deleteAllUsers();
 
         // Create test user
         testUser = new User(

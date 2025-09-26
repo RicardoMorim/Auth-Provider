@@ -1,6 +1,8 @@
 package com.ricardo.auth.dto;
 
+import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 import java.io.Serializable;
 
@@ -29,7 +31,6 @@ public class UserDTO implements Serializable {
         this.username = username;
         this.email = email;
     }
-
 
 
     /**

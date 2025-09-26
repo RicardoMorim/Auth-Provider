@@ -90,7 +90,13 @@ public class AuthProperties {
      * Repository types for refresh tokens
      */
     public enum RepositoryType {
+        /**
+         * Jpa repository type.
+         */
         JPA("jpa"),
+        /**
+         * Postgresql repository type.
+         */
         POSTGRESQL("postgresql");
 
         @Getter
@@ -110,7 +116,13 @@ public class AuthProperties {
      * Storage types for rate limiter and token blocklist
      */
     public enum StorageType {
+        /**
+         * Memory storage type.
+         */
         MEMORY("memory"),
+        /**
+         * Redis storage type.
+         */
         REDIS("redis");
 
         @Getter
@@ -130,8 +142,17 @@ public class AuthProperties {
      * Cookie SameSite attribute values
      */
     public enum SameSitePolicy {
+        /**
+         * Strict same site policy.
+         */
         STRICT("Strict"),
+        /**
+         * Lax same site policy.
+         */
         LAX("Lax"),
+        /**
+         * None same site policy.
+         */
         NONE("None");
 
         @Getter
@@ -178,6 +199,9 @@ public class AuthProperties {
         private Controller auth = new Controller();
         private Controller user = new Controller();
 
+        /**
+         * The type Controller.
+         */
         @Getter
         @Setter
         public static class Controller {
@@ -289,6 +313,8 @@ public class AuthProperties {
         private String schema;
         private String url;
         private String driverClassName;
+        private String username;
+        private String password;
     }
 
     /**

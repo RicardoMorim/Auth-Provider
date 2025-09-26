@@ -2,10 +2,12 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.Publisher;
 import lombok.AllArgsConstructor;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.stereotype.Service;
 
+/**
+ * The type Event publisher.
+ */
 @AllArgsConstructor
 @Service
 public class EventPublisher implements Publisher {

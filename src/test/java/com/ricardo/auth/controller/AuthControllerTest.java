@@ -1,12 +1,11 @@
 package com.ricardo.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.ricardo.auth.domain.user.Email;
-import com.ricardo.auth.domain.user.Password;
-import com.ricardo.auth.domain.user.User;
-import com.ricardo.auth.domain.user.Username;
+import com.ricardo.auth.core.UserService;
+import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.LoginRequestDTO;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
+import com.ricardo.auth.repository.user.UserRepository;
 import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -19,6 +18,8 @@ import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
@@ -40,26 +41,28 @@ class AuthControllerTest {
     @Autowired
     private ObjectMapper objectMapper;
     @Autowired
-    private DefaultUserJpaRepository userRepository;
+    private UserRepository<User, AppRole, UUID> userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
 
     private User testUser;
+    @Autowired
+    private UserService<User, AppRole, UUID> userService;
 
     /**
      * Sets up.
      */
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll();
+        userService.deleteAllUsers();
 
         // Create a test user with encoded password
         Username username = Username.valueOf("testuser");
         Email email = Email.valueOf("test@example.com");
-        Password password = Password.fromHash(passwordEncoder.encode("password123"));
+        Password password = Password.fromHash(passwordEncoder.encode("Password123"));
         testUser = new User(username, email, password);
-        userRepository.save(testUser);
+        userService.createUser(testUser);
     }
 
     /**
@@ -70,7 +73,7 @@ class AuthControllerTest {
     @Test
     void login_shouldReturnToken_whenCredentialsAreValid() throws Exception {
         // Arrange
-        LoginRequestDTO request = new LoginRequestDTO("test@example.com", "password123");
+        LoginRequestDTO request = new LoginRequestDTO("test@example.com", "Password123");
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/login")
@@ -106,7 +109,7 @@ class AuthControllerTest {
     @Test
     void login_shouldReturn401_whenUserDoesNotExist() throws Exception {
         // Arrange
-        LoginRequestDTO request = new LoginRequestDTO("nonexistent@example.com", "password123");
+        LoginRequestDTO request = new LoginRequestDTO("nonexistent@example.com", "Password123");
 
         // Act & Assert
         mockMvc.perform(post("/api/auth/login")
@@ -123,7 +126,7 @@ class AuthControllerTest {
     @Test
     void getAuthenticatedUser_shouldReturnUserDetails_whenTokenIsValid() throws Exception {
         // First, login to get cookies
-        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "password123");
+        LoginRequestDTO loginRequest = new LoginRequestDTO("test@example.com", "Password123");
         MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(loginRequest)))

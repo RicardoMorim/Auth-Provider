@@ -10,6 +10,8 @@ import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.helper.IdConverter;
 import com.ricardo.auth.repository.PasswordResetToken.PasswordResetTokenRepository;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.Cache;
+import org.springframework.cache.CacheManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -22,6 +24,13 @@ import java.util.Base64;
 import java.util.Optional;
 
 
+/**
+ * The type Password reset service.
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
+ */
 @Slf4j
 public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements PasswordResetService {
 
@@ -35,11 +44,31 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     private final SecureRandom secureRandom = new SecureRandom();
     private final IdConverter<ID> idConverter;
     private final AuthProperties properties;
+    private final CacheManager cacheManager;
 
+    /**
+     * The constant PASSWORD_RESET_KEY_PREFIX.
+     */
     public static final String PASSWORD_RESET_KEY_PREFIX = "password_reset:";
+    /**
+     * The constant PASSWORD_RESET_COMPLETE_KEY_PREFIX.
+     */
     public static final String PASSWORD_RESET_COMPLETE_KEY_PREFIX = "password_reset_complete:";
 
 
+    /**
+     * Instantiates a new Password reset service.
+     *
+     * @param emailSenderService    the email sender service
+     * @param userService           the user service
+     * @param tokenRepository       the token repository
+     * @param passwordEncoder       the password encoder
+     * @param passwordPolicyService the password policy service
+     * @param authProperties        the auth properties
+     * @param eventPublisher        the event publisher
+     * @param idConverter           the id converter
+     * @param properties            the properties
+     */
     public PasswordResetServiceImpl(EmailSenderService emailSenderService,
                                     UserService<U, R, ID> userService,
                                     PasswordResetTokenRepository tokenRepository,
@@ -48,7 +77,8 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
                                     AuthProperties authProperties,
                                     Publisher eventPublisher,
                                     IdConverter<ID> idConverter,
-                                    AuthProperties properties) {
+                                    AuthProperties properties,
+                                    CacheManager cacheManager) {
         this.emailSenderService = emailSenderService;
         this.userService = userService;
         this.tokenRepository = tokenRepository;
@@ -58,6 +88,7 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         this.eventPublisher = eventPublisher;
         this.idConverter = idConverter;
         this.properties = properties;
+        this.cacheManager = cacheManager;
     }
 
     @Override
@@ -113,7 +144,10 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
 
         // Find and validate token
         String hashedToken = hashToken(token);
+        long findTokenStartTime = System.currentTimeMillis();
+        log.debug("Attempting to find password reset token");
         Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenAndNotUsed(hashedToken);
+        log.info("Password reset token lookup completed in {}ms", System.currentTimeMillis() - findTokenStartTime);
 
         if (tokenOpt.isEmpty()) {
             log.warn("Invalid or expired password reset token used");
@@ -130,24 +164,30 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
 
         // Get user
         U user = userService.getUserByEmail(resetToken.getEmail());
-
         if (user == null) {
             log.warn("Password reset token used for non-existent user: {}", resetToken.getEmail());
             throw new SecurityException("Invalid token");
         }
 
+
         // Update password
         String encodedPassword = passwordEncoder.encode(newPassword);
         user.setPassword(encodedPassword);
-        userService.updateUser(user.getId(), user);
+        userService.updatePassword(user.getId(), encodedPassword);
 
         // Mark token as used
         resetToken.setUsed(true);
         resetToken.setUsedAt(Instant.now());
+        long saveTokenStartTime = System.currentTimeMillis();
+        log.debug("Attempting to mark password reset token as used for user: {}", user.getEmail());
         tokenRepository.saveToken(resetToken);
+        log.info("Password reset token for user {} marked as used in {}ms", user.getEmail(), System.currentTimeMillis() - saveTokenStartTime);
 
         // Invalidate all other tokens for this user
+        long invalidateStartTime = System.currentTimeMillis();
+        log.debug("Attempting to invalidate other password reset tokens for user: {}", user.getEmail());
         tokenRepository.invalidateTokensForUser(user.getEmail(), Instant.now());
+        log.info("Other password reset tokens for user {} invalidated in {}ms", user.getEmail(), System.currentTimeMillis() - invalidateStartTime);
 
         log.info("Password reset completed for user: {}", user.getEmail());
 
@@ -156,6 +196,13 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
                 user.getUsername(),
                 user.getEmail()
         ));
+
+        evictCache("userById", user.getId());
+        evictCache("userByEmail", user.getEmail());
+        evictCache("userByUsername", user.getUsername());
+        evictCache("userExists", user.getEmail());
+        clearCache("users");
+        clearCache("adminCount");
     }
 
 
@@ -166,13 +213,20 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         }
 
         String hashedToken = hashToken(token);
+        long startTime = System.currentTimeMillis();
+        log.debug("Attempting to validate password reset token");
         Optional<PasswordResetToken> tokenOpt = tokenRepository.findByTokenAndNotUsed(hashedToken);
-        return tokenOpt.isPresent() && !tokenOpt.get().isExpired();
+        boolean isValid = tokenOpt.isPresent() && !tokenOpt.get().isExpired();
+        log.info("Password reset token validation completed in {}ms. Is valid: {}", System.currentTimeMillis() - startTime, isValid);
+        return isValid;
     }
 
     private void processPasswordResetRequest(U user) {
         // Invalidate existing tokens
+        long invalidateStartTime = System.currentTimeMillis();
+        log.debug("Attempting to invalidate existing password reset tokens for user: {}", user.getEmail());
         tokenRepository.invalidateTokensForUser(user.getEmail(), Instant.now());
+        log.info("Existing password reset tokens for user {} invalidated in {}ms", user.getEmail(), System.currentTimeMillis() - invalidateStartTime);
 
         // Generate new raw token (only ever emailed to the user)
         String token = generateSecureToken();
@@ -181,11 +235,14 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         // Create and save token
         PasswordResetToken resetToken = new PasswordResetToken(
                 hashedToken,
-                user.getEmail().toString(),
+                user.getEmail(),
                 Instant.now().plusSeconds(authProperties.getPasswordReset().getTokenExpiryHours() * 3600L)
         );
 
+        long saveTokenStartTime = System.currentTimeMillis();
+        log.debug("Attempting to save new password reset token for user: {}", user.getEmail());
         tokenRepository.saveToken(resetToken);
+        log.info("New password reset token for user {} saved in {}ms", user.getEmail(), System.currentTimeMillis() - saveTokenStartTime);
 
         // Send email
         sendPasswordResetEmail(user, token);
@@ -265,6 +322,9 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Hash the raw reset token using SHA-256 and encode as Base64 URL-safe (no padding).
      * This ensures tokens are never stored in plaintext at rest.
+     *
+     * @param rawToken the raw token
+     * @return the string
      */
     public static String hashToken(String rawToken) {
         try {
@@ -275,4 +335,19 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
             throw new IllegalStateException("SHA-256 algorithm not available", e);
         }
     }
+
+    private void evictCache(String cacheName, Object key) {
+        Cache cache = cacheManager.getCache(cacheName);
+        if (cache != null) {
+            cache.evict(key);
+        }
+    }
+
+    private void clearCache(String cacheName) {
+        Cache cache = cacheManager.getCache(cacheName);
+        if (cache != null) {
+            cache.clear();
+        }
+    }
 }
+

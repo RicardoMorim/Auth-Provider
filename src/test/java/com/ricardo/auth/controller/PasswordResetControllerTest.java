@@ -1,6 +1,6 @@
 package com.ricardo.auth.controller;
 
-import com.ricardo.auth.core.IpResolver;
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.ricardo.auth.core.PasswordResetService;
 import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.core.UserService;
@@ -8,14 +8,12 @@ import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.dto.PasswordResetCompleteRequest;
 import com.ricardo.auth.dto.PasswordResetRequest;
 import com.ricardo.auth.service.EventPublisher;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import jakarta.servlet.http.HttpServletRequest;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.http.MediaType;
@@ -27,8 +25,10 @@ import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 /**
  * Tests for PasswordResetController.
@@ -61,6 +61,9 @@ class PasswordResetControllerTest {
     @MockBean
     private UserService<User, AppRole, UUID> userService;
 
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
         when(rateLimiter.isEnabled()).thenReturn(true);
@@ -69,6 +72,11 @@ class PasswordResetControllerTest {
         when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn(null);
     }
 
+    /**
+     * Request password reset with valid email should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WithValidEmail_ShouldReturnSuccess() throws Exception {
         // Given
@@ -86,6 +94,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService).requestPasswordReset("user@example.com");
     }
 
+    /**
+     * Request password reset with invalid email should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WithInvalidEmail_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -101,6 +114,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).requestPasswordReset(anyString());
     }
 
+    /**
+     * Request password reset with empty email should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WithEmptyEmail_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -116,6 +134,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).requestPasswordReset(anyString());
     }
 
+    /**
+     * Request password reset when rate limit exceeded should return too many requests.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WhenRateLimitExceeded_ShouldReturnTooManyRequests() throws Exception {
         // Given
@@ -133,6 +156,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).requestPasswordReset(anyString());
     }
 
+    /**
+     * Request password reset when service throws exception should still return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WhenServiceThrowsException_ShouldStillReturnSuccess() throws Exception {
         // Given
@@ -150,6 +178,11 @@ class PasswordResetControllerTest {
                     "If an account with that email exists, you will receive password reset instructions."));
     }
 
+    /**
+     * Complete password reset with valid request should return success.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void completePasswordReset_WithValidRequest_ShouldReturnSuccess() throws Exception {
         // Given
@@ -167,6 +200,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService).completePasswordReset("valid-token", "NewPassword123!");
     }
 
+    /**
+     * Complete password reset with weak password should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void completePasswordReset_WithWeakPassword_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -183,6 +221,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
     }
 
+    /**
+     * Complete password reset with mismatched passwords should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void completePasswordReset_WithMismatchedPasswords_ShouldReturnBadRequest() throws Exception {
         // Given
@@ -200,6 +243,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
     }
 
+    /**
+     * Complete password reset with security exception should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void completePasswordReset_WithSecurityException_ShouldReturnBadRequest() throws Exception {
@@ -219,6 +267,11 @@ class PasswordResetControllerTest {
                 .andExpect(jsonPath("$.error").value("Invalid or expired token."));
     }
 
+    /**
+     * Complete password reset with illegal argument exception should return bad request.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void completePasswordReset_WithIllegalArgumentException_ShouldReturnBadRequest() throws Exception {
@@ -238,6 +291,11 @@ class PasswordResetControllerTest {
                 .andExpect(jsonPath("$.error").value("Password validation failed"));
     }
 
+    /**
+     * Complete password reset when rate limit exceeded should return too many requests.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void completePasswordReset_WhenRateLimitExceeded_ShouldReturnTooManyRequests() throws Exception {
         // Given
@@ -256,6 +314,11 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
     }
 
+    /**
+     * Validate token with invalid token should return invalid.
+     *
+     * @throws Exception the exception
+     */
     @Test
     @WithMockUser(roles = "ADMIN")
     void validateToken_WithInvalidToken_ShouldReturnInvalid() throws Exception {
@@ -263,6 +326,12 @@ class PasswordResetControllerTest {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valid").value(false));
     }
+
+    /**
+     * Request password reset with x forwarded for header should use correct ip.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WithXForwardedForHeader_ShouldUseCorrectIP() throws Exception {
         // Given
@@ -285,6 +354,11 @@ class PasswordResetControllerTest {
         verify(rateLimiter).allowRequest("password_reset:192.168.1.100");
     }
 
+    /**
+     * Request password reset with x real ip header should use correct ip.
+     *
+     * @throws Exception the exception
+     */
     @Test
     void requestPasswordReset_WithXRealIPHeader_ShouldUseCorrectIP() throws Exception {
         // Given

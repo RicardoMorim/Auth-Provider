@@ -6,11 +6,13 @@ import jakarta.validation.constraints.Pattern;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
+import lombok.NoArgsConstructor;
 
 /**
  * The type Create user request dto.
  */
 @AllArgsConstructor
+@NoArgsConstructor
 @Getter
 public class CreateUserRequestDTO {
     

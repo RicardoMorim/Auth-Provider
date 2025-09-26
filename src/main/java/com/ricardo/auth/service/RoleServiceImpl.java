@@ -9,9 +9,11 @@ import com.ricardo.auth.domain.domainevents.UserRoleAddedEvent;
 import com.ricardo.auth.domain.domainevents.UserRoleRemovedEvent;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.UserRolesResponse;
+import com.ricardo.auth.helper.CacheHelper;
 import com.ricardo.auth.helper.IdConverter;
 import com.ricardo.auth.helper.RoleMapper;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.cache.annotation.Cacheable;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -26,6 +28,9 @@ import java.util.Set;
  * Implementation of RoleService that provides secure role management.
  * Follows OWASP security guidelines and your decoupled architecture.
  *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
  * @since 3.1.0
  */
 @Service
@@ -37,16 +42,27 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     private final AuthProperties authProperties;
     private final Publisher eventPublisher;
     private final IdConverter<ID> idConverter;
+    private final CacheHelper<U, R, ID> cacheHelper;
 
+    /**
+     * Instantiates a new Role service.
+     *
+     * @param userService    the user service
+     * @param roleMapper     the role mapper
+     * @param authProperties the auth properties
+     * @param eventPublisher the event publisher
+     * @param idConverter    the id converter
+     */
     public RoleServiceImpl(UserService<U, R, ID> userService,
                            RoleMapper<R> roleMapper,
                            AuthProperties authProperties,
-                           Publisher eventPublisher, IdConverter<ID> idConverter) {
+                           Publisher eventPublisher, IdConverter<ID> idConverter, CacheHelper<U, R, ID> cacheHelper) {
         this.userService = userService;
         this.roleMapper = roleMapper;
         this.authProperties = authProperties;
         this.eventPublisher = eventPublisher;
         this.idConverter = idConverter;
+        this.cacheHelper = cacheHelper;
     }
 
     @Override
@@ -65,6 +81,11 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             // Convert string to role type
             R role = roleMapper.mapRole(roleName.trim().toUpperCase());
 
+            if (role == null) {
+                log.warn("Invalid role name: {}", roleName);
+                throw new IllegalArgumentException("Invalid role: " + roleName);
+            }
+
             // Check if user already has this role
             if (user.getRoles().contains(role)) {
                 log.warn("User {} already has role {}", userId, roleName);
@@ -77,6 +98,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
 
             log.info("Role {} added to user {} by admin {} with reason: {}",
                     roleName, userId, getCurrentUsername(), reason);
+
+            this.cacheHelper.evictUserCache(user);
 
             // Publish event if enabled
             if (authProperties.getRoleManagement().isEnableRoleEvents()) {
@@ -125,7 +148,9 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             log.info("Role {} removed from user {} by admin {} with reason: {}",
                     roleName, userId, getCurrentUsername(), reason);
 
-            // Publish event if enabled
+
+            this.cacheHelper.evictUserCache(user);
+
             if (authProperties.getRoleManagement().isEnableRoleEvents()) {
                 eventPublisher.publishEvent(new UserRoleRemovedEvent(
                         user.getUsername(),
@@ -141,6 +166,7 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
+    @Cacheable(value = "userHasRoleCache", key = "#userId + '::' + #roleName")
     public boolean userHasRole(ID userId, String roleName) {
         try {
             U user = userService.getUserById(userId);
@@ -156,13 +182,16 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     }
 
     @Override
+    @Cacheable(value = "getUserRolesCache", key = "#userId", condition = "#userId != null")
     public Set<R> getSetUserRoles(ID userId) {
         U user = userService.getUserById(userId);
+
         return user.getRoles();
     }
 
     @Override
-    @PreAuthorize("hasRole('ADMIN') or hasAuthority('USER_READ')")
+    @PreAuthorize("hasRole('ADMIN')")
+    @Cacheable(value = "getUserRolesCache", key = "#userId", condition = "#userId != null")
     public UserRolesResponse getUserRoles(ID userId) {
         if (userId == null) {
             throw new IllegalArgumentException("User ID cannot be null");
@@ -220,6 +249,8 @@ public class RoleServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
                 removeRoleFromUser(userId, roleName, reason);
             }
         }
+
+        cacheHelper.evictUserCache(userService.getUserById(userId));
 
         log.info("Bulk role update completed for user {}", userId);
     }

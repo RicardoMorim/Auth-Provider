@@ -2,6 +2,7 @@ package com.ricardo.auth.domain.user;
 
 import jakarta.persistence.Embeddable;
 import lombok.Getter;
+
 import java.util.Arrays;
 import java.util.List;
 import java.util.regex.Pattern;

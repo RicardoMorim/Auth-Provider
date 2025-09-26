@@ -16,6 +16,9 @@ import java.time.Instant;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicLong;
 
+/**
+ * The type Redis rate limiter.
+ */
 @Component
 @ConditionalOnClass(name = "org.springframework.data.redis.core.RedisTemplate")
 @ConditionalOnProperty(prefix = "ricardo.auth.rate-limiter", name = "type", havingValue = "redis")
@@ -33,6 +36,12 @@ public class RedisRateLimiter implements RateLimiter {
     private final boolean enabled;
     private final AtomicInteger ttlSeconds; // make TTL dynamic with settings changes
 
+    /**
+     * Instantiates a new Redis rate limiter.
+     *
+     * @param redisTemplate the redis template
+     * @param properties    the properties
+     */
     public RedisRateLimiter(RedisTemplate<String, String> redisTemplate,
                             AuthProperties properties) {
         this.redisTemplate = redisTemplate;

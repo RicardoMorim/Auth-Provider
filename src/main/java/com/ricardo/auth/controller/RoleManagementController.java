@@ -10,7 +10,7 @@ import com.ricardo.auth.dto.AddRoleRequest;
 import com.ricardo.auth.dto.BulkRoleUpdateRequest;
 import com.ricardo.auth.dto.RemoveRoleRequest;
 import com.ricardo.auth.dto.UserRolesResponse;
-import com.ricardo.auth.helper.IdConverter;
+import com.ricardo.auth.helper.VoConverter;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -32,6 +32,10 @@ import java.util.Map;
  * Role management controller with proper authorization.
  * All endpoints require ADMIN role or specific permissions.
  * Uses usernames for security (prevents ID enumeration attacks).
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
  */
 @RestController
 @RequestMapping("/api/users")
@@ -43,12 +47,18 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
 
     private final RoleService<U, R, ID> roleService;
     private final UserService<U, R, ID> userService;
-    private final IdConverter<ID> idConverter;
+    private final VoConverter voConverter;
 
-    public RoleManagementController(RoleService<U, R, ID> roleService, UserService<U, R, ID> userService, IdConverter<ID> idConverter) {
+    /**
+     * Instantiates a new Role management controller.
+     *
+     * @param roleService the role service
+     * @param userService the user service
+     */
+    public RoleManagementController(RoleService<U, R, ID> roleService, UserService<U, R, ID> userService, VoConverter userVoConverter) {
         this.roleService = roleService;
         this.userService = userService;
-        this.idConverter = idConverter;
+        this.voConverter = userVoConverter;
     }
 
     /**
@@ -57,9 +67,7 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
      */
     private String validateUsername(String usernameStr) {
         try {
-            // Let Username VO handle all validation logic
-            Username username = Username.valueOf(usernameStr);
-            return username.getUsername();
+            return voConverter.usernameFromString(usernameStr).toString();
         } catch (IllegalArgumentException e) {
             log.warn("Username validation failed for '{}': {}", usernameStr, e.getMessage());
             throw e; // Re-throw with original message from Username VO
@@ -75,6 +83,7 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
             if (user == null) {
                 throw new ResourceNotFoundException("User not found: " + username);
             }
+
             return user.getId();
         } catch (ResourceNotFoundException e) {
             throw e;
@@ -87,6 +96,9 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Get all roles for a specific user.
      * Requires ADMIN role or USER_READ permission.
+     *
+     * @param username the username
+     * @return the user roles
      */
     @GetMapping("/{username}/roles")
     @PreAuthorize("hasRole('ADMIN')")
@@ -151,6 +163,10 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Add a role to a user.
      * Requires ADMIN role.
+     *
+     * @param username the username
+     * @param request  the request
+     * @return the response entity
      */
     @PostMapping("/{username}/roles")
     @PreAuthorize("hasRole('ADMIN')")
@@ -229,6 +245,10 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Remove a role from a user.
      * Requires ADMIN role or USER_WRITE permission.
+     *
+     * @param username the username
+     * @param request  the request
+     * @return the response entity
      */
     @DeleteMapping("/{username}/roles")
     @PreAuthorize("hasRole('ADMIN')")
@@ -303,6 +323,10 @@ public class RoleManagementController<U extends AuthUser<ID, R>, R extends Role,
     /**
      * Bulk role operations for a user.
      * Requires ADMIN role.
+     *
+     * @param username the username
+     * @param request  the request
+     * @return the response entity
      */
     @PutMapping("/{username}/roles/bulk")
     @PreAuthorize("hasRole('ADMIN')")

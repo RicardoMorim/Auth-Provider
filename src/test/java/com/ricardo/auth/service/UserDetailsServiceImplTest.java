@@ -1,6 +1,7 @@
 package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.PasswordPolicyService;
+import com.ricardo.auth.core.UserService;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
@@ -9,9 +10,12 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -25,7 +29,10 @@ import static org.junit.jupiter.api.Assertions.*;
 class UserDetailsServiceImplTest {
 
     @Autowired
-    private UserDetailsServiceImpl userDetailsService;
+    private UserService<User, AppRole, UUID> userService;
+
+    @Autowired
+    private UserDetailsServiceImpl<User, AppRole, UUID> userDetailsService;
 
     @Autowired
     private DefaultUserJpaRepository userRepository;
@@ -51,7 +58,7 @@ class UserDetailsServiceImplTest {
                 Email.valueOf("test@example.com"),
                 Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
-        testUser = userRepository.save(testUser);
+        testUser = userService.createUser(testUser);
     }
 
     // ========== SUCCESSFUL USER LOADING TESTS ==========
@@ -79,7 +86,7 @@ class UserDetailsServiceImplTest {
         // Arrange - Add roles to user
         testUser.addRole(AppRole.USER);
         testUser.addRole(AppRole.ADMIN);
-        userRepository.save(testUser);
+        userService.updateUser(testUser.getId(), testUser);
 
         // Act
         UserDetails userDetails = userDetailsService.loadUserByUsername("test@example.com");
@@ -131,7 +138,7 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsername_shouldThrowExceptionForNullEmail() {
         // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> {
+        assertThrows(UsernameNotFoundException.class, () -> {
             userDetailsService.loadUserByUsername(null);
         });
     }
@@ -142,11 +149,11 @@ class UserDetailsServiceImplTest {
     @Test
     void loadUserByUsername_shouldThrowExceptionForEmptyEmail() {
         // Act & Assert
-        assertThrows(ResourceNotFoundException.class, () -> {
+        assertThrows(UsernameNotFoundException.class, () -> {
             userDetailsService.loadUserByUsername("");
         });
 
-        assertThrows(ResourceNotFoundException.class, () -> {
+        assertThrows(UsernameNotFoundException.class, () -> {
             userDetailsService.loadUserByUsername("   ");
         });
     }
@@ -182,14 +189,14 @@ class UserDetailsServiceImplTest {
                 Password.valueOf("Password@456", passwordEncoder, passwordPolicyService)
         );
         user2.addRole(AppRole.ADMIN);
-        userRepository.save(user2);
+        userService.createUser(user2);
 
         User user3 = new User(
                 Username.valueOf("user3"),
                 Email.valueOf("user3@example.com"),
                 Password.valueOf("Password@789", passwordEncoder, passwordPolicyService)
         );
-        userRepository.save(user3);
+        userService.createUser(user3);
 
         // Act
         UserDetails userDetails1 = userDetailsService.loadUserByUsername("test@example.com");
@@ -236,7 +243,7 @@ class UserDetailsServiceImplTest {
                 Email.valueOf("test+tag@example.com"),
                 Password.valueOf("Password@123", passwordEncoder, passwordPolicyService)
         );
-        userRepository.save(specialUser);
+        userService.createUser(specialUser);
 
         // Act
         UserDetails userDetails = userDetailsService.loadUserByUsername("test+tag@example.com");
@@ -336,7 +343,7 @@ class UserDetailsServiceImplTest {
 
         // Act - Modify user in database
         testUser.addRole(AppRole.USER);
-        userRepository.save(testUser);
+        userService.updateUser(testUser.getId(), testUser);
 
         // Load user again
         UserDetails updatedUserDetails = userDetailsService.loadUserByUsername("test@example.com");
