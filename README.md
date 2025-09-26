@@ -11,7 +11,7 @@ minimal configuration required.
 
 > 🚀 **Zero-configuration setup** - Just add the dependency and you're ready to go!  
 > 🔐 **Production-ready security** - Built-in password policies, JWT tokens, CSRF protection, and role-based access  
-> 📚 **Complete documentation** - Comprehensive guides for setup, configuration, and deployment
+> 📚 **Complete documentation** - Comprehensive guides for setup, configuration, and deployment  
 > 📈 **BenchMark results** - This library was stress tested with 100k users! Find the results [here](./benchmark_results/Conclusions.md)
 
 ## ✨ What You Get
