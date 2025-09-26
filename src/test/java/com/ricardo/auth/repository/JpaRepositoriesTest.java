@@ -634,19 +634,21 @@ class JpaRepositoriesTest {
         ExecutorService executor = Executors.newFixedThreadPool(5);
         List<Future<?>> futures = new ArrayList<>();
         for (int i = 0; i < 10; i++) {
-        final int index = i;
-        futures.add(executor.submit(() -> {
+            final int index = i;
+            futures.add(executor.submit(() -> {
                 RefreshToken token = new RefreshToken(
-                "concurrent-token-" + index,
-                testUser.getEmail().toString(),
-                Instant.now().plusSeconds(3600)
+                        "concurrent-token-" + index,
+                        testUser.getEmail().toString(),
+                        Instant.now().plusSeconds(3600)
                 );
                 repository.saveToken(token);
-        }));
+            }));
         }
         // Wait for all futures
         futures.forEach(f -> {
-        try { f.get(); } catch (Exception e) { /* handle */ }
+            try {
+                f.get();
+            } catch (Exception e) { /* handle */ }
         });
         executor.shutdown();
     }

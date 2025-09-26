@@ -65,16 +65,18 @@ ricardo:
     redirect-https: true   # Enforce HTTPS (recommended for production)
 ```
 
-  That's it! Ricardo Auth will use sensible defaults for everything else.
+That's it! Ricardo Auth will use sensible defaults for everything else.
 
 ## 📋 Configuration Checklist
 
 ### ✅ **Required (Must Have)**
+
 - [ ] [ JWT secret key configured ](basic.md#jwt-configuration) - `ricardo.auth.jwt.secret`
 - [ ] [ Database dependency added ](basic.md#database-setup) - `spring-boot-starter-data-jpa`
 - [ ] [ Database configured ](database.md) - Connection details in `application.yml`
 
 ### 🎯 **Recommended for Production**
+
 - [ ] [ Environment variables for secrets ](environment.md) - Don't hardcode secrets
 - [ ] [ Password policy configured ](password-policy.md) - Strengthen password requirements
 - [ ] [ Database connection pooling ](database.md#connection-pooling) - Performance optimization
@@ -82,6 +84,7 @@ ricardo:
 - [ ] [ Logging levels ](basic.md#logging-configuration) - Appropriate for environment
 
 ### ⚙️ **Optional Customizations**
+
 - [ ] [ Custom token expiration ](basic.md#jwt-configuration) - Adjust for your use case
 - [ ] [ Disabled endpoints ](basic.md#endpoint-configuration) - Turn off unused features
 - [ ] [ Custom security rules ](security.md#custom-security) - Advanced security needs
@@ -90,28 +93,33 @@ ricardo:
 ## 📚 Configuration Guides
 
 ### **Getting Started**
-  | Guide | Purpose | Time | When to Use |
-  |-------|---------|------|-------------|
-  | **[Basic Configuration](basic.md)** | Essential setup options | 5 min | First time setup |
-  | **[Database Configuration](database.md)** | Database connection and settings | 10 min | Setting up persistence |
 
-### **Security & Policies** 
-  | Guide | Purpose | Time | When to Use |
-  |-------|---------|------|-------------|
-  | **[Password Policy](password-policy.md)** 🆕 | Password strength requirements | 10 min | Enhancing security |
-  | **[Refresh Token Configuration](refresh-token.md)** 🆕 | Token refresh and storage | 15 min | Session management |
-  | **[Security Configuration](security.md)** | Production security settings | 15 min | Production deployment |
+| Guide                                     | Purpose                          | Time   | When to Use            |
+  |-------------------------------------------|----------------------------------|--------|------------------------|
+| **[Basic Configuration](basic.md)**       | Essential setup options          | 5 min  | First time setup       |
+| **[Database Configuration](database.md)** | Database connection and settings | 10 min | Setting up persistence |
+
+### **Security & Policies**
+
+| Guide                                                  | Purpose                        | Time   | When to Use           |
+  |--------------------------------------------------------|--------------------------------|--------|-----------------------|
+| **[Password Policy](password-policy.md)** 🆕           | Password strength requirements | 10 min | Enhancing security    |
+| **[Refresh Token Configuration](refresh-token.md)** 🆕 | Token refresh and storage      | 15 min | Session management    |
+| **[Security Configuration](security.md)**              | Production security settings   | 15 min | Production deployment |
 
 ### **Production Ready**
-  | Guide | Purpose | Time | When to Use |
-  |-------|---------|------|-------------|
-  | **[Environment Variables](environment.md)** | Secure configuration management | 10 min | Multiple environments |
-  | **[Advanced Configuration](advanced.md)** | Performance and customization | 20 min | Complex requirements |
+
+| Guide                                       | Purpose                         | Time   | When to Use           |
+  |---------------------------------------------|---------------------------------|--------|-----------------------|
+| **[Environment Variables](environment.md)** | Secure configuration management | 10 min | Multiple environments |
+| **[Advanced Configuration](advanced.md)**   | Performance and customization   | 20 min | Complex requirements  |
 
 ## 🎯 Configuration by Use Case
 
 ### **Development Environment**
+
 Quick setup for local development:
+
 ```yaml
 ricardo:
   auth:

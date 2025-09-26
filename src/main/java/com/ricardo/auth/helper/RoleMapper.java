@@ -10,25 +10,35 @@ import com.ricardo.auth.core.Role;
  */
 @FunctionalInterface
 public interface RoleMapper<R extends Role> {
-    
+
     /**
      * Maps a string role value from the database to a typed role instance.
-     * 
+     *
      * @param roleString the role string from the database (e.g., "USER", "ADMIN")
      * @return the typed role instance
      * @throws RoleMappingException if the role string cannot be mapped to a valid role
-     * @throws IllegalArgumentException if roleString is null or empty
      */
     R mapRole(String roleString) throws RoleMappingException;
-    
+
     /**
      * Exception thrown when role mapping fails.
      */
     class RoleMappingException extends RuntimeException {
+        /**
+         * Instantiates a new Role mapping exception.
+         *
+         * @param message the message
+         */
         public RoleMappingException(String message) {
             super(message);
         }
-        
+
+        /**
+         * Instantiates a new Role mapping exception.
+         *
+         * @param message the message
+         * @param cause   the cause
+         */
         public RoleMappingException(String message, Throwable cause) {
             super(message, cause);
         }

@@ -2,9 +2,10 @@ package com.ricardo.auth.service;
 
 import com.ricardo.auth.core.IpResolver;
 import jakarta.servlet.http.HttpServletRequest;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
-import org.springframework.stereotype.Service;
 
+/**
+ * The type Simple ip resolver.
+ */
 public class SimpleIpResolver implements IpResolver {
     @Override
     public String resolveIp(HttpServletRequest request) {

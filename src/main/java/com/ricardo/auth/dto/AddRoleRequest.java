@@ -1,14 +1,12 @@
 package com.ricardo.auth.dto;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.Data;
 
 /**
  * Request DTO for adding a role to a user.
- * 
- * @since 3.1.0
+ *
  */
 @Data
 public class AddRoleRequest {

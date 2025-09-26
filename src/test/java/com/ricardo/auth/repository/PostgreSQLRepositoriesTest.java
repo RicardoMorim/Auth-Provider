@@ -15,13 +15,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 import java.time.Instant;
@@ -43,6 +39,10 @@ import static org.assertj.core.api.Assertions.assertThatThrownBy;
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
         "ricardo.auth.repository.type=POSTGRESQL",
+        "ricardo.auth.repository.database.url=jdbc:postgresql://localhost:5432/AuthLibraryTest",
+        "ricardo.auth.repository.database.username=postgres",
+        "ricardo.auth.repository.database.password=8080",
+        "ricardo.auth.repository.database.driver-class-name=org.postgresql.Driver",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
 })
 @Transactional
@@ -51,11 +51,6 @@ class PostgreSQLRepositoriesTest {
     /**
      * The constant postgres.
      */
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18beta3")
-            .withDatabaseName("AuthLibraryTest")
-            .withUsername("postgres")
-            .withPassword("8080");
     @Autowired
     private RefreshTokenRepository repository;
     @Autowired
@@ -67,20 +62,6 @@ class PostgreSQLRepositoriesTest {
     private User testUser;
     private String testUserEmail;
 
-    /**
-     * Configure properties.
-     *
-     * @param registry the registry
-     */
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
-    }
 
     /**
      * Sets up.
@@ -365,40 +346,39 @@ class PostgreSQLRepositoriesTest {
      * @throws InterruptedException the interrupted exception
      */
     @Test
+    @Transactional
     @DisplayName("Should delete oldest tokens when user exceeds max token limit")
     void shouldDeleteOldestTokensWhenUserExceedsLimit() throws InterruptedException {
-        // Arrange - Create 5 tokens with different creation times
-        RefreshToken token1 = new RefreshToken("token1", testUserEmail, Instant.now().plusSeconds(3600));
-        RefreshToken token2 = new RefreshToken("token2", testUserEmail, Instant.now().plusSeconds(3600));
-        RefreshToken token3 = new RefreshToken("token3", testUserEmail, Instant.now().plusSeconds(3600));
-        RefreshToken token4 = new RefreshToken("token4", testUserEmail, Instant.now().plusSeconds(3600));
-        RefreshToken token5 = new RefreshToken("token5", testUserEmail, Instant.now().plusSeconds(3600));
-
         // Save tokens with small delays to ensure different creation times
+        RefreshToken token1 = new RefreshToken("token1", testUserEmail, Instant.now().plusSeconds(3600));
         repository.saveToken(token1);
         Thread.sleep(10);
+        RefreshToken token2 = new RefreshToken("token2", testUserEmail, Instant.now().plusSeconds(3600));
         repository.saveToken(token2);
         Thread.sleep(10);
+        RefreshToken token3 = new RefreshToken("token3", testUserEmail, Instant.now().plusSeconds(3600));
         repository.saveToken(token3);
         Thread.sleep(10);
+        RefreshToken token4 = new RefreshToken("token4", testUserEmail, Instant.now().plusSeconds(3600));
         repository.saveToken(token4);
         Thread.sleep(10);
+        RefreshToken token5 = new RefreshToken("token5", testUserEmail, Instant.now().plusSeconds(3600));
         repository.saveToken(token5);
 
         // Act - Keep only 3 tokens (should delete 2 oldest)
         int deletedCount = repository.deleteOldestTokensForUser(testUserEmail, 3);
-
+        Thread.sleep(100);
         // Assert
         assertThat(deletedCount).isEqualTo(2);
-
-        // Verify the oldest tokens were deleted
-        assertThat(repository.findByTokenRaw("token1")).isEmpty();
-        assertThat(repository.findByTokenRaw("token2")).isEmpty();
 
         // Verify the newest tokens still exist
         assertThat(repository.findByTokenRaw("token3")).isPresent();
         assertThat(repository.findByTokenRaw("token4")).isPresent();
         assertThat(repository.findByTokenRaw("token5")).isPresent();
+
+        // Verify the oldest tokens were deleted
+        assertThat(repository.findByTokenRaw("token1")).isEmpty();
+        assertThat(repository.findByTokenRaw("token2")).isEmpty();
     }
 
     /**

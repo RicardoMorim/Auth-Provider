@@ -1,12 +1,11 @@
 package com.ricardo.auth.repository;
 
 import com.ricardo.auth.core.PasswordPolicyService;
-import com.ricardo.auth.domain.user.AppRole;
-import com.ricardo.auth.domain.user.Email;
-import com.ricardo.auth.domain.user.Password;
-import com.ricardo.auth.domain.user.User;
-import com.ricardo.auth.domain.user.Username;
-import com.ricardo.auth.helper.*;
+import com.ricardo.auth.domain.user.*;
+import com.ricardo.auth.helper.IdConverter;
+import com.ricardo.auth.helper.RoleMapper;
+import com.ricardo.auth.helper.UserRowMapper;
+import com.ricardo.auth.helper.UserSqlParameterMapper;
 import com.ricardo.auth.repository.user.UserPostgreSQLRepository;
 import com.ricardo.auth.repository.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
@@ -17,20 +16,15 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
-import org.springframework.test.context.DynamicPropertyRegistry;
-import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.context.TestPropertySource;
-import org.springframework.transaction.annotation.Transactional;
-import org.testcontainers.containers.PostgreSQLContainer;
-import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
-import javax.sql.DataSource;
 import java.time.Instant;
 import java.util.*;
 import java.util.concurrent.CountDownLatch;
 
-import static org.assertj.core.api.Assertions.*;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 /**
  * Tests for PostgreSQL user repository implementation.
@@ -39,26 +33,15 @@ import static org.assertj.core.api.Assertions.*;
 @Testcontainers
 @ActiveProfiles("test")
 @TestPropertySource(properties = {
-        "spring.datasource.url=jdbc:postgresql://localhost:5432/AuthLibraryTest",
-        "spring.datasource.username=postgres",
-        "spring.datasource.password=8080",
-        "spring.datasource.driver-class-name=org.postgresql.Driver",
         "ricardo.auth.repository.type=POSTGRESQL",
-        // Disable JPA/Hibernate completely when using PostgreSQL
-        "spring.jpa.hibernate.ddl-auto=none",
+        "ricardo.auth.repository.database.url=jdbc:postgresql://localhost:5432/AuthLibraryTest",
+        "ricardo.auth.repository.database.username=postgres",
+        "ricardo.auth.repository.database.password=8080",
+        "ricardo.auth.repository.database.driver-class-name=org.postgresql.Driver",
         "spring.autoconfigure.exclude=org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration"
 })
-@Transactional
 class PostgreSQLUserRepositoryTest {
 
-    @Container
-    static PostgreSQLContainer<?> postgres = new PostgreSQLContainer<>("postgres:18beta3")
-            .withDatabaseName("AuthLibraryTest")
-            .withUsername("postgres")
-            .withPassword("8080");
-
-    @Autowired
-    private DataSource dataSource;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -66,41 +49,42 @@ class PostgreSQLUserRepositoryTest {
     @Autowired
     private PasswordPolicyService passwordPolicyService;
 
+    @Autowired
     private IdConverter<UUID> idConverter;
+
+    @Autowired
     private UserRepository<User, AppRole, UUID> repository;
+
+    @Autowired
     private UserRowMapper<User, AppRole, UUID> userRowMapper;
+
+    @Autowired
     private UserSqlParameterMapper<User> userSqlParameterMapper;
+
+    @Autowired
     private RoleMapper<AppRole> roleMapper;
 
-    @DynamicPropertySource
-    static void configureProperties(DynamicPropertyRegistry registry) {
-        registry.add("spring.datasource.url", postgres::getJdbcUrl);
-        registry.add("spring.datasource.username", postgres::getUsername);
-        registry.add("spring.datasource.password", postgres::getPassword);
-        registry.add("spring.datasource.driver-class-name", () -> "org.postgresql.Driver");
-        registry.add("spring.jpa.hibernate.ddl-auto", () -> "none");
-        registry.add("spring.jpa.database-platform", () -> "org.hibernate.dialect.PostgreSQLDialect");
-    }
-
+    /**
+     * Sets up.
+     */
     @BeforeEach
     void setUp() {
-        idConverter = new UUIDConverter();
-        userRowMapper = new UserRowMapperImpl(idConverter);
-        userSqlParameterMapper = new UserSqlMapper();
-        roleMapper = new AppRoleMapper();
-
-        repository = new UserPostgreSQLRepository<>(userRowMapper, userSqlParameterMapper, roleMapper, idConverter, dataSource);
-
         // Clean up any existing data
         repository.deleteAll();
     }
 
+    /**
+     * Should use postgre sql implementation.
+     */
     @Test
     @DisplayName("Should use PostgreSQL implementation")
     void shouldUsePostgreSQLImplementation() {
         assertThat(repository).isInstanceOf(UserPostgreSQLRepository.class);
     }
 
+    /**
+     * Should create new user with auto generated id and version.
+     */
     @Test
     @DisplayName("Should create new user with auto-generated ID and version")
     void shouldCreateNewUserWithAutoGeneratedIdAndVersion() {
@@ -117,6 +101,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(savedUser.getEmail()).isEqualTo("test@example.com");
     }
 
+    /**
+     * Should find user by email.
+     */
     @Test
     @DisplayName("Should find user by email")
     void shouldFindUserByEmail() {
@@ -133,6 +120,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(found.get().getEmail()).isEqualTo("test@example.com");
     }
 
+    /**
+     * Should find user by username.
+     */
     @Test
     @DisplayName("Should find user by username")
     void shouldFindUserByUsername() {
@@ -149,6 +139,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(found.get().getEmail()).isEqualTo("test@example.com");
     }
 
+    /**
+     * Should find user by id.
+     */
     @Test
     @DisplayName("Should find user by ID")
     void shouldFindUserById() {
@@ -165,6 +158,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(found.get().getUsername()).isEqualTo("testuser");
     }
 
+    /**
+     * Should return empty when user not found.
+     */
     @Test
     @DisplayName("Should return empty when user not found")
     void shouldReturnEmptyWhenUserNotFound() {
@@ -174,6 +170,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.findById(UUID.randomUUID())).isEmpty();
     }
 
+    /**
+     * Should check if user exists by email.
+     */
     @Test
     @DisplayName("Should check if user exists by email")
     void shouldCheckIfUserExistsByEmail() {
@@ -186,6 +185,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsByEmail("nonexistent@example.com")).isFalse();
     }
 
+    /**
+     * Should check if user exists by username.
+     */
     @Test
     @DisplayName("Should check if user exists by username")
     void shouldCheckIfUserExistsByUsername() {
@@ -198,6 +200,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsByUsername("nonexistent")).isFalse();
     }
 
+    /**
+     * Should check if user exists by id.
+     */
     @Test
     @DisplayName("Should check if user exists by ID")
     void shouldCheckIfUserExistsById() {
@@ -210,6 +215,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsById(UUID.randomUUID())).isFalse();
     }
 
+    /**
+     * Should update existing user with optimistic locking.
+     */
     @Test
     @DisplayName("Should update existing user with optimistic locking")
     void shouldUpdateExistingUserWithOptimisticLocking() {
@@ -230,6 +238,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(updatedUser.getUpdatedAt()).isNotNull();
     }
 
+    /**
+     * Should throw exception on optimistic locking failure.
+     */
     @Test
     @DisplayName("Should throw exception on optimistic locking failure")
     void shouldThrowExceptionOnOptimisticLockingFailure() {
@@ -247,6 +258,9 @@ class PostgreSQLUserRepositoryTest {
                 .hasMessageContaining("was not found or has been modified");
     }
 
+    /**
+     * Should save user with roles.
+     */
     @Test
     @DisplayName("Should save user with roles")
     void shouldSaveUserWithRoles() {
@@ -269,6 +283,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(found.get().getRoles()).contains(AppRole.ADMIN, AppRole.USER);
     }
 
+    /**
+     * Should update user roles.
+     */
     @Test
     @DisplayName("Should update user roles")
     void shouldUpdateUserRoles() {
@@ -293,6 +310,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(found.get().getRoles()).contains(AppRole.ADMIN);
     }
 
+    /**
+     * Should save multiple users.
+     */
     @Test
     @DisplayName("Should save multiple users")
     void shouldSaveMultipleUsers() {
@@ -314,6 +334,9 @@ class PostgreSQLUserRepositoryTest {
         });
     }
 
+    /**
+     * Should find all users.
+     */
     @Test
     @DisplayName("Should find all users")
     void shouldFindAllUsers() {
@@ -331,6 +354,9 @@ class PostgreSQLUserRepositoryTest {
                 .containsExactlyInAnyOrder("user1", "user2", "user3");
     }
 
+    /**
+     * Should find users by ids.
+     */
     @Test
     @DisplayName("Should find users by IDs")
     void shouldFindUsersByIds() {
@@ -350,6 +376,9 @@ class PostgreSQLUserRepositoryTest {
                 .containsExactlyInAnyOrder("user1", "user3");
     }
 
+    /**
+     * Should count users.
+     */
     @Test
     @DisplayName("Should count users")
     void shouldCountUsers() {
@@ -364,6 +393,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(count).isEqualTo(2L);
     }
 
+    /**
+     * Should delete user by id.
+     */
     @Test
     @DisplayName("Should delete user by ID")
     void shouldDeleteUserById() {
@@ -379,6 +411,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsById((UUID) savedUser.getId())).isFalse();
     }
 
+    /**
+     * Should delete user entity.
+     */
     @Test
     @DisplayName("Should delete user entity")
     void shouldDeleteUserEntity() {
@@ -393,6 +428,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.findById((UUID) savedUser.getId())).isEmpty();
     }
 
+    /**
+     * Should delete users by ids.
+     */
     @Test
     @DisplayName("Should delete users by IDs")
     void shouldDeleteUsersByIds() {
@@ -412,6 +450,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsById((UUID) user3.getId())).isFalse();
     }
 
+    /**
+     * Should delete user entities.
+     */
     @Test
     @DisplayName("Should delete user entities")
     void shouldDeleteUserEntities() {
@@ -426,6 +467,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.count()).isEqualTo(0L);
     }
 
+    /**
+     * Should delete all users.
+     */
     @Test
     @DisplayName("Should delete all users")
     void shouldDeleteAllUsers() {
@@ -441,9 +485,14 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.findAll()).isEmpty();
     }
 
+    /**
+     * Should handle postgre sql timestamp operations.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should handle PostgreSQL timestamp operations correctly")
-    void shouldHandlePostgreSQLTimestampOperations() {
+    void shouldHandlePostgreSQLTimestampOperations() throws InterruptedException {
         // Arrange
         User user = createTestUser("timestampuser", "timestamp@example.com");
 
@@ -456,6 +505,8 @@ class PostgreSQLUserRepositoryTest {
         assertThat(savedUser.getCreatedAt()).isBeforeOrEqualTo(Instant.now());
         assertThat(savedUser.getUpdatedAt()).isBeforeOrEqualTo(Instant.now());
 
+        Thread.sleep(100);
+
         // Test update timestamp
         Instant originalUpdatedAt = savedUser.getUpdatedAt();
         savedUser.setUsername("updated");
@@ -464,6 +515,11 @@ class PostgreSQLUserRepositoryTest {
         assertThat(updatedUser.getUpdatedAt()).isAfter(originalUpdatedAt);
     }
 
+    /**
+     * Should handle concurrent user operations.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should handle concurrent user operations")
     void shouldHandleConcurrentUserOperations() throws InterruptedException {
@@ -498,6 +554,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(uniqueIds).hasSize(threadCount);
     }
 
+    /**
+     * Should handle large username and email values.
+     */
     @Test
     @DisplayName("Should handle large username and email values")
     void shouldHandleLargeUsernameAndEmailValues() {
@@ -518,6 +577,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(foundUser.get().getUsername()).isEqualTo(largeUsername);
     }
 
+    /**
+     * Should handle empty roles correctly.
+     */
     @Test
     @DisplayName("Should handle empty roles correctly")
     void shouldHandleEmptyRolesCorrectly() {
@@ -537,6 +599,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(found.get().getRoles()).isEmpty();
     }
 
+    /**
+     * Should maintain referential integrity when deleting users with roles.
+     */
     @Test
     @DisplayName("Should maintain referential integrity when deleting users with roles")
     void shouldMaintainReferentialIntegrityWhenDeletingUsersWithRoles() {
@@ -554,6 +619,9 @@ class PostgreSQLUserRepositoryTest {
         // User roles should be deleted automatically due to CASCADE
     }
 
+    /**
+     * Should handle batch operations efficiently.
+     */
     @Test
     @DisplayName("Should handle batch operations efficiently")
     void shouldHandleBatchOperationsEfficiently() {
@@ -577,6 +645,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(duration).isLessThan(5000L); // Should complete within 5 seconds
     }
 
+    /**
+     * Should handle null parameters gracefully.
+     */
     @Test
     @DisplayName("Should handle null parameters gracefully")
     void shouldHandleNullParametersGracefully() {
@@ -587,6 +658,9 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsByUsername(null)).isFalse();
     }
 
+    /**
+     * Should handle empty parameters gracefully.
+     */
     @Test
     @DisplayName("Should handle empty parameters gracefully")
     void shouldHandleEmptyParametersGracefully() {
@@ -597,14 +671,19 @@ class PostgreSQLUserRepositoryTest {
         assertThat(repository.existsByUsername("")).isFalse();
     }
 
+    /**
+     * Should preserve creation timestamp on update.
+     *
+     * @throws InterruptedException the interrupted exception
+     */
     @Test
     @DisplayName("Should preserve creation timestamp on update")
-    void shouldPreserveCreationTimestampOnUpdate() {
+    void shouldPreserveCreationTimestampOnUpdate() throws InterruptedException {
         // Arrange
         User user = createTestUser("timestamptest", "timestamp@example.com");
         User savedUser = repository.saveUser(user);
         Instant originalCreatedAt = savedUser.getCreatedAt();
-
+        Thread.sleep(100);
         // Act - Update user
         savedUser.setUsername("updated");
         User updatedUser = repository.saveUser(savedUser);
