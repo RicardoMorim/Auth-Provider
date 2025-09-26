@@ -13,7 +13,6 @@ import com.ricardo.auth.repository.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.cache.annotation.CacheEvict;
-import org.springframework.cache.annotation.CachePut;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.cache.annotation.Caching;
 import org.springframework.data.domain.Page;
@@ -121,10 +120,6 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             @CacheEvict(value = "userById", key = "#user.id"),
             @CacheEvict(value = "users", allEntries = true),
             @CacheEvict(value = "adminCount", allEntries = true),
-    }, put = {
-            @CachePut(value = "userByEmail", key = "#user.email", condition = "#user.email != null"),
-            @CachePut(value = "userByUsername", key = "#user.username", condition = "#user.username != null"),
-            @CachePut(value = "userById", key = "#user.id", condition = "#user.id != null"),
     })
     public U createUser(U user) {
         if (user == null) {
@@ -346,8 +341,8 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
             List<String> roles = role != null ? List.of(role) : null;
 
             Page<U> users = userRepository.findAllWithFilters(
-                    sanitizeForLogging(username),
-                    sanitizeForLogging(email),
+                    username,
+                    email,
                     roles,
                     after,
                     before,

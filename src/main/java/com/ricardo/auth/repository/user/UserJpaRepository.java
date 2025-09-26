@@ -114,10 +114,10 @@ public interface UserJpaRepository<U extends AuthUser<ID, R>, R extends Role, ID
     }
 
     @Override
-    @Query("SELECT u FROM #{#entityName} u LEFT JOIN u.roles r WHERE " +
+    @Query("SELECT DISTINCT u FROM #{#entityName} u LEFT JOIN u.roles r WHERE " +
             "(:username IS NULL OR u.username.username LIKE CONCAT('%', :username, '%')) AND " +
             "(:email IS NULL OR u.email.email LIKE CONCAT('%', :email, '%')) AND " +
-            "(:roleList IS NULL OR r IN :roleList) AND " +
+            "(:roleList IS NULL OR EXISTS (SELECT 1 FROM #{#entityName} u2 JOIN u2.roles r2 WHERE u2.id = u.id AND r2 IN :roleList)) AND " +
             "(:createdAfter IS NULL OR u.createdAt >= :createdAfter) AND " +
             "(:createdBefore IS NULL OR u.createdAt <= :createdBefore)")
     Page<U> findAllWithFilters(
