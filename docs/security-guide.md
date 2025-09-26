@@ -39,17 +39,17 @@ The Ricardo Auth Starter implements comprehensive security mechanisms:
       ```bash
       export RICARDO_AUTH_POSTGRESQL_PASS=your_secure_password
       ```
-    - On Windows: 
+    - On Windows:
       ```cmd
       set RICARDO_AUTH_POSTGRESQL_PASS=your_secure_password
       ```
 3. Reference it in your application.yml:
+
 ```yml
 auth:
   password:
     password: ${POSTGRE_SQL_PASS}
 ```
-
 
 ### Option 2: Use Dotenv
 
@@ -61,7 +61,8 @@ auth:
 3. Load the `.env` file in a bean that starts before the other beans:
    ```java
    @Configuration
-  public class EarlyPropertyInjectionConfig {
+
+public class EarlyPropertyInjectionConfig {
 
       @Bean
       public static BeanFactoryPostProcessor injectPostgreSqlPassword() {
@@ -83,7 +84,9 @@ auth:
               });
           };
       }
-  }
+
+}
+
 ```
 
 ## Cookie-Based Authentication Security
@@ -121,6 +124,7 @@ ricardo:
 ### CORS Configuration for Cookie Authentication
 
 **Backend Configuration:**
+
 ```yaml
 ricardo:
   auth:
@@ -133,6 +137,7 @@ ricardo:
 ```
 
 **Frontend Integration:**
+
 ```javascript
 // Ensure cookies are sent with all requests
 fetch('/api/auth/me', {
@@ -153,11 +158,13 @@ $.ajaxSetup({
 ### HTTPS Requirements
 
 **Production Security:**
+
 - HTTPS is mandatory for secure cookies in production
 - Automatic HTTPS redirection enabled by default
 - SSL/TLS certificates required
 
 **Development Configuration:**
+
 ```yaml
 ricardo:
   auth:
@@ -422,6 +429,7 @@ Monitor these metrics:
 The Ricardo Auth Starter implements a secure password reset system following OWASP guidelines:
 
 **Security Features:**
+
 - **Time-Limited Tokens**: Reset tokens expire after configurable time period
 - **Cryptographically Secure Tokens**: Uses SecureRandom for token generation
 - **Rate Limiting**: Prevents password reset abuse and enumeration attacks
@@ -448,12 +456,14 @@ ricardo:
 ### Security Best Practices
 
 **Token Security:**
+
 - **Short Expiration**: 15-60 minutes maximum
 - **Strong Randomness**: 256-bit cryptographically secure tokens
 - **Single Use**: Tokens invalidated immediately after use
 - **Database Storage**: Hashed token storage (never plain text)
 
 **Rate Limiting:**
+
 ```yaml
 ricardo:
   auth:
@@ -464,6 +474,7 @@ ricardo:
 ```
 
 **Email Security:**
+
 - **HTTPS Links**: Always use HTTPS for reset URLs
 - **Clear Instructions**: Include security warnings in emails
 - **Branded Templates**: Use recognizable email templates
@@ -472,6 +483,7 @@ ricardo:
 ### Frontend Integration
 
 **Secure Reset Flow:**
+
 ```javascript
 // 1. Request password reset
 const requestReset = async (email) => {
@@ -507,12 +519,14 @@ const confirmReset = async (token, newPassword) => {
 ### Monitoring and Alerting
 
 **Security Monitoring:**
+
 - Track password reset request patterns
 - Monitor for enumeration attempts
 - Alert on unusual reset volumes
 - Log all reset activities via domain events
 
 **Metrics to Track:**
+
 - Reset requests per user/IP
 - Token usage patterns
 - Failed reset attempts
@@ -896,7 +910,8 @@ curl -X POST http://localhost:8080/api/auth/revoke \
 
 ### Overview
 
-**NEW in v3.0.0**: The Ricardo Auth Starter now includes built-in Cross-Site Request Forgery (CSRF) protection to prevent malicious websites from performing unauthorized actions on behalf of authenticated users.
+**NEW in v3.0.0**: The Ricardo Auth Starter now includes built-in Cross-Site Request Forgery (CSRF) protection to
+prevent malicious websites from performing unauthorized actions on behalf of authenticated users.
 
 ### How CSRF Protection Works
 
@@ -920,6 +935,7 @@ CSRF protection is enabled by default and automatically configured:
 ```
 
 **Key Configuration Details:**
+
 - Uses `CookieCsrfTokenRepository.withHttpOnlyFalse()` to allow JavaScript access
 - Public endpoints (`/api/auth/login`, `/api/users/create`) are exempt
 - All other authenticated endpoints require CSRF tokens
@@ -927,10 +943,12 @@ CSRF protection is enabled by default and automatically configured:
 ### Endpoints and CSRF Requirements
 
 #### Exempt from CSRF Protection
+
 - `POST /api/auth/login` - Public authentication endpoint
 - `POST /api/users/create` - Public user registration endpoint
 
 #### Require CSRF Protection
+
 - `POST /api/auth/refresh` - Token refresh
 - `POST /api/auth/revoke` - Token revocation (ADMIN)
 - `PUT /api/users/update/{id}` - User updates
@@ -1061,6 +1079,7 @@ When CSRF protection is violated, the server returns a 403 Forbidden response:
 ```
 
 **Common CSRF Error Scenarios:**
+
 - Missing `X-XSRF-TOKEN` header
 - Invalid or expired CSRF token
 - Token mismatch between cookie and header
@@ -1076,6 +1095,7 @@ When CSRF protection is violated, the server returns a 403 Forbidden response:
 ### Best Practices
 
 #### Development
+
 ```javascript
 // Always check for CSRF token before making requests
 const csrfToken = getCsrfToken();
@@ -1085,12 +1105,14 @@ if (!csrfToken) {
 ```
 
 #### Production
+
 - Ensure HTTPS is enabled (required for secure cookies)
 - Monitor CSRF error rates in application logs
 - Implement proper error handling for CSRF failures
 - Use `SameSite=Strict` cookies when possible for additional protection
 
 #### Testing
+
 ```javascript
 // Test CSRF protection in your test suite
 test('should reject requests without CSRF token', async () => {
@@ -1113,14 +1135,17 @@ test('should reject requests without CSRF token', async () => {
 #### Common Issues
 
 **1. "CSRF token missing" errors**
+
 - **Cause**: Frontend not including `X-XSRF-TOKEN` header
 - **Solution**: Ensure CSRF token is read from cookie and included in headers
 
 **2. "Invalid CSRF token" errors**
+
 - **Cause**: Token mismatch or expiration
 - **Solution**: Refresh the page to get a new token
 
 **3. CSRF token not found in cookies**
+
 - **Cause**: Not making an initial request to get the token
 - **Solution**: Make a GET request to any authenticated endpoint first
 
@@ -1183,6 +1208,7 @@ If upgrading from v2.x to v3.0.0:
 4. **Gradual Rollout**: Consider feature flags for gradual CSRF enforcement
 
 **Migration Script Example:**
+
 ```javascript
 // Before v3.0.0
 fetch('/api/auth/refresh', {

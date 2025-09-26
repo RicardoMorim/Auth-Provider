@@ -21,6 +21,9 @@ class InMemoryTokenBlocklistTest {
     private InMemoryTokenBlocklist blocklist;
 
 
+    /**
+     * Test blocklist initialization.
+     */
     @Test
     void testBlocklistInitialization() {
         assertNotNull(blocklist);

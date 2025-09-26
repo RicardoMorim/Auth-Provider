@@ -6,12 +6,16 @@ import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.*;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
+import com.ricardo.auth.repository.user.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
@@ -24,14 +28,13 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @ActiveProfiles("test")
-@Transactional
 class UserServiceImplTest {
 
     @Autowired
     private UserService<User, AppRole, UUID> userService;
 
     @Autowired
-    private DefaultUserJpaRepository userRepository;
+    private UserRepository<User, AppRole, UUID> userRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -46,14 +49,14 @@ class UserServiceImplTest {
      */
     @BeforeEach
     void setUp() {
-        userRepository.deleteAll();
+        userService.deleteAllUsers();
 
         // Create a test user
         Username username = Username.valueOf("existinguser");
         Email email = Email.valueOf("existing@example.com");
         Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         testUser = new User(username, email, password);
-        userRepository.save(testUser);
+        userService.createUser(testUser);
     }
 
     /**
@@ -174,7 +177,7 @@ class UserServiceImplTest {
      * Update user should update user details.
      */
     @Test
-    void updateUser_shouldUpdateUserDetails() {
+    void updateUser_shouldUpdateEmailAndUsernameDetails() {
         // Arrange
         Username newUsername = Username.valueOf("updateduser");
         Email newEmail = Email.valueOf("updated@example.com");
@@ -182,7 +185,7 @@ class UserServiceImplTest {
         User userDetails = new User(newUsername, newEmail, newPassword);
 
         // Act
-        User updatedUser = userService.updateUser(testUser.getId(), userDetails);
+        User updatedUser = userService.updateEmailAndUsername(testUser.getId(), userDetails.getEmail(), userDetails.getUsername());
 
         // Assert
         assertNotNull(updatedUser);
@@ -225,10 +228,12 @@ class UserServiceImplTest {
         Email email = Email.valueOf("second@example.com");
         Password password = Password.valueOf("Password@123", passwordEncoder, passwordPolicyService);
         User secondUser = new User(username, email, password);
-        userRepository.save(secondUser);
+        userService.createUser(secondUser);
 
         // Act
-        List<User> users = userService.getAllUsers();
+        Pageable pageable = PageRequest.of(0, 10);
+
+        List<User> users = userService.getAllUsers(pageable, null, null, null, null, null);
 
         // Assert
         assertEquals(2, users.size());

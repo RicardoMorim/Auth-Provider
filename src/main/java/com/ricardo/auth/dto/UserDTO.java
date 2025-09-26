@@ -31,7 +31,6 @@ public class UserDTO implements Serializable {
     }
 
 
-
     /**
      * Sets username.
      *

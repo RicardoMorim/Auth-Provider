@@ -28,13 +28,13 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 
 ### 🔐 **Authentication & Security**
 
-| Issue                       | Guide                                      | Common Causes                              |
-|-----------------------------|--------------------------------------------|-------------------------------------------|
-| Cookie authentication fails | [Authentication Issues](authentication.md) | CORS not configured, HTTPS required       |
-| Login always fails          | [Authentication Issues](authentication.md) | Wrong credentials, user not found         |
-| CORS errors                 | [Authentication Issues](authentication.md) | Missing CORS configuration, credentials   |
-| HTTPS redirect issues       | [Authentication Issues](authentication.md) | SSL certificate problems                  |
-| Password reset fails        | [Password Reset Issues](password-reset.md) | Email not configured, token expired       |
+| Issue                       | Guide                                      | Common Causes                           |
+|-----------------------------|--------------------------------------------|-----------------------------------------|
+| Cookie authentication fails | [Authentication Issues](authentication.md) | CORS not configured, HTTPS required     |
+| Login always fails          | [Authentication Issues](authentication.md) | Wrong credentials, user not found       |
+| CORS errors                 | [Authentication Issues](authentication.md) | Missing CORS configuration, credentials |
+| HTTPS redirect issues       | [Authentication Issues](authentication.md) | SSL certificate problems                |
+| Password reset fails        | [Password Reset Issues](password-reset.md) | Email not configured, token expired     |
 
 ### 🔑 **Password Policy**
 
@@ -73,7 +73,9 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 ### Application Startup Errors
 
 -
+
 `Property 'ricardo.auth.jwt.secret' is required` → [JWT Secret Not Configured](startup-issues.md#jwt-secret-not-configured)
+
 - `Failed to configure a DataSource` → [Missing JPA Dependencies](startup-issues.md#missing-jpa-dependencies)
 - `Error creating bean` → [Bean Creation Errors](startup-issues.md#bean-creation-errors)
 

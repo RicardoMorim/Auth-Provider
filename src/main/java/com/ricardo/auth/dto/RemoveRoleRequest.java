@@ -1,15 +1,17 @@
 package com.ricardo.auth.dto;
 
-import lombok.Data;
-
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.Size;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
 
 /**
  * Request DTO for removing a role from a user.
- * 
- * @since 3.1.0
+ *
  */
+@AllArgsConstructor
+@NoArgsConstructor
 @Data
 public class RemoveRoleRequest {
 

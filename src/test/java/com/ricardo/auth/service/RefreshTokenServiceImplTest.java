@@ -46,6 +46,7 @@ class RefreshTokenServiceImplTest {
     private DefaultUserJpaRepository userRepository;
     @Autowired
     private PasswordEncoder passwordEncoder;
+
     private User testUser;
 
     /**
@@ -54,7 +55,8 @@ class RefreshTokenServiceImplTest {
     @BeforeEach
     void setUp() {
         // Clean database
-        userRepository.deleteAll();
+        refreshTokenService.deleteAllTokens();
+        userService.deleteAllUsers();
 
         // Create test user
         testUser = new User(

@@ -4,13 +4,14 @@ import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.EmailSenderService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
-import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
 
 
+/**
+ * The type Email sender service.
+ */
 @AllArgsConstructor
 @Slf4j
 public class EmailSenderServiceImpl implements EmailSenderService {
@@ -48,7 +49,7 @@ public class EmailSenderServiceImpl implements EmailSenderService {
             message.setSubject(subject);
             message.setText(body);
             message.setFrom(authProperties.getEmail().getFromAddress());
-            
+
             mailSender.send(message);
             log.info("Email sent successfully to: {}", to);
             return true;

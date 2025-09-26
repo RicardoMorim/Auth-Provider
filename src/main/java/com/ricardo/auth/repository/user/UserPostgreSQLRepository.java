@@ -2,34 +2,52 @@ package com.ricardo.auth.repository.user;
 
 import com.ricardo.auth.core.Role;
 import com.ricardo.auth.domain.user.AuthUser;
-import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.helper.IdConverter;
 import com.ricardo.auth.helper.RoleMapper;
 import com.ricardo.auth.helper.UserRowMapper;
 import com.ricardo.auth.helper.UserSqlParameterMapper;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageImpl;
+import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.orm.ObjectOptimisticLockingFailureException;
-
 import org.springframework.stereotype.Repository;
 
 import javax.sql.DataSource;
+import java.time.Instant;
 import java.util.*;
 
+/**
+ * The type User postgre sql repository.
+ *
+ * @param <U>  the type parameter
+ * @param <R>  the type parameter
+ * @param <ID> the type parameter
+ */
 @Repository
-public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role, ID> implements UserRepository<T, R, ID> {
-    
+public class UserPostgreSQLRepository<U extends AuthUser<ID, R>, R extends Role, ID> implements UserRepository<U, R, ID> {
+
     private static final Logger logger = LoggerFactory.getLogger(UserPostgreSQLRepository.class);
 
-    private final UserRowMapper<T, R, ID> userRowMapper;
-    private final UserSqlParameterMapper<T> userSqlParameterMapper;
+    private final UserRowMapper<U, R, ID> userRowMapper;
+    private final UserSqlParameterMapper<U> userSqlParameterMapper;
     private final RoleMapper<R> roleMapper;
     private final JdbcTemplate jdbcTemplate;
     private final IdConverter<ID> idConverter;
 
-    public UserPostgreSQLRepository(UserRowMapper<T, R, ID> userRowMapper,
-                                    UserSqlParameterMapper<T> userSqlParameterMapper,
+    /**
+     * Instantiates a new User postgre sql repository.
+     *
+     * @param userRowMapper          the user row mapper
+     * @param userSqlParameterMapper the user sql parameter mapper
+     * @param roleMapper             the role mapper
+     * @param idConverter            the id converter
+     * @param dataSource             the data source
+     */
+    public UserPostgreSQLRepository(UserRowMapper<U, R, ID> userRowMapper,
+                                    UserSqlParameterMapper<U> userSqlParameterMapper,
                                     RoleMapper<R> roleMapper,
                                     IdConverter<ID> idConverter,
                                     DataSource dataSource) {
@@ -41,25 +59,25 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
     }
 
     @Override
-    public Optional<T> findByEmail(String email) {
+    public Optional<U> findByEmail(String email) {
         String sql = """
-            SELECT u.*, ur.role 
-            FROM users u 
-            LEFT JOIN user_roles ur ON u.id = ur.user_id 
-            WHERE u.email = ?
-            """;
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                WHERE u.email = ?
+                """;
 
         return findUserWithRoles(sql, email);
     }
 
     @Override
-    public Optional<T> findByUsername(String username) {
+    public Optional<U> findByUsername(String username) {
         String sql = """
-            SELECT u.*, ur.role 
-            FROM users u 
-            LEFT JOIN user_roles ur ON u.id = ur.user_id 
-            WHERE u.username = ?
-            """;
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                WHERE u.username = ?
+                """;
 
         return findUserWithRoles(sql, username);
     }
@@ -93,7 +111,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
     }
 
     @Override
-    public <S extends T> S saveUser(S entity) {
+    public <S extends U> S saveUser(S entity) {
         if (entity.getId() == null) {
             // Insert new user
             return insertUser(entity);
@@ -103,7 +121,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         }
     }
 
-    private <S extends T> S insertUser(S entity) {
+    private <S extends U> S insertUser(S entity) {
         // Insert the user using RETURNING to get the generated ID
         String userSql = userSqlParameterMapper.getInsertSql();
         Object[] userParams = userSqlParameterMapper.getInsertParams(entity);
@@ -117,7 +135,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
         String stringId;
 
-        if (generatedId instanceof String){
+        if (generatedId instanceof String) {
             try {
                 stringId = (String) generatedId;
             } catch (IllegalArgumentException e) {
@@ -140,13 +158,13 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         return entity;
     }
 
-    private <S extends T> S updateUser(S entity) {
+    private <S extends U> S updateUser(S entity) {
         // Use optimistic locking with version
         String sql = """
-            UPDATE users 
-            SET username = ?, email = ?, password = ?, version = version + 1, updated_at = NOW()
-            WHERE id = ? AND version = ?
-            """;
+                UPDATE users 
+                SET username = ?, email = ?, password = ?, version = version + 1, updated_at = NOW()
+                WHERE id = ? AND version = ?
+                """;
 
         int rowsAffected = jdbcTemplate.update(sql,
                 entity.getUsername(),
@@ -158,8 +176,8 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
         if (rowsAffected == 0) {
             throw new ObjectOptimisticLockingFailureException(
-                "User with id " + entity.getId() + " and version " + entity.getVersion() +
-                " was not found or has been modified by another transaction", entity
+                    "User with id " + entity.getId() + " and version " + entity.getVersion() +
+                            " was not found or has been modified by another transaction", entity
             );
         }
         // Increment version locally
@@ -172,7 +190,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         return entity;
     }
 
-    private <S extends T> void insertUserRoles(S entity) {
+    private <S extends U> void insertUserRoles(S entity) {
         Object[][] rolesParams = userSqlParameterMapper.getInsertRolesParams(entity);
         if (rolesParams.length > 0) {
             String rolesSql = userSqlParameterMapper.getInsertRolesSql();
@@ -181,7 +199,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         }
     }
 
-    private <S extends T> void updateUserRoles(S entity) {
+    private <S extends U> void updateUserRoles(S entity) {
         // First, delete existing roles for this user
         String deleteRolesSql = "DELETE FROM user_roles WHERE user_id = ?";
         jdbcTemplate.update(deleteRolesSql, entity.getId());
@@ -192,7 +210,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
     // Optimized bulk operations
     @Override
-    public <S extends T> List<S> saveAll(Iterable<S> entities) {
+    public <S extends U> List<S> saveAll(Iterable<S> entities) {
         List<S> result = new ArrayList<>();
         List<S> toInsert = new ArrayList<>();
         List<S> toUpdate = new ArrayList<>();
@@ -219,7 +237,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         return result;
     }
 
-    private <S extends T> List<S> batchInsertUsers(List<S> entities) {
+    private <S extends U> List<S> batchInsertUsers(List<S> entities) {
         List<S> result = new ArrayList<>();
 
         for (S entity : entities) {
@@ -230,37 +248,38 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
     }
 
     @Override
-    public Optional<T> findById(ID id) {
+    public Optional<U> findById(ID id) {
         String sql = """
-            SELECT u.*, ur.role 
-            FROM users u 
-            LEFT JOIN user_roles ur ON u.id = ur.user_id 
-            WHERE u.id = ?
-            """;
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                WHERE u.id = ?
+                """;
 
         return findUserWithRoles(sql, id);
     }
 
+
     @Override
-    public List<T> findAll() {
+    public List<U> findAll() {
         String sql = """
-            SELECT u.*, ur.role 
-            FROM users u 
-            LEFT JOIN user_roles ur ON u.id = ur.user_id 
-            ORDER BY u.id
-            """;
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                ORDER BY u.id
+                """;
 
         return findUsersWithRoles(sql);
     }
 
     @Override
-    public List<T> findAllById(Iterable<ID> ids) {
+    public List<U> findAllById(Iterable<ID> ids) {
         StringBuilder sql = new StringBuilder("""
-            SELECT u.*, ur.role 
-            FROM users u 
-            LEFT JOIN user_roles ur ON u.id = ur.user_id 
-            WHERE u.id IN (
-            """);
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                WHERE u.id IN (
+                """);
 
         List<Object> params = new ArrayList<>();
         for (ID id : ids) {
@@ -286,7 +305,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
     }
 
     @Override
-    public void delete(T entity) {
+    public void delete(U entity) {
         if (entity.getId() != null) {
             @SuppressWarnings("unchecked")
             ID id = (ID) entity.getId();
@@ -302,8 +321,8 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
     }
 
     @Override
-    public void deleteAll(Iterable<? extends T> entities) {
-        for (T entity : entities) {
+    public void deleteAll(Iterable<? extends U> entities) {
+        for (U entity : entities) {
             delete(entity);
         }
     }
@@ -321,7 +340,7 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
 
     @Override
-    public int countUsers(){
+    public int countUsers() {
         String countSql = "SELECT COUNT(*) FROM users";
         Integer count = jdbcTemplate.queryForObject(countSql, Integer.class);
         return count != null ? count : 0;
@@ -329,13 +348,13 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
 
     @Override
-    public int countUsersByRole(String Role){
+    public int countUsersByRole(String Role) {
         String countSql = """
-            SELECT COUNT(DISTINCT u.id) 
-            FROM users u 
-            JOIN user_roles ur ON u.id = ur.user_id 
-            WHERE ur.role = ?
-            """;
+                SELECT COUNT(DISTINCT u.id) 
+                FROM users u 
+                JOIN user_roles ur ON u.id = ur.user_id 
+                WHERE ur.role = ?
+                """;
         Integer count = jdbcTemplate.queryForObject(countSql, Integer.class, Role);
         return count != null ? count : 0;
     }
@@ -343,11 +362,11 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
     // Helper methods to aggregate roles
     @SuppressWarnings("unchecked")
-    private Optional<T> findUserWithRoles(String sql, Object... params) {
-        Map<Object, T> userMap = new HashMap<>();
+    private Optional<U> findUserWithRoles(String sql, Object... params) {
+        Map<Object, U> userMap = new HashMap<>();
         jdbcTemplate.query(sql, rs -> {
             Object userId = rs.getObject("id");
-            T user = userMap.get(userId);
+            U user = userMap.get(userId);
             if (user == null) {
                 user = userRowMapper.mapRow(rs, 0);
                 userMap.put(userId, user);
@@ -371,12 +390,13 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
 
         return userMap.values().stream().findFirst();
     }
+
     @SuppressWarnings("unchecked")
-    private List<T> findUsersWithRoles(String sql, Object... params) {
-        Map<Object, T> userMap = new LinkedHashMap<>();
+    private List<U> findUsersWithRoles(String sql, Object... params) {
+        Map<Object, U> userMap = new LinkedHashMap<>();
         jdbcTemplate.query(sql, rs -> {
             Object userId = rs.getObject("id");
-            T user = userMap.get(userId);
+            U user = userMap.get(userId);
             if (user == null) {
                 user = userRowMapper.mapRow(rs, 0);
                 userMap.put(userId, user);
@@ -399,5 +419,158 @@ public class UserPostgreSQLRepository<T extends AuthUser<ID, R>, R extends Role,
         }, params);
 
         return new ArrayList<>(userMap.values());
+    }
+
+
+    @Override
+    public Page<U> findAll(Pageable pageable) {
+        // Count total elements
+        long total = count();
+
+        // Calculate offset
+        int offset = (int) pageable.getOffset();
+        int pageSize = pageable.getPageSize();
+
+        // Build sort clause
+        String sortClause = buildSortClause(pageable);
+
+        String sql = """
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id 
+                """ + sortClause + """
+                LIMIT ? OFFSET ?
+                """;
+
+        List<U> content = findUsersWithRoles(sql, pageSize, offset);
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    @Override
+    public Page<U> findAllWithFilters(String username, String email, List<String> roles,
+                                      Instant createdAfter, Instant createdBefore,
+                                      Pageable pageable) {
+        StringBuilder whereClause = new StringBuilder(" WHERE 1=1");
+        List<Object> params = new ArrayList<>();
+
+        // Username filter
+        if (username != null && !username.trim().isEmpty()) {
+            if (username.startsWith("contains:")) {
+                String searchTerm = username.substring(9);
+                whereClause.append(" AND u.username LIKE ?");
+                params.add("%" + searchTerm + "%");
+            } else {
+                whereClause.append(" AND u.username = ?");
+                params.add(username);
+            }
+        }
+
+        // Email filter
+        if (email != null && !email.trim().isEmpty()) {
+            if (email.startsWith("contains:")) {
+                String searchTerm = email.substring(9);
+                whereClause.append(" AND u.email LIKE ?");
+                params.add("%" + searchTerm + "%");
+            } else {
+                whereClause.append(" AND u.email = ?");
+                params.add(email);
+            }
+        }
+
+        // Role filter
+        if (roles != null && !roles.isEmpty()) {
+            for (String role : roles) {
+                if (role != null && !role.trim().isEmpty()) {
+                    whereClause.append(" AND EXISTS (SELECT 1 FROM user_roles ur2 WHERE ur2.user_id = u.id AND ur2.role = ?)");
+                    params.add(role);
+                }
+            }
+        }
+
+        // Date range filters
+        if (createdAfter != null && !createdAfter.toString().trim().isEmpty()) {
+            whereClause.append(" AND u.created_at >= ?::timestamp");
+            params.add(createdAfter.toString());
+        }
+
+        if (createdBefore != null && !createdBefore.toString().trim().isEmpty()) {
+            whereClause.append(" AND u.created_at <= ?::timestamp");
+            params.add(createdBefore.toString());
+        }
+
+        // Count query
+        String countSql = "SELECT COUNT(DISTINCT u.id) FROM users u" + whereClause;
+        Long total = jdbcTemplate.queryForObject(countSql, Long.class, params.toArray());
+        if (total == null) total = 0L;
+
+        // Build sort clause
+        String sortClause = buildSortClause(pageable);
+
+        // Data query
+        String sql = """
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                """ + whereClause + sortClause + """
+                LIMIT ? OFFSET ?
+                """;
+
+        params.add(pageable.getPageSize());
+        params.add((int) pageable.getOffset());
+
+        List<U> content = findUsersWithRoles(sql, params.toArray());
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    @Override
+    public Page<U> searchByQuery(String query, Pageable pageable) {
+        String whereClause = " WHERE u.username LIKE ? OR u.email LIKE ?";
+        String searchPattern = "%" + query + "%";
+
+        // Count query
+        String countSql = "SELECT COUNT(DISTINCT u.id) FROM users u" + whereClause;
+        Long total = jdbcTemplate.queryForObject(countSql, Long.class, searchPattern, searchPattern);
+        if (total == null) total = 0L;
+
+        // Build sort clause
+        String sortClause = buildSortClause(pageable);
+
+        // Data query
+        String sql = """
+                SELECT u.*, ur.role 
+                FROM users u 
+                LEFT JOIN user_roles ur ON u.id = ur.user_id
+                """ + whereClause + sortClause + """
+                LIMIT ? OFFSET ?
+                """;
+
+        List<U> content = findUsersWithRoles(sql, searchPattern, searchPattern,
+                pageable.getPageSize(), (int) pageable.getOffset());
+
+        return new PageImpl<>(content, pageable, total);
+    }
+
+    private String buildSortClause(Pageable pageable) {
+        if (pageable.getSort().isEmpty()) {
+            return " ORDER BY u.id ASC ";
+        }
+
+        StringBuilder sortClause = new StringBuilder(" ORDER BY ");
+        pageable.getSort().forEach(order -> {
+            String property = mapSortProperty(order.getProperty());
+            sortClause.append("u.").append(property).append(" ")
+                    .append(order.getDirection().name()).append(", ");
+        });
+
+        sortClause.setLength(sortClause.length() - 2);
+        sortClause.append(" ");
+        return sortClause.toString();
+    }
+
+    private String mapSortProperty(String property) {
+        // Map property names to database columns
+        return userRowMapper.mapSortProperty(property);
     }
 }
