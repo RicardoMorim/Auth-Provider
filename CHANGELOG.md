@@ -5,7 +5,7 @@ All notable changes to the Ricardo Auth Spring Boot Starter will be documented i
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
-## [4.0.0] - 2025-09-14
+## [4.0.0] - 2025-09-26
 
 ### 🔐 New Authentication Features
 
@@ -139,12 +139,23 @@ ricardo:
 ricardo:
   auth:
     email:
-      enabled: true
-      from: "noreply@yourdomain.com"
+      fromAddress: "noreply@example.com";
+      password: "password"; // YOU MAY USE A ENV VARIABLE INSTEAD OF PROPERTIES FOR THIS ONE
+      host: "smtp.gmail.com";
+      port: 587;
+      fromName: "Auth Service";
+      resetSubject: "Password Reset Request";
     password-reset:
-      enabled: true
-    openapi:
-      enabled: true # Set to false if you don't want API documentation
+      enabled: true;
+      tokenExpiryHours: 1;
+      maxAttempts: 3;
+      timeWindowMs: 3600000;
+      enableCleanup: true;
+      cleanupIntervalHours: 24;
+      tokenLength: 32;
+      requireHttps: true;
+}
+
 ```
 
 ### 🧪 Testing Enhancements
