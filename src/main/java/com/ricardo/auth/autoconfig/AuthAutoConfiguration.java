@@ -78,6 +78,12 @@ public class AuthAutoConfiguration {
     @Bean
     @ConditionalOnMissingBean
     public JwtService jwtService(AuthProperties authProperties) {
+        Dotenv dotenv = Dotenv.load();
+
+        if (dotenv.get("AUTH_JWT_SECRET_KEY") != null && !dotenv.get("AUTH_JWT_SECRET_KEY").isBlank()) {
+            authProperties.getJwt().setSecret(dotenv.get("AUTH_JWT_SECRET_KEY"));
+        }
+
         return new JwtServiceImpl(authProperties);
     }
 
