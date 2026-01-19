@@ -39,7 +39,7 @@ jobs:
 
 
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v6
 
       - name: Create test database
         run: |
@@ -64,7 +64,7 @@ jobs:
 
       # Cache Maven dependencies for faster builds
       - name: Cache Maven packages
-        uses: actions/cache@v4
+        uses: actions/cache@v5
         with:
           path: ~/.m2
           key: ${{ runner.os }}-m2-${{ hashFiles('**/pom.xml') }}
