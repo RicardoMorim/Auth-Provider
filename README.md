@@ -70,7 +70,7 @@ minimal configuration required.
 <dependency>
     <groupId>io.github.ricardomorim</groupId>
     <artifactId>auth-spring-boot-starter</artifactId>
-    <version>4.0.0</version>
+    <version>4.0.2</version>
 </dependency>
 ```
 
