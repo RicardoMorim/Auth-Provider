@@ -294,7 +294,7 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     }
 
     private String buildResetUrl(String token) {
-        return properties.getBaseUrl() + "api/auth/reset/" + token;
+        return properties.getBaseUrl() + (properties.getBaseUrl().endsWith("/") ? ("api/auth/reset/" + token) : ("/api/auth/reset/" + token));
     }
 
     private String buildEmailBody(String username, String resetUrl) {
