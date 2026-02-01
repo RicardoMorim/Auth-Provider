@@ -8,6 +8,7 @@ and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.
 ## [4.0.2] - 2025-01-19
 ### Fix:
 - The password reset link will now include the "/" even if the base url does not end with it.
+- Several package versions were improved
 
 
 ## [4.0.1] - 2025-09-27
