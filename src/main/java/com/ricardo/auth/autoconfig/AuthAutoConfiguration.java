@@ -69,6 +69,13 @@ import java.util.UUID;
 public class AuthAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(AuthAutoConfiguration.class);
 
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RsaKeyProvider rsaKeyProvider() {
+        return new InMemoryRsaKeyProvider();
+    }
+
     /**
      * Jwt service.
      *
@@ -77,15 +84,10 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public JwtService jwtService(AuthProperties authProperties) {
-        Dotenv dotenv = Dotenv.load();
-
-        if (dotenv.get("AUTH_JWT_SECRET_KEY") != null && !dotenv.get("AUTH_JWT_SECRET_KEY").isBlank()) {
-            authProperties.getJwt().setSecret(dotenv.get("AUTH_JWT_SECRET_KEY"));
-        }
-
-        return new JwtServiceImpl(authProperties);
+    public JwtService jwtService(AuthProperties authProperties, RsaKeyProvider rsaKeyProvider) {
+        return new JwtServiceImpl(authProperties, rsaKeyProvider);
     }
+
 
     // ========== COMMON SERVICES ==========
 

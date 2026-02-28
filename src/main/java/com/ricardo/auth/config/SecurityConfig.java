@@ -50,6 +50,7 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/csrf-token",
+            "/api/auth/.well-known/jwks.json"
     };
 
     // Only login and user creation are public for CSRF (Refresh routes need CSRF protection)
@@ -61,6 +62,7 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/csrf-token",
+            "/api/auth/.well-known/jwks.json"
     };
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
@@ -171,7 +173,7 @@ public class SecurityConfig {
      * @throws Exception the exception
      */
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE + 1)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     @ConditionalOnMissingBean(SecurityFilterChain.class)
     public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter) throws Exception {
         if (authProperties.isRedirectHttps()) {

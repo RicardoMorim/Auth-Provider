@@ -34,8 +34,12 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
+import java.util.Base64;
 import java.util.Collection;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -404,6 +408,41 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         blocklist.revoke(token);
         return ResponseEntity.ok().body(Map.of("message", "Token revoked successfully"));
     }
+
+    @GetMapping("/.well-known/jwks.json")
+    public Map<String, Object> jwks() {
+
+        PublicKey key = jwtService.getPublicKey();
+
+        if (!(key instanceof RSAPublicKey rsaKey)) {
+            throw new IllegalStateException("Public key is not an RSA key");
+        }
+
+        Map<String, Object> jwk = Map.of(
+                "kty", "RSA",
+                "alg", "RS256",
+                "use", "sig",
+                "kid", "ricardo-auth-key-1",
+                "n", base64url(rsaKey.getModulus().toByteArray()),
+                "e", base64url(rsaKey.getPublicExponent().toByteArray())
+        );
+
+        return Map.of("keys", List.of(jwk));
+    }
+
+    /**
+     * Encode bytes to Base64url (no padding) as required by JWK spec.
+     */
+    private String base64url(byte[] bytes) {
+        // RSA BigInteger may have a leading zero byte for sign — strip it
+        if (bytes.length > 0 && bytes[0] == 0) {
+            byte[] trimmed = new byte[bytes.length - 1];
+            System.arraycopy(bytes, 1, trimmed, 0, trimmed.length);
+            bytes = trimmed;
+        }
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
 
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
         setAccessCookie(response, accessToken);
