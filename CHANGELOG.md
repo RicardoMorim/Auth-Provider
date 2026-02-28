@@ -5,6 +5,16 @@ All notable changes to the Ricardo Auth Spring Boot Starter will be documented i
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-02-28
+### Breaking Changes:
+- **Removed**:
+- The jwt secret key is now not used anymore.
+
+- **Added**:
+-  implement RSA key pair provider and support for JWT signing/verification with RS256
+-  Add jwks support for public key saving
+-  Added RsaKeyProvider interface for any custom key provider.
+
 ## [4.0.2] - 2025-01-19
 ### Fix:
 - The password reset link will now include the "/" even if the base url does not end with it.
