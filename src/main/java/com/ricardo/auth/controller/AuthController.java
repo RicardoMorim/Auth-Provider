@@ -12,6 +12,8 @@ import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.AuthenticatedUserDTO;
 import com.ricardo.auth.dto.ErrorResponse;
 import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.dto.RevokeTokenRequest;
+import com.ricardo.auth.helper.LogSanitizer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,11 +31,13 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
@@ -91,17 +95,6 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         this.userService = userService;
     }
 
-    private static String sanitizeForLogging(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\"", "\\\"")
-                .trim();
-    }
 
     /**
      * Login endpoint that works with any AuthUser implementation
@@ -149,7 +142,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
             Object principal = authentication.getPrincipal();
             if (principal == null) {
-                logger.warn("Authentication failed: no principal for email: {}", sanitizeForLogging(request.getEmail()));
+                logger.warn("Authentication failed: no principal for email: {}", LogSanitizer.sanitize(request.getEmail()));
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(new ErrorResponse("Authentication failed: no principal"));
             }
@@ -157,11 +150,11 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @SuppressWarnings("unchecked")
             U userDetails = (U) principal;
 
-            logger.info("Successful login for user: {}", sanitizeForLogging(userDetails.getEmail()));
+            logger.info("Successful login for user: {}", LogSanitizer.sanitize(userDetails.getEmail()));
 
             eventPublisher.publishEvent(new UserAuthenticatedEvent(
-                    sanitizeForLogging(userDetails.getUsername()),
-                    sanitizeForLogging(userDetails.getEmail()),
+                    LogSanitizer.sanitize(userDetails.getUsername()),
+                    LogSanitizer.sanitize(userDetails.getEmail()),
                     userDetails.getRoles()
             ));
 
@@ -179,13 +172,13 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
             return ResponseEntity.ok().build();
 
-        } catch (Exception e) {
+        } catch (AuthenticationException e) {
             logger.warn("Failed login attempt for email: {} - {}",
-                    sanitizeForLogging(request.getEmail()),
-                    sanitizeForLogging(e.getMessage()));
+                    LogSanitizer.sanitize(request.getEmail()),
+                    LogSanitizer.sanitize(e.getMessage()));
 
             eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
-                    sanitizeForLogging(request.getEmail()),
+                    LogSanitizer.sanitize(request.getEmail()),
                     AuthenticationFailedReason.INVALID_CREDENTIALS
             ));
 
@@ -347,9 +340,11 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @Parameter(description = "Refresh token from HTTP-only cookie", hidden = true)
             @CookieValue(value = "refresh_token", required = false) String refreshToken) {
 
+        String email = null;
         if (StringUtils.hasText(accessToken)) {
             try {
                 if (jwtService.isTokenValid(accessToken)) {
+                    email = jwtService.extractSubject(accessToken);
                     blocklist.revoke(accessToken);
                     logger.debug("Access token revoked during logout");
                 }
@@ -358,12 +353,11 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             }
         }
 
-        String email = jwtService.extractSubject(accessToken);
 
         if (email == null) {
             logger.info("Logging out user with unknown email");
         } else {
-            logger.info("Logging out user: {}", sanitizeForLogging(email));
+            logger.info("Logging out user: {}", LogSanitizer.sanitize(email));
         }
 
         if (StringUtils.hasText(refreshToken) && refreshTokenService != null) {
@@ -381,15 +375,15 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             try {
                 user = userService.getUserByEmail(email);
             } catch (Exception e) {
-                logger.warn("Could not find user during logout for email: {}", sanitizeForLogging(email));
+                logger.warn("Could not find user during logout for email: {}", LogSanitizer.sanitize(email));
             }
         }
 
         clearAuthCookies(response);
         if (user != null) {
             eventPublisher.publishEvent(new UserLoggedOutEvent(
-                    sanitizeForLogging(user.getUsername()),
-                    sanitizeForLogging(user.getEmail())
+                    LogSanitizer.sanitize(user.getUsername()),
+                    LogSanitizer.sanitize(user.getEmail())
             ));
         }
         return ResponseEntity.ok().build();
@@ -398,13 +392,21 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     /**
      * Admin endpoint to revoke any token
      *
-     * @param token the token to revoke
+     * @param request the revoke token request
      * @return the response entity
      */
     @PostMapping("/revoke")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> revokeToken(@RequestBody String token) {
-        // Sanitize only if used in logs — not used here, but safe to sanitize if logged later
+    public ResponseEntity<?> revokeToken(@Valid @RequestBody RevokeTokenRequest request) {
+        String token = request.getToken().trim();
+
+        // Basic JWT format validation (header.payload.signature)
+        String[] parts = token.split("\\.");
+        if (parts.length != 3 || parts[0].isEmpty() || parts[1].isEmpty() || parts[2].isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Invalid token format"));
+        }
+
         blocklist.revoke(token);
         return ResponseEntity.ok().body(Map.of("message", "Token revoked successfully"));
     }
@@ -418,11 +420,16 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             throw new IllegalStateException("Public key is not an RSA key");
         }
 
+        String kid = authProperties.getJwt().getKid();
+        if (kid == null || kid.isBlank()) {
+            kid = generateKeyId(rsaKey);
+        }
+
         Map<String, Object> jwk = Map.of(
                 "kty", "RSA",
                 "alg", "RS256",
                 "use", "sig",
-                "kid", "ricardo-auth-key-1",
+                "kid", kid,
                 "n", base64url(rsaKey.getModulus().toByteArray()),
                 "e", base64url(rsaKey.getPublicExponent().toByteArray())
         );
@@ -431,10 +438,24 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     }
 
     /**
+     * Generate a key ID from the public key using SHA-256 hash.
+     */
+    private String generateKeyId(RSAPublicKey publicKey) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(publicKey.getEncoded());
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (Exception e) {
+            logger.warn("Failed to generate key ID from public key, using fallback", e);
+            return "ricardo-auth-key-1";
+        }
+    }
+
+    /**
      * Encode bytes to Base64url (no padding) as required by JWK spec.
      */
     private String base64url(byte[] bytes) {
-        // RSA BigInteger may have a leading zero byte for sign — strip it
+        // RSA BigInteger may have a leading zero byte for sign - strip it
         if (bytes.length > 0 && bytes[0] == 0) {
             byte[] trimmed = new byte[bytes.length - 1];
             System.arraycopy(bytes, 1, trimmed, 0, trimmed.length);

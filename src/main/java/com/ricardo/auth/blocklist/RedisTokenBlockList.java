@@ -9,10 +9,8 @@ import org.springframework.stereotype.Component;
 import java.util.concurrent.TimeUnit;
 
 /**
- * The type Redis token block list.
+ * Redis-backed token blocklist implementation.
  */
-@Component
-@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "REDIS")
 public class RedisTokenBlockList implements TokenBlocklist {
 
     private final RedisTemplate<String, String> redisTemplate;

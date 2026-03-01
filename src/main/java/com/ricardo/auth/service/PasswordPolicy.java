@@ -63,7 +63,7 @@ public class PasswordPolicy implements PasswordPolicyService {
 
     @Override
     public boolean validatePassword(String passwordInput) {
-        String password = passwordInput != null ? passwordInput.trim() : null;
+        String password = passwordInput;
         if (password == null || password.length() < minLength) {
             throw new IllegalArgumentException("Password must be at least " + minLength + " characters long.");
         }

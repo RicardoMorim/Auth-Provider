@@ -9,6 +9,7 @@ import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.helper.CacheHelper;
+import com.ricardo.auth.helper.LogSanitizer;
 import com.ricardo.auth.repository.user.UserRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -54,23 +55,6 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         this.cacheHelper = cacheHelper;
     }
 
-    // --- LOG SANITIZATION HELPER ---
-    private static String sanitizeForLogging(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\"", "\\\"")
-                .trim();
-    }
-
-    private static String sanitizeIdForLogging(Object id) {
-        if (id == null) return "null";
-        return sanitizeForLogging(id.toString());
-    }
 
     @Override
     @Caching(evict = {
@@ -86,9 +70,9 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         log.debug("Starting operation: {}", operation);
         try {
             userRepository.deleteAll();
-            log.info("Operation: {} completed successfully in {}ms", operation, System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} completed successfully in {}ms", operation, System.currentTimeMillis() - startTime);
         } catch (Exception e) {
-            log.error("Operation: {} failed after {}ms. Error: {}", operation, System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} failed after {}ms. Error: {}", operation, System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -101,14 +85,14 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         }
         long startTime = System.currentTimeMillis();
         String operation = "getUserById";
-        log.debug("Starting operation: {} for id: {}", operation, sanitizeIdForLogging(id));
+        log.debug("Starting operation: {} for id: {}", operation, LogSanitizer.sanitizeId(id));
         try {
             U user = userRepository.findById(id)
                     .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-            log.info("Operation: {} for id: {} completed successfully in {}ms", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for id: {} completed successfully in {}ms", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime);
             return user;
         } catch (Exception e) {
-            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -128,23 +112,23 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         long startTime = System.currentTimeMillis();
         String operation = "createUser";
         String email = user.getEmail();
-        log.debug("Starting operation: {} for email: {}", operation, sanitizeForLogging(email));
+        log.debug("Starting operation: {} for email: {}", operation, LogSanitizer.sanitize(email));
         try {
             if (userRepository.existsByEmail(email)) {
-                log.warn("Operation: {} failed. Email already exists: {}", operation, sanitizeForLogging(email));
-                throw new DuplicateResourceException("Email already exists: " + sanitizeForLogging(email));
+                log.warn("Operation: {} failed. Email already exists: {}", operation, LogSanitizer.sanitize(email));
+                throw new DuplicateResourceException("Email already exists: " + LogSanitizer.sanitize(email));
             }
 
             eventPublisher.publishEvent(new UserCreatedEvent(
-                    sanitizeForLogging(user.getUsername()),
-                    sanitizeForLogging(email),
+                    LogSanitizer.sanitize(user.getUsername()),
+                    LogSanitizer.sanitize(email),
                     user.getRoles()
             ));
             U savedUser = userRepository.saveUser(user);
-            log.info("Operation: {} for email: {} completed successfully in {}ms", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for email: {} completed successfully in {}ms", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime);
             return savedUser;
         } catch (Exception e) {
-            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -159,26 +143,26 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public U updateEmailAndUsername(ID id, String email, String username) {
         long startTime = System.currentTimeMillis();
         String operation = "updateEmailAndUsername";
-        log.debug("Starting operation: {} for id: {}", operation, sanitizeIdForLogging(id));
+        log.debug("Starting operation: {} for id: {}", operation, LogSanitizer.sanitizeId(id));
         try {
             U user = getUserById(id);
             if (!user.getEmail().equals(email) &&
                     userRepository.existsByEmail(email)) {
-                log.warn("Operation: {} failed for id: {}. Email already exists: {}", operation, sanitizeIdForLogging(id), sanitizeForLogging(email));
-                throw new DuplicateResourceException("Email already exists: " + sanitizeForLogging(email));
+                log.warn("Operation: {} failed for id: {}. Email already exists: {}", operation, LogSanitizer.sanitizeId(id), LogSanitizer.sanitize(email));
+                throw new DuplicateResourceException("Email already exists: " + LogSanitizer.sanitize(email));
             }
 
             user.setUsername(username);
             user.setEmail(email);
             eventPublisher.publishEvent(new UserUpdatedEvent(
-                    sanitizeForLogging(username),
-                    sanitizeForLogging(email)
+                    LogSanitizer.sanitize(username),
+                    LogSanitizer.sanitize(email)
             ));
             U updatedUser = userRepository.saveUser(user);
-            log.info("Operation: {} for id: {} completed successfully in {}ms", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for id: {} completed successfully in {}ms", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime);
             return updatedUser;
         } catch (Exception e) {
-            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -198,14 +182,14 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         }
         long startTime = System.currentTimeMillis();
         String operation = "updateUser";
-        log.debug("Starting operation: {} for id: {}", operation, sanitizeIdForLogging(id));
+        log.debug("Starting operation: {} for id: {}", operation, LogSanitizer.sanitizeId(id));
         try {
             U existingUser = getUserById(id);
 
             if (!existingUser.getEmail().equals(user.getEmail()) &&
                     userRepository.existsByEmail(user.getEmail())) {
-                log.warn("Operation: {} failed for id: {}. Email already exists: {}", operation, sanitizeIdForLogging(id), sanitizeForLogging(user.getEmail()));
-                throw new DuplicateResourceException("Email already exists: " + sanitizeForLogging(user.getEmail()));
+                log.warn("Operation: {} failed for id: {}. Email already exists: {}", operation, LogSanitizer.sanitizeId(id), LogSanitizer.sanitize(user.getEmail()));
+                throw new DuplicateResourceException("Email already exists: " + LogSanitizer.sanitize(user.getEmail()));
             }
 
             existingUser.setUsername(user.getUsername());
@@ -214,14 +198,14 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
 
             cacheHelper.evictUserCache(existingUser);
             eventPublisher.publishEvent(new UserUpdatedEvent(
-                    sanitizeForLogging(existingUser.getUsername()),
-                    sanitizeForLogging(existingUser.getEmail())
+                    LogSanitizer.sanitize(existingUser.getUsername()),
+                    LogSanitizer.sanitize(existingUser.getEmail())
             ));
             U savedUser = userRepository.saveUser(existingUser);
-            log.info("Operation: {} for id: {} completed successfully in {}ms", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for id: {} completed successfully in {}ms", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime);
             return savedUser;
         } catch (Exception e) {
-            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -233,15 +217,15 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         }
         long startTime = System.currentTimeMillis();
         String operation = "updatePassword";
-        log.debug("Starting operation: {} for id: {}", operation, sanitizeIdForLogging(id));
+        log.debug("Starting operation: {} for id: {}", operation, LogSanitizer.sanitizeId(id));
         try {
             U user = getUserById(id);
             user.setPassword(encodedPassword);
             U savedUser = userRepository.saveUser(user);
-            log.info("Operation: {} for id: {} completed successfully in {}ms", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for id: {} completed successfully in {}ms", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime);
             return savedUser;
         } catch (Exception e) {
-            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -254,41 +238,42 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         }
         long startTime = System.currentTimeMillis();
         String operation = "userExists";
-        log.debug("Starting operation: {} for email: {}", operation, sanitizeForLogging(email));
+        log.debug("Starting operation: {} for email: {}", operation, LogSanitizer.sanitize(email));
         try {
             boolean exists = userRepository.existsByEmail(email);
-            log.info("Operation: {} for email: {} completed successfully in {}ms", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for email: {} completed successfully in {}ms", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime);
             return exists;
         } catch (Exception e) {
-            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
 
     @Override
+    @Transactional
     public void deleteUser(ID id) {
         if (id == null) {
             throw new IllegalArgumentException("Id cannot be null");
         }
         long startTime = System.currentTimeMillis();
         String operation = "deleteUser";
-        log.debug("Starting operation: {} for id: {}", operation, sanitizeIdForLogging(id));
+        log.debug("Starting operation: {} for id: {}", operation, LogSanitizer.sanitizeId(id));
         try {
             if (!userRepository.existsById(id)) {
-                log.warn("Operation: {} failed for id: {}. User not found.", operation, sanitizeIdForLogging(id));
+                log.warn("Operation: {} failed for id: {}. User not found.", operation, LogSanitizer.sanitizeId(id));
                 throw new ResourceNotFoundException("User not found");
             }
             U user = getUserById(id);
 
             cacheHelper.evictUserCache(user);
             eventPublisher.publishEvent(new UserDeletedEvent(
-                    sanitizeForLogging(user.getUsername()),
-                    sanitizeForLogging(user.getEmail())
+                    LogSanitizer.sanitize(user.getUsername()),
+                    LogSanitizer.sanitize(user.getEmail())
             ));
             userRepository.deleteById(id);
-            log.info("Operation: {} for id: {} completed successfully in {}ms", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for id: {} completed successfully in {}ms", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime);
         } catch (Exception e) {
-            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, sanitizeIdForLogging(id), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for id: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitizeId(id), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -315,15 +300,15 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         }
         long startTime = System.currentTimeMillis();
         String operation = "getUserByEmail";
-        log.debug("Starting operation: {} for email: {}", operation, sanitizeForLogging(email));
+        log.debug("Starting operation: {} for email: {}", operation, LogSanitizer.sanitize(email));
         try {
             U user = userRepository.findByEmail(email)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + sanitizeForLogging(email)));
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with email: " + LogSanitizer.sanitize(email)));
 
-            log.info("Operation: {} for email: {} completed successfully in {}ms", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} for email: {} completed successfully in {}ms", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime);
             return user;
         } catch (Exception e) {
-            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -348,10 +333,10 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
                     before,
                     pageable
             );
-            log.info("Operation: {} completed successfully in {}ms", operation, System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} completed successfully in {}ms", operation, System.currentTimeMillis() - startTime);
             return users.getContent();
         } catch (Exception e) {
-            log.error("Operation: {} failed after {}ms. Error: {}", operation, System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} failed after {}ms. Error: {}", operation, System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -361,13 +346,13 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public List<U> searchUsers(String query, Pageable pageable) {
         long startTime = System.currentTimeMillis();
         String operation = "searchUsers";
-        log.debug("Starting operation: {} with query: {}", operation, sanitizeForLogging(query));
+        log.debug("Starting operation: {} with query: {}", operation, LogSanitizer.sanitize(query));
         try {
-            Page<U> users = userRepository.searchByQuery(sanitizeForLogging(query), pageable);
-            log.info("Operation: {} with query: {} completed successfully in {}ms", operation, sanitizeForLogging(query), System.currentTimeMillis() - startTime);
+            Page<U> users = userRepository.searchByQuery(LogSanitizer.sanitize(query), pageable);
+            log.debug("Operation: {} with query: {} completed successfully in {}ms", operation, LogSanitizer.sanitize(query), System.currentTimeMillis() - startTime);
             return users.getContent();
         } catch (Exception e) {
-            log.error("Operation: {} with query: {} failed after {}ms. Error: {}", operation, sanitizeForLogging(query), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} with query: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(query), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -376,14 +361,14 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public Optional<U> authenticate(String email, String rawPassword, PasswordEncoder encoder) {
         long startTime = System.currentTimeMillis();
         String operation = "authenticate";
-        log.debug("Starting operation: {} for email: {}", operation, sanitizeForLogging(email));
+        log.debug("Starting operation: {} for email: {}", operation, LogSanitizer.sanitize(email));
         try {
             Optional<U> userOpt = userRepository.findByEmail(email)
                     .filter(user -> encoder.matches(rawPassword, user.getPassword()));
-            log.info("Operation: {} for email: {} completed in {}ms. User found: {}", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime, userOpt.isPresent());
+            log.debug("Operation: {} for email: {} completed in {}ms. User found: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, userOpt.isPresent());
             return userOpt;
         } catch (Exception e) {
-            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, sanitizeForLogging(email), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -393,14 +378,14 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
     public U getUserByUserName(String username) {
         long startTime = System.currentTimeMillis();
         String operation = "getUserByUserName";
-        log.debug("Starting operation: {} for username: {}", operation, sanitizeForLogging(username));
+        log.debug("Starting operation: {} for username: {}", operation, LogSanitizer.sanitize(username));
         try {
             U user = userRepository.findByUsername(username)
-                    .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + sanitizeForLogging(username)));
-            log.info("Operation: {} for username: {} completed successfully in {}ms", operation, sanitizeForLogging(username), System.currentTimeMillis() - startTime);
+                    .orElseThrow(() -> new ResourceNotFoundException("User not found with username: " + LogSanitizer.sanitize(username)));
+            log.debug("Operation: {} for username: {} completed successfully in {}ms", operation, LogSanitizer.sanitize(username), System.currentTimeMillis() - startTime);
             return user;
         } catch (Exception e) {
-            log.error("Operation: {} for username: {} failed after {}ms. Error: {}", operation, sanitizeForLogging(username), System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} for username: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(username), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -413,11 +398,13 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         log.debug("Starting operation: {}", operation);
         try {
             int count = userRepository.countUsersByRole("ADMIN");
-            log.info("Operation: {} completed successfully in {}ms", operation, System.currentTimeMillis() - startTime);
+            log.debug("Operation: {} completed successfully in {}ms", operation, System.currentTimeMillis() - startTime);
             return count;
         } catch (Exception e) {
-            log.error("Operation: {} failed after {}ms. Error: {}", operation, System.currentTimeMillis() - startTime, sanitizeForLogging(e.getMessage()));
+            log.error("Operation: {} failed after {}ms. Error: {}", operation, System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
 }
+
+

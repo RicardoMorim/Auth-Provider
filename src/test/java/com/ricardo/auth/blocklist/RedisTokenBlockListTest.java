@@ -1,11 +1,15 @@
 package com.ricardo.auth.blocklist;
 
+import com.ricardo.auth.core.TokenBlocklist;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.RedisSystemException;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -15,16 +19,21 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @TestPropertySource(properties = {
-        "ricardo.auth.blocklist.type=redis",
+        "ricardo.auth.rate-limiter.type=redis",
+        "ricardo.auth.token-blocklist.type=redis",
+        "ricardo.auth.token-blocklist.enabled=true",
         "ricardo.auth.jwt.access-token-expiration=1000",
         "ricardo.auth.jwt.secret=jrQBZmSULrzxVbDCxZk1BOqp3dOo95fp+ZA422w1GXs="
 })
+@ActiveProfiles("test")
 class RedisTokenBlockListTest {
     private final long ttlMillis = 1000L;
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+
     @Autowired
-    private RedisTokenBlockList blockList;
+    @Qualifier("RedisTokenBlocklist")
+    private TokenBlocklist blockList;
 
     /**
      * Clean redis.

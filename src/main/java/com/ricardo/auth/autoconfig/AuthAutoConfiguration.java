@@ -614,8 +614,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the token blocklist
          */
-        @Bean
-        @ConditionalOnMissingBean
+        @Bean(name="RedisTokenBlocklist")
+        @ConditionalOnMissingBean(TokenBlocklist.class)
         public TokenBlocklist redisTokenBlocklist(
                 RedisTemplate<String, String> redisTemplate,
                 AuthProperties authProperties
@@ -629,6 +629,7 @@ public class AuthAutoConfiguration {
      */
     @Configuration
     @ConditionalOnMissingBean(TokenBlocklist.class)
+    @ConditionalOnProperty(prefix = "ricardo.auth.token-blocklist", name = "type", havingValue = "memory", matchIfMissing = true)
     static class MemoryBlocklistConfig {
         /**
          * In memory token blocklist token blocklist.
@@ -636,7 +637,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the token blocklist
          */
-        @Bean
+        @Bean(name="InMemoryTokenBlocklist")
+        @ConditionalOnMissingBean(TokenBlocklist.class)
         public TokenBlocklist inMemoryTokenBlocklist(AuthProperties authProperties) {
             return new InMemoryTokenBlocklist(authProperties);
         }
@@ -711,20 +713,26 @@ public class AuthAutoConfiguration {
          */
         @Bean
         public JavaMailSender javaMailSender(AuthProperties properties) {
-            Dotenv dotenv = Dotenv.load();
+            Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
             JavaMailSenderImpl sender = new JavaMailSenderImpl();
             String mailUsername = dotenv.get("MAIL_USERNAME");
             String mailPassword = dotenv.get("MAIL_PASSWORD");
-            if (properties.getEmail().getPassword() == null && mailPassword == null) {
+
+            boolean hasPassword = properties.getEmail().getPassword() != null || mailPassword != null;
+            boolean hasUsername = properties.getEmail().getFromAddress() != null || mailUsername != null;
+
+            if (!hasPassword) {
                 logger.warn("Email password not configured. Email sending will be disabled. Set 'MAIL_PASSWORD' env variable or configure in properties.");
-                return null; // Return null to indicate email service is not available
             }
-
-            if (mailUsername == null && properties.getEmail().getFromAddress() == null) {
+            if (!hasUsername) {
                 logger.warn("Email username not configured. Email sending will be disabled. Set 'MAIL_USERNAME' env variable or configure in properties.");
-                return null;
             }
 
+            if (!hasPassword || !hasUsername) {
+                // Return a no-op sender so the bean chain doesn't break.
+                // EmailSenderServiceImpl should handle send failures gracefully.
+                return sender;
+            }
 
             if (mailUsername != null && !mailUsername.isBlank()) {
                 properties.getEmail().setFromAddress(mailUsername);
@@ -843,7 +851,6 @@ public class AuthAutoConfiguration {
          * @param authProperties        the auth properties
          * @param eventPublisher        the event publisher
          * @param idConverter           the id converter
-         * @param properties            the properties
          * @param cacheManager          the cache manager
          * @return the password reset service
          */
@@ -856,7 +863,6 @@ public class AuthAutoConfiguration {
                                                          AuthProperties authProperties,
                                                          Publisher eventPublisher,
                                                          IdConverter<UUID> idConverter,
-                                                         AuthProperties properties,
                                                          CacheManager cacheManager) {
             return new PasswordResetServiceImpl<>(emailSenderService,
                     userService,
@@ -866,7 +872,6 @@ public class AuthAutoConfiguration {
                     authProperties,
                     eventPublisher,
                     idConverter,
-                    properties,
                     cacheManager);
         }
     }

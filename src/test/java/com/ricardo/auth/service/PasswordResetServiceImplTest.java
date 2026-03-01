@@ -81,7 +81,7 @@ class PasswordResetServiceImplTest {
                 passwordPolicyService,
                 authProperties,
                 eventPublisher,
-                idConverter, new AuthProperties(), cacheManager
+                idConverter, cacheManager
         );
     }
 

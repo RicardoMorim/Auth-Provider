@@ -7,6 +7,8 @@ import com.ricardo.auth.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -28,7 +30,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -72,6 +73,8 @@ public class SecurityConfig {
     @Autowired
     private AuthProperties authProperties;
 
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
     /**
      * Is public endpoint boolean.
      *
@@ -97,7 +100,7 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnMissingBean(PasswordEncoder.class)
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(authProperties.getPasswordPolicy().getBcryptStrength());
     }
 
     /**
@@ -114,7 +117,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Custom authentication entry point that returns 401 instead of 403.
+     * Custom authentication entry point that returns 401 without leaking internal details.
      *
      * @return the authentication entry point
      */
@@ -122,9 +125,10 @@ public class SecurityConfig {
     @ConditionalOnMissingBean(AuthenticationEntryPoint.class)
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
+            logger.debug("Authentication failed: {}", authException.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"message\":\"Authentication Failed: " + authException.getMessage() + "\"}");
+            response.getWriter().write("{\"message\":\"Unauthorized\"}");
         };
     }
 
@@ -137,27 +141,24 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnMissingBean(CorsConfigurationSource.class)
     public CorsConfigurationSource corsConfigurationSource() {
+        AuthProperties.Cors corsConfig = authProperties.getCors();
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow specific origins (configure via application.properties)
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = corsConfig.getAllowedOrigins();
+        if (origins == null || origins.isEmpty()) {
+            logger.warn("No CORS allowed origins configured (ricardo.auth.cors.allowed-origins). " +
+                    "Cross-origin requests will be rejected. Configure specific origins for your frontend.");
+        } else if (origins.contains("*")) {
+            logger.warn("CORS is configured with wildcard '*' origin. " +
+                    "This is insecure for cookie-based authentication. " +
+                    "Configure specific origins via ricardo.auth.cors.allowed-origins");
+        }
 
-        // Allow common HTTP methods
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ));
-
-        // Allow common headers including CSRF token
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Content-Type", "X-Requested-With", "Authorization",
-                "X-XSRF-TOKEN", "Cache-Control", "Accept"
-        ));
-
-        // Allow credentials for cookie authentication
-        configuration.setAllowCredentials(true);
-
-        // Cache preflight requests for 1 hour
-        configuration.setMaxAge(3600L);
+        configuration.setAllowedOriginPatterns(origins);
+        configuration.setAllowedMethods(corsConfig.getAllowedMethods());
+        configuration.setAllowedHeaders(corsConfig.getAllowedHeaders());
+        configuration.setAllowCredentials(corsConfig.isAllowCredentials());
+        configuration.setMaxAge(corsConfig.getMaxAge());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);

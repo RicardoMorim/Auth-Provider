@@ -2,9 +2,7 @@ package com.ricardo.auth.blocklist;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.TokenBlocklist;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,8 +10,6 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
  * The type In memory token blocklist.
  */
-@Component
-@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "MEMORY", matchIfMissing = true)
 public class InMemoryTokenBlocklist implements TokenBlocklist {
     private final Map<String, Long> revokedTokens = new ConcurrentHashMap<>();
     private final long ttlMillis;

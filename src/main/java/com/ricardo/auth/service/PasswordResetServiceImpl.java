@@ -8,6 +8,7 @@ import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.passwordresettoken.PasswordResetToken;
 import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.helper.IdConverter;
+import com.ricardo.auth.helper.LogSanitizer;
 import com.ricardo.auth.repository.PasswordResetToken.PasswordResetTokenRepository;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.cache.Cache;
@@ -51,7 +52,6 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     private final Publisher eventPublisher;
     private final SecureRandom secureRandom = new SecureRandom();
     private final IdConverter<ID> idConverter;
-    private final AuthProperties properties;
     private final CacheManager cacheManager;
 
     /**
@@ -65,7 +65,6 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
      * @param authProperties        the auth properties
      * @param eventPublisher        the event publisher
      * @param idConverter           the id converter
-     * @param properties            the properties
      * @param cacheManager          the cache manager
      */
     public PasswordResetServiceImpl(EmailSenderService emailSenderService,
@@ -76,7 +75,6 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
                                     AuthProperties authProperties,
                                     Publisher eventPublisher,
                                     IdConverter<ID> idConverter,
-                                    AuthProperties properties,
                                     CacheManager cacheManager) {
         this.emailSenderService = emailSenderService;
         this.userService = userService;
@@ -86,27 +84,9 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         this.authProperties = authProperties;
         this.eventPublisher = eventPublisher;
         this.idConverter = idConverter;
-        this.properties = properties;
         this.cacheManager = cacheManager;
     }
 
-    // --- LOG SANITIZATION HELPER ---
-    private static String sanitizeForLogging(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\"", "\\\"")
-                .trim();
-    }
-
-    private static String sanitizeIdForLogging(Object id) {
-        if (id == null) return "null";
-        return sanitizeForLogging(id.toString());
-    }
 
     /**
      * Hash the raw reset token using SHA-256 and encode as Base64 URL-safe (no padding).
@@ -136,23 +116,23 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
 
         try {
             if (!isValidEmail(email)) {
-                log.warn("Invalid email format for password reset: {}", sanitizeForLogging(email));
+                log.warn("Invalid email format for password reset: {}", LogSanitizer.sanitize(email));
                 return;
             }
 
             U user = userService.getUserByEmail(email);
 
             if (user == null) {
-                log.info("Password reset requested for non-existent email: {}", sanitizeForLogging(email));
+                log.info("Password reset requested for non-existent email: {}", LogSanitizer.sanitize(email));
                 return;
             }
 
             processPasswordResetRequest(user);
 
-            log.info("Password reset requested for email: {}", sanitizeForLogging(email));
+            log.info("Password reset requested for email: {}", LogSanitizer.sanitize(email));
 
         } catch (ResourceNotFoundException e) {
-            log.info("Password reset requested for non-existent email: {}", sanitizeForLogging(email));
+            log.info("Password reset requested for non-existent email: {}", LogSanitizer.sanitize(email));
             return;
         } finally {
             ensureMinimumProcessingTime(startTime, 500);
@@ -184,13 +164,13 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         PasswordResetToken resetToken = tokenOpt.get();
 
         if (resetToken.isExpired()) {
-            log.warn("Expired password reset token used: {}", sanitizeIdForLogging(resetToken.getId()));
+            log.warn("Expired password reset token used: {}", LogSanitizer.sanitizeId(resetToken.getId()));
             throw new SecurityException("Token has expired");
         }
 
         U user = userService.getUserByEmail(resetToken.getEmail());
         if (user == null) {
-            log.warn("Password reset token used for non-existent user: {}", sanitizeForLogging(resetToken.getEmail()));
+            log.warn("Password reset token used for non-existent user: {}", LogSanitizer.sanitize(resetToken.getEmail()));
             throw new SecurityException("Invalid token");
         }
 
@@ -201,20 +181,20 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         resetToken.setUsed(true);
         resetToken.setUsedAt(Instant.now());
         long saveTokenStartTime = System.currentTimeMillis();
-        log.debug("Attempting to mark password reset token as used for user: {}", sanitizeForLogging(user.getEmail()));
+        log.debug("Attempting to mark password reset token as used for user: {}", LogSanitizer.sanitize(user.getEmail()));
         tokenRepository.saveToken(resetToken);
-        log.info("Password reset token for user {} marked as used in {}ms", sanitizeForLogging(user.getEmail()), System.currentTimeMillis() - saveTokenStartTime);
+        log.info("Password reset token for user {} marked as used in {}ms", LogSanitizer.sanitize(user.getEmail()), System.currentTimeMillis() - saveTokenStartTime);
 
         long invalidateStartTime = System.currentTimeMillis();
-        log.debug("Attempting to invalidate other password reset tokens for user: {}", sanitizeForLogging(user.getEmail()));
+        log.debug("Attempting to invalidate other password reset tokens for user: {}", LogSanitizer.sanitize(user.getEmail()));
         tokenRepository.invalidateTokensForUser(user.getEmail(), Instant.now());
-        log.info("Other password reset tokens for user {} invalidated in {}ms", sanitizeForLogging(user.getEmail()), System.currentTimeMillis() - invalidateStartTime);
+        log.info("Other password reset tokens for user {} invalidated in {}ms", LogSanitizer.sanitize(user.getEmail()), System.currentTimeMillis() - invalidateStartTime);
 
-        log.info("Password reset completed for user: {}", sanitizeForLogging(user.getEmail()));
+        log.info("Password reset completed for user: {}", LogSanitizer.sanitize(user.getEmail()));
 
         eventPublisher.publishEvent(new PasswordResetCompletedEvent(
-                sanitizeForLogging(user.getUsername()),
-                sanitizeForLogging(user.getEmail())
+                LogSanitizer.sanitize(user.getUsername()),
+                LogSanitizer.sanitize(user.getEmail())
         ));
 
         evictCache("userById", user.getId());
@@ -242,9 +222,9 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
 
     private void processPasswordResetRequest(U user) {
         long invalidateStartTime = System.currentTimeMillis();
-        log.debug("Attempting to invalidate existing password reset tokens for user: {}", sanitizeForLogging(user.getEmail()));
+        log.debug("Attempting to invalidate existing password reset tokens for user: {}", LogSanitizer.sanitize(user.getEmail()));
         tokenRepository.invalidateTokensForUser(user.getEmail(), Instant.now());
-        log.info("Existing password reset tokens for user {} invalidated in {}ms", sanitizeForLogging(user.getEmail()), System.currentTimeMillis() - invalidateStartTime);
+        log.info("Existing password reset tokens for user {} invalidated in {}ms", LogSanitizer.sanitize(user.getEmail()), System.currentTimeMillis() - invalidateStartTime);
 
         String token = generateSecureToken();
         String hashedToken = hashToken(token);
@@ -256,15 +236,15 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         );
 
         long saveTokenStartTime = System.currentTimeMillis();
-        log.debug("Attempting to save new password reset token for user: {}", sanitizeForLogging(user.getEmail()));
+        log.debug("Attempting to save new password reset token for user: {}", LogSanitizer.sanitize(user.getEmail()));
         tokenRepository.saveToken(resetToken);
-        log.info("New password reset token for user {} saved in {}ms", sanitizeForLogging(user.getEmail()), System.currentTimeMillis() - saveTokenStartTime);
+        log.info("New password reset token for user {} saved in {}ms", LogSanitizer.sanitize(user.getEmail()), System.currentTimeMillis() - saveTokenStartTime);
 
         sendPasswordResetEmail(user, token);
 
         eventPublisher.publishEvent(new PasswordResetRequestedEvent(
-                sanitizeForLogging(user.getUsername()),
-                sanitizeForLogging(user.getEmail())
+                LogSanitizer.sanitize(user.getUsername()),
+                LogSanitizer.sanitize(user.getEmail())
         ));
     }
 
@@ -288,13 +268,13 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
         boolean sent = emailSenderService.sendEmail(user.getEmail(), subject, body);
 
         if (!sent) {
-            log.error("Failed to send password reset email to: {}", sanitizeForLogging(user.getEmail()));
+            log.error("Failed to send password reset email to: {}", LogSanitizer.sanitize(user.getEmail()));
             throw new RuntimeException("Failed to send password reset email");
         }
     }
 
     private String buildResetUrl(String token) {
-        return properties.getBaseUrl() + (properties.getBaseUrl().endsWith("/") ? ("api/auth/reset/" + token) : ("/api/auth/reset/" + token));
+        return authProperties.getBaseUrl() + (authProperties.getBaseUrl().endsWith("/") ? ("api/auth/reset/" + token) : ("/api/auth/reset/" + token));
     }
 
     private String buildEmailBody(String username, String resetUrl) {
@@ -314,10 +294,10 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
                         Best regards,
                         %s
                         """,
-                sanitizeForLogging(username),
-                sanitizeForLogging(resetUrl),
+                LogSanitizer.sanitize(username),
+                LogSanitizer.sanitize(resetUrl),
                 authProperties.getPasswordReset().getTokenExpiryHours(),
-                sanitizeForLogging(authProperties.getEmail().getFromName())
+                LogSanitizer.sanitize(authProperties.getEmail().getFromName())
         );
     }
 

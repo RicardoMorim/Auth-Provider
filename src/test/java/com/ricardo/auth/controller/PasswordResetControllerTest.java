@@ -1,6 +1,7 @@
 package com.ricardo.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.PasswordResetService;
 import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.core.UserService;
@@ -60,6 +61,9 @@ class PasswordResetControllerTest {
 
     @MockBean
     private UserService<User, AppRole, UUID> userService;
+
+    @MockBean
+    private PasswordPolicyService passwordPolicyService;
 
     /**
      * Sets up.
@@ -211,6 +215,10 @@ class PasswordResetControllerTest {
         PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
         request.setPassword("123");
         request.setConfirmPassword("123");
+
+        when(passwordPolicyService.validatePassword("123")).then(invocation -> {
+            throw new IllegalArgumentException("Password does not meet complexity requirements");
+        });
 
         // When & Then
         mockMvc.perform(post("/api/auth/reset/valid-token")

@@ -62,7 +62,6 @@ class AuthAutoConfigurationTest {
     void shouldLoadAuthProperties() {
         AuthProperties properties = applicationContext.getBean(AuthProperties.class);
         assertThat(properties).isNotNull();
-        assertThat(properties.getJwt().getSecret()).isEqualTo("dGVzdC1zZWNyZXQtZm9yLWp3dC10b2tlbnMtaW4tdGVzdHMtb25seQ==");
         assertThat(properties.getJwt().getAccessTokenExpiration()).isEqualTo(900000);
     }
 
@@ -157,7 +156,6 @@ class AuthAutoConfigurationTest {
     void shouldVerifyAutoConfigurationProperties() {
         // Verify auto-configuration properties are loaded
         AuthProperties properties = applicationContext.getBean(AuthProperties.class);
-        assertThat(properties.getJwt().getSecret()).isNotBlank();
         assertThat(properties.getJwt().getAccessTokenExpiration()).isGreaterThan(0);
         assertThat(properties.getJwt().getRefreshTokenExpiration()).isGreaterThan(0);
     }

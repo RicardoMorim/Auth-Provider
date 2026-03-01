@@ -87,6 +87,11 @@ public class AuthProperties {
     private RoleManagement roleManagement = new RoleManagement();
 
     /**
+     * CORS configuration
+     */
+    private Cors cors = new Cors();
+
+    /**
      * Repository types for refresh tokens
      */
     public enum RepositoryType {
@@ -188,6 +193,11 @@ public class AuthProperties {
          * JWT refresh token expiration time in milliseconds (default: 7 days)
          */
         private long refreshTokenExpiration = 604800000L;
+
+        /**
+         * Key ID (kid) for JWKS endpoint. If not set, a hash of the public key will be used.
+         */
+        private String kid;
     }
 
     /**
@@ -260,6 +270,12 @@ public class AuthProperties {
          * Required when preventCommonPasswords is true
          */
         private String commonPasswordsFilePath = "/commonpasswords.txt";
+
+        /**
+         * BCrypt encoder strength (4 to 31). Default is 10.
+         */
+        @Min(4)
+        private int bcryptStrength = 10;
     }
 
     /**
@@ -425,5 +441,44 @@ public class AuthProperties {
         private boolean enableRoleEvents = true;
         private boolean requireAdminForRoleChanges = true;
         private boolean allowSelfRoleModification = false;
+    }
+
+    /**
+     * CORS configuration properties
+     */
+    @Getter
+    @Setter
+    public static class Cors {
+        /**
+         * Allowed origin patterns for CORS requests.
+         * Defaults to empty list (no cross-origin allowed).
+         * Use specific origins like "https://example.com" instead of "*" for security.
+         */
+        private java.util.List<String> allowedOrigins = java.util.List.of();
+
+        /**
+         * Allowed HTTP methods for CORS requests.
+         */
+        private java.util.List<String> allowedMethods = java.util.List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        );
+
+        /**
+         * Allowed headers for CORS requests.
+         */
+        private java.util.List<String> allowedHeaders = java.util.List.of(
+                "Content-Type", "X-Requested-With", "Authorization",
+                "X-XSRF-TOKEN", "Cache-Control", "Accept"
+        );
+
+        /**
+         * Whether credentials (cookies) are allowed in CORS requests.
+         */
+        private boolean allowCredentials = true;
+
+        /**
+         * Max age (in seconds) for CORS preflight cache.
+         */
+        private long maxAge = 3600L;
     }
 }
