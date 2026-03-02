@@ -6,7 +6,6 @@ import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.ratelimiter.RateLimiterFilter;
 import com.ricardo.auth.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -69,12 +68,15 @@ public class SecurityConfig {
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    @Autowired
-    private JwtAuthFilter jwtAuthFilter;
-    @Autowired
-    private AuthProperties authProperties;
+    private final JwtAuthFilter jwtAuthFilter;
+    private final AuthProperties authProperties;
 
     private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, AuthProperties authProperties) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.authProperties = authProperties;
+    }
 
     /**
      * Is public endpoint boolean.

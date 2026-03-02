@@ -35,6 +35,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
         implements RefreshTokenService<U, R, ID> {
 
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenServiceImpl.class);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserService<U, R, ID> userService;
     private final AuthProperties authProperties;
@@ -150,9 +151,8 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
      * @return a securely generated random token string
      */
     private String generateSecureToken() {
-        SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[64];
-        random.nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
     }
 

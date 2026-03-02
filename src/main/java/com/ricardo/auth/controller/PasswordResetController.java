@@ -273,19 +273,4 @@ public class PasswordResetController {
     private String getClientIp(HttpServletRequest request) {
         return ipResolver.resolveIp(request);
     }
-
-    /**
-     * Validates if a string is a valid IP address (IPv4 or IPv6).
-     */
-    private boolean isValidIpAddress(String ip) {
-        if (ip == null || ip.isEmpty() || ip.length() > 45) { // Max IPv6 length is 45
-            return false;
-        }
-
-        // Basic validation for IPv4 and IPv6 patterns
-        return ip.matches("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$") || // IPv4
-                ip.matches("^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$") || // IPv6 full
-                ip.matches("^::1$") || // IPv6 loopback
-                ip.matches("^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$"); // IPv6 compressed
-    }
 }
