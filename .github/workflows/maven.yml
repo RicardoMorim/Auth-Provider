@@ -71,7 +71,20 @@ jobs:
           cache: maven
 
       - name: Build with Maven (includes tests)
-        run: ./mvnw -B package --file pom.xml
+        run: ./mvnw -B verify -P coverage --file pom.xml
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v4
+        with:
+          name: jacoco-report
+          path: target/site/jacoco/
+
+      - name: Upload to Codecov
+        uses: codecov/codecov-action@v4
+        with:
+          files: target/site/jacoco/jacoco.xml
+          fail_ci_if_error: true
+
 
       - name: Update dependency graph
         uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
