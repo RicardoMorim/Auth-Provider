@@ -2,16 +2,20 @@ package com.ricardo.auth.blocklist;
 
 import com.ricardo.auth.core.TokenBlocklist;
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.concurrent.TimeUnit;
 
 /**
  * Redis-backed token blocklist implementation.
  */
 public class RedisTokenBlockList implements TokenBlocklist {
+
+    private static final String REVOKED_PREFIX = "revoked:";
 
     private final RedisTemplate<String, String> redisTemplate;
     private final long ttlMillis;
@@ -34,7 +38,7 @@ public class RedisTokenBlockList implements TokenBlocklist {
             throw new IllegalArgumentException("Token cannot be null or empty");
         }
         redisTemplate.opsForValue().set(
-                "revoked:" + token,
+                toRedisKey(token),
                 "1",
                 ttlMillis,
                 TimeUnit.MILLISECONDS
@@ -46,6 +50,20 @@ public class RedisTokenBlockList implements TokenBlocklist {
         if (token == null || token.isEmpty()) {
             throw new IllegalArgumentException("Token cannot be null or empty");
         }
-        return redisTemplate.hasKey("revoked:" + token);
+        return redisTemplate.hasKey(toRedisKey(token));
+    }
+
+    private String toRedisKey(String token) {
+        return REVOKED_PREFIX + hashToken(token);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
+        }
     }
 }

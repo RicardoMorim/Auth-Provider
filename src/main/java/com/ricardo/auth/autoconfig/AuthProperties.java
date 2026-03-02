@@ -55,6 +55,11 @@ public class AuthProperties {
     private RateLimiter rateLimiter = new RateLimiter();
 
     /**
+     * Login lockout configuration
+     */
+    private LoginLockout loginLockout = new LoginLockout();
+
+    /**
      * Token blocklist configuration
      */
     private TokenBlocklist tokenBlocklist = new TokenBlocklist();
@@ -344,6 +349,18 @@ public class AuthProperties {
         private StorageType type = StorageType.MEMORY;
         private int maxRequests = 150;
         private long timeWindowMs = 60000L;
+    }
+
+    /**
+     * Login lockout configuration properties
+     */
+    @Getter
+    @Setter
+    public static class LoginLockout {
+        private boolean enabled = true;
+        private int maxFailedAttempts = 10;
+        private long attemptWindowMs = 900000L;
+        private long lockDurationMs = 900000L;
     }
 
     /**

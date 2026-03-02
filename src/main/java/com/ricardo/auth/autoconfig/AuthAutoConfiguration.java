@@ -949,12 +949,7 @@ public class AuthAutoConfiguration {
         private void createPasswordResetTokenTableIfNotExists(JdbcTemplate jdbcTemplate) {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
-            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
-
-            // Validate table name to prevent SQL injection
-            if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
-                throw new IllegalArgumentException("Invalid table name: " + tableName);
-            }
+            String tableName = getValidatedPasswordResetTableName();
 
             String createTableSql = String.format("""
                                     CREATE TABLE IF NOT EXISTS %s (
@@ -973,7 +968,7 @@ public class AuthAutoConfiguration {
         }
 
         private void createPasswordResetTokenIndexes(JdbcTemplate jdbcTemplate) {
-            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+            String tableName = getValidatedPasswordResetTableName();
             String[] indexStatements = {
                     String.format("CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_token ON %s(token)", tableName, tableName),
                     String.format("CREATE INDEX IF NOT EXISTS idx_%s_email ON %s(email)", tableName, tableName),
@@ -989,6 +984,14 @@ public class AuthAutoConfiguration {
             }
 
             logger.debug("All password reset token indexes created or already exist");
+        }
+
+        private String getValidatedPasswordResetTableName() {
+            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+            if (tableName == null || tableName.isBlank() || !tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                throw new IllegalArgumentException("Invalid table name: " + tableName);
+            }
+            return tableName;
         }
     }
 

@@ -41,10 +41,13 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.Base64;
 import java.util.Collection;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Generic Auth Controller that works with any AuthUser implementation and ID type.
@@ -67,6 +70,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private final TokenBlocklist blocklist;
     private final UserService<U, R, ID> userService;
     private final Publisher eventPublisher;
+    private final ConcurrentHashMap<String, LoginAttemptState> loginAttempts = new ConcurrentHashMap<>();
 
     /**
      * Constructor with optional refresh token service
@@ -136,6 +140,18 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @Parameter(description = "Login credentials", required = true)
             @Valid @RequestBody LoginRequestDTO request,
             HttpServletResponse response) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
+        if (isLoginTemporarilyLocked(normalizedEmail)) {
+            logger.warn("Login temporarily locked due to too many failed attempts");
+            eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
+                LogSanitizer.sanitize(normalizedEmail),
+                AuthenticationFailedReason.INVALID_CREDENTIALS
+            ));
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ErrorResponse("Too many failed login attempts. Please try again later."));
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
@@ -150,7 +166,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @SuppressWarnings("unchecked")
             U userDetails = (U) principal;
 
-            logger.info("Successful login for user: {}", LogSanitizer.sanitize(userDetails.getEmail()));
+            clearFailedLoginAttempts(normalizedEmail);
+            logger.info("Successful login");
 
             eventPublisher.publishEvent(new UserAuthenticatedEvent(
                     LogSanitizer.sanitize(userDetails.getUsername()),
@@ -174,14 +191,21 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             return ResponseEntity.ok().build();
 
         } catch (AuthenticationException e) {
-            logger.warn("Failed login attempt for email: {} - {}",
-                    LogSanitizer.sanitize(request.getEmail()),
-                    LogSanitizer.sanitize(e.getMessage()));
+            boolean lockedNow = recordFailedLoginAttempt(normalizedEmail);
+            logger.warn("Failed login attempt");
+            if (lockedNow) {
+                logger.warn("Login temporarily locked due to repeated failed attempts");
+            }
 
             eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
-                    LogSanitizer.sanitize(request.getEmail()),
+                    LogSanitizer.sanitize(normalizedEmail),
                     AuthenticationFailedReason.INVALID_CREDENTIALS
             ));
+
+                if (lockedNow) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(new ErrorResponse("Too many failed login attempts. Please try again later."));
+                }
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(new ErrorResponse("Authentication failed"));
@@ -357,11 +381,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         }
 
 
-        if (email == null) {
-            logger.info("Logging out user with unknown email");
-        } else {
-            logger.info("Logging out user: {}", LogSanitizer.sanitize(email));
-        }
+        logger.info("Processing logout request");
 
         if (StringUtils.hasText(refreshToken) && refreshTokenService != null) {
             try {
@@ -378,7 +398,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             try {
                 user = userService.getUserByEmail(email);
             } catch (Exception e) {
-                logger.warn("Could not find user during logout for email: {}", LogSanitizer.sanitize(email));
+                logger.warn("Could not resolve user during logout");
             }
         }
 
@@ -530,5 +550,76 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             return authProperties.getRefreshTokens().isRotateOnRefresh();
         }
         return true;
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return "unknown";
+        }
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private boolean isLoginTemporarilyLocked(String normalizedEmail) {
+        AuthProperties.LoginLockout lockoutConfig = authProperties.getLoginLockout();
+        if (lockoutConfig == null || !lockoutConfig.isEnabled()) {
+            return false;
+        }
+
+        LoginAttemptState state = loginAttempts.get(normalizedEmail);
+        if (state == null) {
+            return false;
+        }
+
+        long now = Instant.now().toEpochMilli();
+        if (state.lockUntilEpochMs > now) {
+            return true;
+        }
+
+        if (state.lockUntilEpochMs > 0 && state.lockUntilEpochMs <= now) {
+            loginAttempts.remove(normalizedEmail);
+        }
+
+        return false;
+    }
+
+    private boolean recordFailedLoginAttempt(String normalizedEmail) {
+        AuthProperties.LoginLockout lockoutConfig = authProperties.getLoginLockout();
+        if (lockoutConfig == null || !lockoutConfig.isEnabled()) {
+            return false;
+        }
+
+        long now = Instant.now().toEpochMilli();
+        LoginAttemptState state = loginAttempts.compute(normalizedEmail, (key, current) -> {
+            if (current == null || now - current.windowStartEpochMs > lockoutConfig.getAttemptWindowMs()) {
+                LoginAttemptState refreshed = new LoginAttemptState();
+                refreshed.windowStartEpochMs = now;
+                refreshed.failedAttempts = 1;
+                return refreshed;
+            }
+
+            if (current.lockUntilEpochMs > now) {
+                return current;
+            }
+
+            current.failedAttempts++;
+            if (current.failedAttempts >= lockoutConfig.getMaxFailedAttempts()) {
+                current.lockUntilEpochMs = now + lockoutConfig.getLockDurationMs();
+            }
+            return current;
+        });
+
+        return state != null && state.lockUntilEpochMs > now;
+    }
+
+    private void clearFailedLoginAttempts(String normalizedEmail) {
+        if (normalizedEmail != null) {
+            loginAttempts.remove(normalizedEmail);
+        }
+    }
+
+    private static class LoginAttemptState {
+        private int failedAttempts;
+        private long windowStartEpochMs;
+        private long lockUntilEpochMs;
     }
 }

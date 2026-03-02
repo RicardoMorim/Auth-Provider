@@ -15,6 +15,7 @@ import org.springframework.cache.Cache;
 import org.springframework.cache.CacheManager;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.StringUtils;
 
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -274,7 +275,21 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
     }
 
     private String buildResetUrl(String token) {
-        return authProperties.getBaseUrl() + (authProperties.getBaseUrl().endsWith("/") ? ("api/auth/reset/" + token) : ("/api/auth/reset/" + token));
+        String baseUrl = authProperties.getBaseUrl();
+        if (!StringUtils.hasText(baseUrl)) {
+            throw new IllegalStateException("Password reset base URL is not configured");
+        }
+
+        String normalizedBaseUrl = baseUrl.trim();
+        if (authProperties.getPasswordReset().isRequireHttps()) {
+            if (normalizedBaseUrl.startsWith("http://")) {
+                normalizedBaseUrl = "https://" + normalizedBaseUrl.substring("http://".length());
+            } else if (!normalizedBaseUrl.startsWith("https://")) {
+                throw new IllegalStateException("Password reset base URL must use HTTPS when requireHttps is enabled");
+            }
+        }
+
+        return normalizedBaseUrl + (normalizedBaseUrl.endsWith("/") ? ("api/auth/reset/" + token) : ("/api/auth/reset/" + token));
     }
 
     private String buildEmailBody(String username, String resetUrl) {
