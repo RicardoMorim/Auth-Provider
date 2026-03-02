@@ -95,7 +95,7 @@ jobs:
         uses: codecov/codecov-action@v4
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
-          slug: RicardoMorim/Auth-Provider
+          slug: ${{ github.repository }}
           files: target/site/jacoco/jacoco.xml
           fail_ci_if_error: false
 
