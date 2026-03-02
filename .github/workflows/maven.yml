@@ -20,6 +20,9 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    env:
+      SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+      SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
     permissions:
       contents: read
       id-token: write
@@ -51,6 +54,8 @@ jobs:
 
     steps:
       - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
 
 
       - name: Create test database
@@ -83,11 +88,22 @@ jobs:
           path: target/site/jacoco/
 
       - name: Upload to Codecov
+        continue-on-error: true
         uses: codecov/codecov-action@v4
         with:
           use_oidc: true
           files: target/site/jacoco/jacoco.xml
           fail_ci_if_error: false
+
+      - name: SonarQube Analysis
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        run: |
+          ./mvnw -B sonar:sonar \
+            -DskipTests \
+            -Dsonar.projectKey=RicardoMorim_Auth-Provider \
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.token=${SONAR_TOKEN} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
 
 
       - name: Update dependency graph
