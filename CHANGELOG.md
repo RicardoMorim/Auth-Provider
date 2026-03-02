@@ -7,6 +7,9 @@ and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.
 
 ## [5.0.0] - 2026-02-28
 ### Breaking Changes:
+
+migrate JWT signing to RS256 and enhance refresh token handling
+
 - **Removed**:
 - The jwt secret key is now not used anymore.
 
