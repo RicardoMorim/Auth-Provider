@@ -23,6 +23,7 @@ jobs:
     env:
       SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+      SONAR_ORGANIZATION: ${{ vars.SONAR_ORGANIZATION }}
     permissions:
       contents: read
       id-token: write
@@ -87,19 +88,12 @@ jobs:
           name: jacoco-report
           path: target/site/jacoco/
 
-      - name: Upload to Codecov
-        continue-on-error: true
-        uses: codecov/codecov-action@v4
-        with:
-          use_oidc: true
-          files: target/site/jacoco/jacoco.xml
-          fail_ci_if_error: false
-
       - name: SonarQube Analysis
-        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' }}
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_ORGANIZATION != '' }}
         run: |
           ./mvnw -B sonar:sonar \
             -DskipTests \
+            -Dsonar.organization=${SONAR_ORGANIZATION} \
             -Dsonar.projectKey=RicardoMorim_Auth-Provider \
             -Dsonar.host.url=${SONAR_HOST_URL} \
             -Dsonar.token=${SONAR_TOKEN} \
