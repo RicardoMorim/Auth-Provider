@@ -20,6 +20,9 @@ jobs:
   build:
     name: Build and Test
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
     services:
       redis:
         image: redis:7
@@ -79,23 +82,10 @@ jobs:
           name: jacoco-report
           path: target/site/jacoco/
 
-      - name: Check Codecov token
-        id: codecov-token
-        run: |
-          if [ -n "${CODECOV_TOKEN}" ]; then
-            echo "present=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "present=false" >> "$GITHUB_OUTPUT"
-          fi
-        env:
-          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
-
       - name: Upload to Codecov
-        if: ${{ steps.codecov-token.outputs.present == 'true' }}
         uses: codecov/codecov-action@v4
         with:
-          token: ${{ secrets.CODECOV_TOKEN }}
-          slug: ${{ github.repository }}
+          use_oidc: true
           files: target/site/jacoco/jacoco.xml
           fail_ci_if_error: false
 
