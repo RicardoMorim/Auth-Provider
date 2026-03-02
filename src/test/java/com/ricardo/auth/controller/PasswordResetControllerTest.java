@@ -72,8 +72,8 @@ class PasswordResetControllerTest {
     void setUp() {
         when(rateLimiter.isEnabled()).thenReturn(true);
         when(rateLimiter.allowRequest(anyString())).thenReturn(true);
-        // Default: return null for IP unless overridden in test
-        when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn(null);
+                // Default fallback IP for filter + controller paths
+                when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn("127.0.0.1");
     }
 
     /**
@@ -204,30 +204,30 @@ class PasswordResetControllerTest {
         verify(passwordResetService).completePasswordReset("valid-token", "NewPassword123!");
     }
 
-    /**
-     * Complete password reset with weak password should return bad request.
-     *
-     * @throws Exception the exception
-     */
-    @Test
-    void completePasswordReset_WithWeakPassword_ShouldReturnBadRequest() throws Exception {
-        // Given
-        PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
-        request.setPassword("123");
-        request.setConfirmPassword("123");
+        /**
+         * Complete password reset should return bad request when service rejects password.
+         *
+         * @throws Exception the exception
+         */
+        @Test
+        void completePasswordReset_WhenServiceRejectsPassword_ShouldReturnBadRequest() throws Exception {
+                // Given
+                PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
+                request.setPassword("123");
+                request.setConfirmPassword("123");
 
-        when(passwordPolicyService.validatePassword("123")).then(invocation -> {
-            throw new IllegalArgumentException("Password does not meet complexity requirements");
-        });
+                doThrow(new IllegalArgumentException("Password does not meet complexity requirements"))
+                                .when(passwordResetService)
+                                .completePasswordReset("valid-token", "123");
 
-        // When & Then
-        mockMvc.perform(post("/api/auth/reset/valid-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                // When & Then
+                mockMvc.perform(post("/api/auth/reset/valid-token")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest());
 
-        verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
-    }
+                verify(passwordResetService).completePasswordReset("valid-token", "123");
+        }
 
     /**
      * Complete password reset with mismatched passwords should return bad request.

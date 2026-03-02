@@ -180,7 +180,8 @@ public class AuthProperties {
     @Setter
     public static class Jwt {
         /**
-         * JWT secret key (Base64 encoded) - REQUIRED
+         * Deprecated legacy JWT secret key. RS256 with {@code RsaKeyProvider} is used for signing.
+         * This value is ignored by default runtime wiring.
          */
         private String secret;
 

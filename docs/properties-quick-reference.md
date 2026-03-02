@@ -32,9 +32,9 @@ ricardo:
 ricardo:
   auth:
     jwt:
-      secret: "${JWT_SECRET}"                    # Environment variable
       access-token-expiration: 900000           # 15 minutes
       refresh-token-expiration: 604800000       # 7 days
+      kid: "auth-key-1"                         # Optional key id for JWKS
     cookies:
       access:
         secure: true      # HTTPS only

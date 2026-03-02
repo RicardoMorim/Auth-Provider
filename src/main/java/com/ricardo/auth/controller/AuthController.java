@@ -165,7 +165,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
             if (refreshTokenService != null) {
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails);
-                setAuthCookies(response, accessToken, refreshToken.getToken());
+                String cookieRefreshToken = refreshToken.getRawToken() != null ? refreshToken.getRawToken() : refreshToken.getToken();
+                setAuthCookies(response, accessToken, cookieRefreshToken);
             } else {
                 setAccessCookie(response, accessToken);
             }
@@ -253,11 +254,13 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                     user.getAuthorities()
             );
 
-            String newRefreshToken = refreshToken.getToken();
+            String newRefreshToken = refreshTokenCookie;
             if (shouldRotateRefreshToken()) {
                 RefreshToken newRefreshTokenObj = refreshTokenService.createRefreshToken(user);
-                refreshTokenService.revokeToken(refreshToken.getToken());
-                newRefreshToken = newRefreshTokenObj.getToken();
+                refreshTokenService.revokeToken(refreshTokenCookie);
+                newRefreshToken = newRefreshTokenObj.getRawToken() != null
+                    ? newRefreshTokenObj.getRawToken()
+                    : newRefreshTokenObj.getToken();
                 blocklist.revoke(refreshTokenCookie);
             }
 

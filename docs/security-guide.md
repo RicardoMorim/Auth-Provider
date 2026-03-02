@@ -178,25 +178,25 @@ ricardo:
 
 ### Token Generation
 
-JWT tokens are signed using HMAC SHA-256 with your secret key:
+JWT tokens are signed using RSA (RS256) via the configured `RsaKeyProvider`:
 
 ```java
 // The starter automatically handles token generation
 String token = jwtService.generateToken(username, authorities);
 ```
 
-### Secret Key Security
+### Key Management Security
 
-**Critical: Your JWT secret key is the cornerstone of security.**
+**Critical: Your RSA private key is the cornerstone of security.**
 
 #### Requirements
 
-- **Minimum length**: 256 bits (32 characters)
-- **Randomness**: Cryptographically secure random generation
-- **Uniqueness**: Different for each environment
-- **Secrecy**: Never commit to version control
+- **Private key secrecy**: Never commit private keys to version control
+- **Key rotation**: Rotate key pairs on a defined schedule
+- **Environment isolation**: Use different key pairs per environment
+- **Stable distribution**: Share the same key pair across all app instances in the same environment
 
-#### Generating Secure Secrets
+#### Generating Secure Key Pairs
 
 **OpenSSL (Recommended):**
 
@@ -232,9 +232,9 @@ nextBytes(bytes);
 String secret = Base64.getEncoder().encodeToString(bytes);
 ```
 
-#### Secret Rotation
+#### Key Rotation
 
-Rotate your JWT secret regularly:
+Rotate your JWT signing keys regularly:
 
 1. **Generate a new secret**
 2. **Update configuration** with the new secret

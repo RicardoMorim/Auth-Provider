@@ -175,11 +175,11 @@ class RefreshTokenServiceImplTest {
         RefreshToken createdToken = refreshTokenService.createRefreshToken(testUser);
 
         // Act
-        RefreshToken foundToken = refreshTokenService.findByToken(createdToken.getToken());
+        RefreshToken foundToken = refreshTokenService.findByToken(createdToken.getRawToken());
 
         // Assert
         assertNotNull(foundToken);
-        assertEquals(createdToken.getToken(), foundToken.getToken());
+        assertEquals(createdToken.getRawToken(), foundToken.getRawToken());
         assertEquals(createdToken.getUserEmail(), foundToken.getUserEmail());
     }
 
@@ -241,13 +241,14 @@ class RefreshTokenServiceImplTest {
     void revokeToken_shouldMarkTokenAsRevoked_whenTokenExists() {
         // Arrange
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(testUser);
-        String tokenValue = refreshToken.getToken();
+        String tokenValue = refreshToken.getRawToken();
+        String storedTokenValue = refreshToken.getToken();
 
         // Act
         refreshTokenService.revokeToken(tokenValue);
 
         // Assert - Use raw find to get revoked token
-        RefreshToken revokedToken = refreshTokenRepository.findByTokenRaw(tokenValue)
+        RefreshToken revokedToken = refreshTokenRepository.findByTokenRaw(storedTokenValue)
                 .orElseThrow(() -> new AssertionError("Token should exist"));
         assertTrue(revokedToken.isRevoked());
 
@@ -280,16 +281,18 @@ class RefreshTokenServiceImplTest {
         RefreshToken token2 = refreshTokenService.createRefreshToken(testUser);
 
         // Store the token values for later lookup
-        String token1Value = token1.getToken();
-        String token2Value = token2.getToken();
+        String token1Value = token1.getRawToken();
+        String token2Value = token2.getRawToken();
+        String storedToken1Value = token1.getToken();
+        String storedToken2Value = token2.getToken();
 
         // Act
         refreshTokenService.revokeAllUserTokens(testUser);
 
         // Assert - Fetch fresh objects from database (not the stale in-memory ones)
-        RefreshToken revokedToken1 = refreshTokenRepository.findByTokenRaw(token1Value)
+        RefreshToken revokedToken1 = refreshTokenRepository.findByTokenRaw(storedToken1Value)
                 .orElseThrow(() -> new AssertionError("Token should exist"));
-        RefreshToken revokedToken2 = refreshTokenRepository.findByTokenRaw(token2Value)
+        RefreshToken revokedToken2 = refreshTokenRepository.findByTokenRaw(storedToken2Value)
                 .orElseThrow(() -> new AssertionError("Token should exist"));
 
         assertTrue(revokedToken1.isRevoked());
@@ -327,7 +330,7 @@ class RefreshTokenServiceImplTest {
         refreshTokenService.cleanupExpiredTokens();
 
         // Assert - Valid token should still exist, expired should be gone
-        assertDoesNotThrow(() -> refreshTokenService.findByToken(validToken.getToken()));
+        assertDoesNotThrow(() -> refreshTokenService.findByToken(validToken.getRawToken()));
 
         Thread.sleep(1050);
         assertThrows(ResourceNotFoundException.class, () -> {
@@ -397,7 +400,7 @@ class RefreshTokenServiceImplTest {
     void shouldMaintainTokenLifecycleThroughUserOperations() {
         // Arrange
         RefreshToken refreshToken = refreshTokenService.createRefreshToken(testUser);
-        String originalToken = refreshToken.getToken();
+        String originalToken = refreshToken.getRawToken();
 
         // Act - Update user (should not affect token)
         testUser.addRole(AppRole.ADMIN);

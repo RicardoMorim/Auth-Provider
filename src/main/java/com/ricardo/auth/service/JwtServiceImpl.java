@@ -6,6 +6,8 @@ import com.ricardo.auth.core.RsaKeyProvider;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.SignatureException;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.core.GrantedAuthority;
 
 import java.security.PrivateKey;
@@ -16,6 +18,8 @@ import java.util.stream.Collectors;
 
 public class JwtServiceImpl implements JwtService {
 
+    private static final Logger logger = LoggerFactory.getLogger(JwtServiceImpl.class);
+
     private static final String ISSUER = "ricardo-auth";
     private static final String AUDIENCE = "ricardo-auth-client";
 
@@ -25,6 +29,10 @@ public class JwtServiceImpl implements JwtService {
     public JwtServiceImpl(AuthProperties authProperties, RsaKeyProvider keyProvider) {
         this.accessTokenExpiration = authProperties.getJwt().getAccessTokenExpiration();
         this.keyProvider = keyProvider;
+
+        if (authProperties.getJwt().getSecret() != null && !authProperties.getJwt().getSecret().isBlank()) {
+            logger.warn("Property 'ricardo.auth.jwt.secret' is set but ignored. JWT signing uses RS256 via RsaKeyProvider.");
+        }
     }
 
 

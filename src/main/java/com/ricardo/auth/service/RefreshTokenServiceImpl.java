@@ -15,6 +15,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
@@ -53,15 +56,18 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     @Override
     @Transactional
     public RefreshToken createRefreshToken(U user) {
+        String rawToken = generateSecureToken();
         RefreshToken token = new RefreshToken(
-                generateSecureToken(),
+            hashToken(rawToken),
                 user.getEmail(),
                 calculateExpiry()
         );
+        token.setRawToken(rawToken);
 
         long startTime = System.currentTimeMillis();
         log.debug("Attempting to save refresh token for user: {}", user.getEmail());
         RefreshToken savedToken = refreshTokenRepository.saveToken(token);
+        savedToken.setRawToken(rawToken);
         log.info("Refresh token for user {} saved successfully in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
         log.debug("Starting cleanup of oldest tokens for user: {}", user.getEmail());
         startTime = System.currentTimeMillis();
@@ -110,11 +116,17 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     @Override
     @Cacheable(value = "refreshToken", key = "#tokenValue", condition = "#tokenValue != null")
     public RefreshToken findByToken(String tokenValue) {
+        if (tokenValue == null || tokenValue.isBlank()) {
+            throw new ResourceNotFoundException("Token not found");
+        }
+
+        String tokenHash = hashToken(tokenValue);
         long startTime = System.currentTimeMillis();
         log.debug("Attempting to find refresh token by value");
         try {
-            RefreshToken token = refreshTokenRepository.findByToken(tokenValue)
+            RefreshToken token = refreshTokenRepository.findByToken(tokenHash)
                     .orElseThrow(() -> new ResourceNotFoundException("Token not found"));
+            token.setRawToken(tokenValue);
             log.info("Refresh token found successfully in {}ms", System.currentTimeMillis() - startTime);
             return token;
         } catch (Exception e) {
@@ -142,6 +154,16 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
         byte[] bytes = new byte[64];
         random.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashedBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hashedBytes);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
+        }
     }
 
     private Instant calculateExpiry() {

@@ -77,7 +77,7 @@ class AuthControllerRefreshTokenTest {
         String token = jwtService.generateAccessToken(testUser.getEmail(), testUser.getAuthorities());
 
         accessTokenCookie = new Cookie("access_token", token);
-        refreshTokenCookie = new Cookie("refresh_token", testRefreshToken.getToken());
+        refreshTokenCookie = new Cookie("refresh_token", testRefreshToken.getRawToken());
     }
 
     /**
@@ -261,7 +261,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldHandleRevokedToken() throws Exception {
-        refreshTokenService.revokeToken(testRefreshToken.getToken());
+                refreshTokenService.revokeToken(testRefreshToken.getRawToken());
 
         mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
@@ -301,7 +301,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldRotateRefreshToken_whenRotationIsEnabled() throws Exception {
-        String originalRefreshToken = testRefreshToken.getToken();
+                String originalRefreshToken = testRefreshToken.getRawToken();
 
         MvcResult result = mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))
@@ -321,7 +321,7 @@ class AuthControllerRefreshTokenTest {
      */
     @Test
     void refreshToken_shouldRevokeOldTokenAfterRotation() throws Exception {
-        String originalRefreshToken = testRefreshToken.getToken();
+                String originalRefreshToken = testRefreshToken.getRawToken();
 
         mockMvc.perform(post("/api/auth/refresh").with(csrf())
                         .cookie(refreshTokenCookie))

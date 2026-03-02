@@ -133,7 +133,7 @@ public class GlobalExceptionHandler {
      */
     @ExceptionHandler(AuthenticationException.class)
     public ResponseEntity<ErrorResponse> handleAuthenticationException(AuthenticationException ex, WebRequest request) {
-        ErrorResponse errorResponse = new ErrorResponse("Authentication Failed: " + ex.getMessage());
+        ErrorResponse errorResponse = new ErrorResponse("Authentication failed.");
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
     }
 

@@ -1,6 +1,7 @@
 package com.ricardo.auth.config;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
+import com.ricardo.auth.core.IpResolver;
 import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.ratelimiter.RateLimiterFilter;
 import com.ricardo.auth.security.JwtAuthFilter;
@@ -176,7 +177,7 @@ public class SecurityConfig {
     @Bean
     @Order(Ordered.HIGHEST_PRECEDENCE)
     @ConditionalOnMissingBean(SecurityFilterChain.class)
-    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter, IpResolver ipResolver) throws Exception {
         if (authProperties.isRedirectHttps()) {
             http.redirectToHttps(withDefaults());
         }
@@ -192,7 +193,7 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
-                .addFilterBefore(new RateLimiterFilter(rateLimiter), UsernamePasswordAuthenticationFilter.class)
+                .addFilterBefore(new RateLimiterFilter(rateLimiter, ipResolver), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .build();
     }

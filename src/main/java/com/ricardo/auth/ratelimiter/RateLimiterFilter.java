@@ -1,5 +1,6 @@
 package com.ricardo.auth.ratelimiter;
 
+import com.ricardo.auth.core.IpResolver;
 import com.ricardo.auth.core.RateLimiter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -18,14 +19,16 @@ import java.util.Optional;
  */
 public class RateLimiterFilter extends OncePerRequestFilter {
     private final RateLimiter rateLimiter;
+    private final IpResolver ipResolver;
 
     /**
      * Instantiates a new Rate limiter filter.
      *
      * @param rateLimiter the rate limiter
      */
-    public RateLimiterFilter(RateLimiter rateLimiter) {
+    public RateLimiterFilter(RateLimiter rateLimiter, IpResolver ipResolver) {
         this.rateLimiter = rateLimiter;
+        this.ipResolver = ipResolver;
     }
 
     /**
@@ -61,6 +64,6 @@ public class RateLimiterFilter extends OncePerRequestFilter {
     private String getClientIdentifier(HttpServletRequest request) {
         return Optional.ofNullable(SecurityContextHolder.getContext().getAuthentication())
                 .map(Authentication::getName)
-                .orElseGet(request::getRemoteAddr);
+                .orElseGet(() -> ipResolver.resolveIp(request));
     }
 }
