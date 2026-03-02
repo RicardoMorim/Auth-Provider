@@ -65,11 +65,11 @@ spring:
           starttls:
             enable: true
 
-# Required: JWT Secret
+# JWT Configuration (RS256 via RsaKeyProvider)
 ricardo:
   auth:
     jwt:
-      secret: "your-super-secure-secret-key-make-it-long-256-bits-for-security"
+      kid: "auth-key-1"
       access-token-expiration: 900000     # 15 minutes for access tokens
       refresh-token-expiration: 604800000 # 7 days for refresh tokens
     refresh-tokens:
@@ -296,7 +296,7 @@ spring:
 
 **Common Issues:**
 
-- **"JWT secret not configured"** → Add `ricardo.auth.jwt.secret` to your config
+- **"No RSA key provider configured for JWT signing"** → Register a custom `RsaKeyProvider` bean
 - **"Failed to configure DataSource"** → Add `spring-boot-starter-data-jpa` dependency
 - **"Password doesn't meet requirements"** → Use pattern: `Uppercase + lowercase + digit + symbol` (e.g., `MyPass123!`)
 - **"No access token cookie found"** → Ensure your frontend sends cookies with requests and CORS is configured

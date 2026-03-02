@@ -8,16 +8,17 @@
 ricardo:
   auth:
     jwt:
-      secret: "your-256-bit-base64-encoded-secret-key-here"  # REQUIRED
+      access-token-expiration: 900000      # 15 minutes
+      refresh-token-expiration: 604800000  # 7 days
 ```
+
+> JWT signing uses RS256 via `RsaKeyProvider`. The `ricardo.auth.jwt.secret` property is legacy and ignored by runtime.
 
 ### Development Configuration
 
 ```yaml
 ricardo:
   auth:
-    jwt:
-      secret: "ZGV2ZWxvcG1lbnQtc2VjcmV0LWtleS1hdXRoLXN0YXJ0ZXI="  # Base64: "development-secret-key-auth-starter"
     cookies:
       access:
         secure: false     # Allow HTTP for localhost
@@ -64,7 +65,6 @@ ricardo:
     redirect-https: true            # Force HTTPS redirect
     
     jwt:
-      secret: ""                    # REQUIRED - Base64 encoded secret key
       access-token-expiration: 900000    # 15 minutes (in milliseconds)
       refresh-token-expiration: 604800000  # 7 days (in milliseconds)
 ```
@@ -141,6 +141,18 @@ ricardo:
       time-window-ms: 60000       # Time window (1 minute in ms)
 ```
 
+### Login Lockout
+
+```yaml
+ricardo:
+  auth:
+    login-lockout:
+      enabled: true               # Enable account lockout tracking
+      max-failed-attempts: 10     # Failed attempts before lock
+      attempt-window-ms: 900000   # Attempt window (15 minutes)
+      lock-duration-ms: 900000    # Lock duration (15 minutes)
+```
+
 ### Token Blocklist (Revocation)
 
 ```yaml
@@ -215,7 +227,6 @@ ricardo:
 ricardo:
   auth:
     jwt:
-      secret: "ZGV2ZWxvcG1lbnQtc2VjcmV0LWtleS1hdXRoLXN0YXJ0ZXI="
       access-token-expiration: 1800000  # 30 minutes for development
     cookies:
       access:
@@ -238,7 +249,7 @@ logging:
 ricardo:
   auth:
     jwt:
-      secret: "${JWT_SECRET}"
+      kid: "auth-key-1"
       access-token-expiration: 900000   # 15 minutes
       refresh-token-expiration: 604800000  # 7 days
     cookies:
@@ -271,7 +282,6 @@ spring:
 ricardo:
   auth:
     jwt:
-      secret: "dGVzdC1zZWNyZXQta2V5LWF1dGgtc3RhcnRlci10ZXN0aW5n"
       access-token-expiration: 300000   # 5 minutes for tests
     cookies:
       access:
@@ -300,23 +310,22 @@ spring:
 ### Production Secrets
 
 ```yaml
-# ❌ Never store secrets in code
+# ❌ Never use ephemeral in-memory RSA keys in production
 ricardo:
   auth:
     jwt:
-      secret: "hardcoded-secret"
+      kid: "dev-ephemeral"
 
-# ✅ Use environment variables
+# ✅ Use a persistent custom key provider and stable key id
 ricardo:
   auth:
     jwt:
-      secret: "${JWT_SECRET}"
+      kid: "auth-key-1"
 
 # ✅ Or external configuration
 ricardo:
   auth:
-    jwt:
-      secret: "${spring.cloud.config.uri}/jwt-secret"
+    # Provide RsaKeyProvider from your secure key store
 ```
 
 ### HTTPS Configuration

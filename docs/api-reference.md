@@ -81,10 +81,9 @@ spring:
             enable: true
 ```
 
-**Optional .env File (only 3 properties supported):**
+**Optional .env File (mail properties):**
 
 ```env
-RICARDO_AUTH_JWT_SECRET=your-256-bit-secret-key-here
 MAIL_USERNAME=your_smtp_username
 MAIL_PASSWORD=your_smtp_password
 ```

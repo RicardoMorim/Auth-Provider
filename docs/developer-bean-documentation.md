@@ -27,7 +27,8 @@ All configuration is handled by `AuthAutoConfiguration.class`.
 
 **Dependencies**:
 
-- `AuthProperties authProperties` - JWT configuration (secret, expiration times)
+- `AuthProperties authProperties` - JWT configuration (expiration times, kid)
+- `RsaKeyProvider rsaKeyProvider` - RS256 signing and verification keys
 
 **Configurable Properties**:
 
@@ -35,18 +36,19 @@ All configuration is handled by `AuthAutoConfiguration.class`.
 ricardo:
   auth:
     jwt:
-      secret: "your-base64-secret-key"           # Required - Base64 encoded secret
       access-token-expiration: 900000           # 15 minutes (milliseconds)
       refresh-token-expiration: 604800000       # 7 days (milliseconds)
 ```
+
+> Runtime JWT signing uses RS256 via `RsaKeyProvider`; `ricardo.auth.jwt.secret` is legacy and ignored.
 
 **Bean Creation**:
 
 ```java
 @Bean
 @ConditionalOnMissingBean
-public JwtService jwtService(AuthProperties authProperties) {
-    return new JwtServiceImpl(authProperties);
+public JwtService jwtService(AuthProperties authProperties, RsaKeyProvider rsaKeyProvider) {
+  return new JwtServiceImpl(authProperties, rsaKeyProvider);
 }
 ```
 
@@ -501,7 +503,6 @@ ricardo:
     redirect-https: true                            # Force HTTPS redirect
     
     jwt:
-      secret: "your-256-bit-base64-encoded-secret"  # Required - JWT signing key
       access-token-expiration: 900000               # 15 minutes
       refresh-token-expiration: 604800000           # 7 days
     
