@@ -158,7 +158,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
             Object principal = authentication.getPrincipal();
             if (principal == null) {
-                logger.warn("Authentication failed: no principal for email: {}", LogSanitizer.sanitize(request.getEmail()));
+                logger.warn("Authentication failed: no principal returned by authentication provider");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(new ErrorResponse("Authentication failed: no principal"));
             }

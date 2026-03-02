@@ -5,6 +5,8 @@ package com.ricardo.auth.helper;
  */
 public final class LogSanitizer {
 
+    private static final int MAX_LOG_VALUE_LENGTH = 256;
+
     private LogSanitizer() {
         // Utility class
     }
@@ -19,12 +21,24 @@ public final class LogSanitizer {
         if (input == null) {
             return "null";
         }
-        return input
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\"", "\\\"")
-                .trim();
+
+        String trimmed = input.trim();
+        StringBuilder safe = new StringBuilder(Math.min(trimmed.length(), MAX_LOG_VALUE_LENGTH));
+
+        for (int index = 0; index < trimmed.length() && safe.length() < MAX_LOG_VALUE_LENGTH; index++) {
+            char current = trimmed.charAt(index);
+            if (Character.isISOControl(current)) {
+                safe.append('_');
+            } else {
+                safe.append(current);
+            }
+        }
+
+        if (trimmed.length() > MAX_LOG_VALUE_LENGTH) {
+            safe.append("...");
+        }
+
+        return safe.toString();
     }
 
     /**
