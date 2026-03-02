@@ -193,8 +193,8 @@ public class SecurityConfig {
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
-                .addFilterBefore(new RateLimiterFilter(rateLimiter, ipResolver), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new RateLimiterFilter(rateLimiter, ipResolver), JwtAuthFilter.class)
                 .build();
     }
 
