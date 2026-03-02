@@ -12,6 +12,11 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
@@ -60,7 +65,7 @@ class RedisTokenBlockListTest {
     void testRevokeCallsRedisSet() {
         String token = "token1";
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
     }
 
@@ -101,7 +106,7 @@ class RedisTokenBlockListTest {
         String token = "dupToken";
         blockList.revoke(token);
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
     }
 
@@ -145,7 +150,7 @@ class RedisTokenBlockListTest {
     void testVeryLongToken() {
         String token = "t".repeat(200);
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
         assertTrue(blockList.isRevoked(token));
     }
@@ -157,7 +162,7 @@ class RedisTokenBlockListTest {
     void testSpecialCharToken() {
         String token = "tok:!@#$_-çãõ";
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
         assertTrue(blockList.isRevoked(token));
     }
@@ -183,5 +188,19 @@ class RedisTokenBlockListTest {
         for (Thread t : arr) t.start();
         for (Thread t : arr) t.join();
         for (boolean b : results) assertTrue(b);
+    }
+
+    private String buildKey(String token) {
+        return "revoked:" + hashToken(token);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
+        }
     }
 }

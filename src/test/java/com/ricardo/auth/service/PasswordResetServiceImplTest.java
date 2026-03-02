@@ -114,6 +114,43 @@ class PasswordResetServiceImplTest {
     }
 
     /**
+     * Request password reset with requireHttps enabled should send HTTPS reset URL.
+     */
+    @Test
+    void requestPasswordReset_WithRequireHttpsEnabled_ShouldSendHttpsResetUrl() {
+        String email = "user@example.com";
+        TestUser user = createTestUser(email);
+        authProperties.setBaseUrl("http://localhost:8080");
+        authProperties.getPasswordReset().setRequireHttps(true);
+
+        when(userService.getUserByEmail(email)).thenReturn(user);
+        when(emailSenderService.sendEmail(anyString(), anyString(), anyString())).thenReturn(true);
+
+        passwordResetService.requestPasswordReset(email);
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailSenderService).sendEmail(eq(email), anyString(), bodyCaptor.capture());
+        assertThat(bodyCaptor.getValue()).contains("https://localhost:8080/api/auth/reset/");
+    }
+
+    /**
+     * Request password reset with invalid base URL scheme should fail when requireHttps is enabled.
+     */
+    @Test
+    void requestPasswordReset_WithInvalidBaseUrlScheme_ShouldThrowWhenRequireHttpsEnabled() {
+        String email = "user@example.com";
+        TestUser user = createTestUser(email);
+        authProperties.setBaseUrl("localhost:8080");
+        authProperties.getPasswordReset().setRequireHttps(true);
+
+        when(userService.getUserByEmail(email)).thenReturn(user);
+
+        assertThatThrownBy(() -> passwordResetService.requestPasswordReset(email))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("must use HTTPS");
+    }
+
+    /**
      * Request password reset with nonexistent email should not throw exception.
      */
     @Test
