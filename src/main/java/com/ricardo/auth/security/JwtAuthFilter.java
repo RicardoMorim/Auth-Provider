@@ -152,8 +152,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         for (Cookie cookie : cookies) {
             if (ACCESS_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
-                String token = cookie.getValue();
-                return token;
+                return cookie.getValue();
             }
         }
         return null;
@@ -190,8 +189,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             String requestPath = request.getRequestURI();
             if (!requestPath.startsWith(expectedPath)) {
                 logger.warn("Cookie path mismatch. Expected: {}, Request path: {}", expectedPath, LogSanitizer.sanitize(requestPath));
-                // This might be too strict, so we'll log but not fail
-                // return false;
+                // block the request - Fail close
+                return false;
             }
         }
 
@@ -234,8 +233,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authToken);
-
-        logger.debug("Authentication set for user: {} with roles: {}", subject, roles);
     }
 
     /**
