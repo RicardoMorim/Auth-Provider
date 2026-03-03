@@ -83,12 +83,14 @@ public class CommonPasswordHelper {
             throw new IOException("File not found: " + filePath);
         }
 
-        return Files.lines(path, StandardCharsets.UTF_8)
-                .map(String::trim)
-                .filter(line -> !line.isEmpty())
-                .filter(line -> !line.startsWith("#"))
-                .map(String::toLowerCase)
-                .collect(Collectors.toSet());
+        try (var lines = Files.lines(path, StandardCharsets.UTF_8)) {
+            return lines
+                    .map(String::trim)
+                    .filter(line -> !line.isEmpty())
+                    .filter(line -> !line.startsWith("#"))
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toSet());
+        }
     }
 
     private static Set<String> loadFromClasspath(String resourcePath, Class<?> contextClass) throws IOException {
