@@ -501,6 +501,7 @@ class PasswordResetControllerTest {
                 .andExpect(jsonPath("$.valid").value(false))
                 .andExpect(jsonPath("$.message").value("Too many requests. Please try again later."));
 
+                verify(rateLimiter).allowRequest("password_reset_validate:127.0.0.1");
         verify(passwordResetService, never()).validatePasswordResetToken(anyString());
     }
 

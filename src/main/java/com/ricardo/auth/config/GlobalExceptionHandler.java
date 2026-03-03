@@ -3,6 +3,7 @@ package com.ricardo.auth.config;
 import com.ricardo.auth.domain.exceptions.DuplicateResourceException;
 import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.dto.ErrorResponse;
+import jakarta.validation.ConstraintViolationException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpStatus;
@@ -34,6 +35,24 @@ public class GlobalExceptionHandler {
         StringBuilder message = new StringBuilder("Validation failed: ");
         ex.getBindingResult().getFieldErrors().forEach(error ->
                 message.append(error.getField()).append(" ").append(error.getDefaultMessage()).append("; ")
+        );
+
+        return ResponseEntity.badRequest()
+                .body(new ErrorResponse(message.toString()));
+    }
+
+    /**
+     * Handle constraint violation exceptions (e.g., @Email validation on path variables).
+     * Returns 400 Bad Request.
+     *
+     * @param ex the ex
+     * @return the response entity
+     */
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolationException(ConstraintViolationException ex) {
+        StringBuilder message = new StringBuilder("Validation failed: ");
+        ex.getConstraintViolations().forEach(violation ->
+                message.append(violation.getPropertyPath()).append(" ").append(violation.getMessage()).append("; ")
         );
 
         return ResponseEntity.badRequest()
