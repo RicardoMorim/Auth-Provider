@@ -419,7 +419,7 @@ class PasswordResetControllerTest {
     @WithMockUser(roles = "ADMIN")
     void validateToken_WithInvalidToken_ShouldReturnInvalid() throws Exception {
         mockMvc.perform(get("/api/auth/reset/invalid-token/validate"))
-                .andExpect(status().isOk())
+                                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.valid").value(false));
     }
 
@@ -446,7 +446,7 @@ class PasswordResetControllerTest {
     @Test
     void validateToken_WithMalformedToken_ShouldReturnInvalidWithoutCallingService() throws Exception {
         mockMvc.perform(get("/api/auth/reset/invalid token/validate"))
-                .andExpect(status().isOk())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.valid").value(false))
                 .andExpect(jsonPath("$.message").value("Token is invalid or expired."));
 
@@ -465,9 +465,43 @@ class PasswordResetControllerTest {
                 .validatePasswordResetToken("valid-token");
 
         mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
-                .andExpect(status().isOk())
+                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.valid").value(false))
                 .andExpect(jsonPath("$.message").value("Token is invalid or expired."));
+    }
+
+    /**
+     * Validate token should return invalid when service throws unexpected exception.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WhenServiceThrowsUnexpectedException_ShouldReturnInvalid() throws Exception {
+        doThrow(new RuntimeException("Unexpected failure"))
+                .when(passwordResetService)
+                .validatePasswordResetToken("valid-token");
+
+        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Token is invalid or expired."));
+    }
+
+    /**
+     * Validate token should return too many requests when rate limit is exceeded.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WhenRateLimitExceeded_ShouldReturnTooManyRequests() throws Exception {
+        when(rateLimiter.allowRequest(anyString())).thenReturn(false);
+
+        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Too many requests. Please try again later."));
+
+        verify(passwordResetService, never()).validatePasswordResetToken(anyString());
     }
 
     /**

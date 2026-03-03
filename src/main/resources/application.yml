@@ -1,0 +1,51 @@
+server:
+  port: 9090
+spring:
+  autoconfigure:
+    exclude: org.springframework.boot.autoconfigure.orm.jpa.HibernateJpaAutoConfiguration,org.springframework.boot.autoconfigure.data.jpa.JpaRepositoriesAutoConfiguration
+
+ricardo:
+  auth:
+    refresh-tokens:
+      enabled: true
+      max-tokens-per-user: 5
+      rotate-on-refresh: true
+      cleanup-interval: 36000
+      auto-cleanup: true
+    jwt:
+      access-token-expiration: 900000    # 15 minutes
+      refresh-token-expiration: 604800000 # 7 days
+    password-policy:
+      min-length: 10
+      require-uppercase: true
+      require-lowercase: true
+      require-digits: true
+      require-special-chars: true
+      prevent-common-passwords: true
+      max-length: 60 # 60 characters for the test environment use a reasonable limit in production
+    redirect-https: false
+    cookies:
+      access:
+        http-only: true
+        secure: true
+      refresh:
+        secure: true
+        http-only: true
+    repository:
+      type: postgresql
+      database:
+        url: jdbc:postgresql://localhost:5432/AuthLibraryTest
+        password: 8080
+        username: postgres
+        driver-class-name: org.postgresql.Driver
+
+
+
+# Logging Configuration
+logging:
+  level:
+    org.springframework.security: DEBUG
+    com.ricardo.auth: DEBUG
+
+
+

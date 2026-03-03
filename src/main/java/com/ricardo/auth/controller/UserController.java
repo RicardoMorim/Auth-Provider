@@ -16,6 +16,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.security.SecurityRequirement;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Email;
 import jakarta.validation.Valid;
 import org.springframework.data.domain.*;
 import org.springframework.http.HttpStatus;
@@ -81,7 +82,7 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
     @PreAuthorize("hasRole('ADMIN')")
     public ResponseEntity<UserDTO> getUserByEmail(
             @Parameter(description = "User email address", required = true)
-            @PathVariable String email) {
+            @PathVariable @Email String email) {
         U user = userService.getUserByEmail(email);
         return ResponseEntity.ok(UserDTOMapper.toDTO(user));
     }
@@ -107,7 +108,7 @@ public class UserController<U extends AuthUser<ID, R>, R extends Role, ID> imple
      */
     @GetMapping("/exists/{email}")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<Boolean> userExists(@PathVariable String email) {
+    public ResponseEntity<Boolean> userExists(@PathVariable @Email String email) {
         boolean exists = userService.userExists(email);
         return ResponseEntity.ok(exists);
     }

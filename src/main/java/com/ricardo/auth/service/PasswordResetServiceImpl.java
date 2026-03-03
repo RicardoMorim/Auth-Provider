@@ -44,6 +44,10 @@ public class PasswordResetServiceImpl<U extends AuthUser<ID, R>, R extends Role,
      * The constant PASSWORD_RESET_COMPLETE_KEY_PREFIX.
      */
     public static final String PASSWORD_RESET_COMPLETE_KEY_PREFIX = "password_reset_complete:";
+    /**
+     * The constant PASSWORD_RESET_VALIDATE_KEY_PREFIX.
+     */
+    public static final String PASSWORD_RESET_VALIDATE_KEY_PREFIX = "password_reset_validate:";
     private final EmailSenderService emailSenderService;
     private final UserService<U, R, ID> userService;
     private final PasswordResetTokenRepository tokenRepository;

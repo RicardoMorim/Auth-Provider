@@ -36,6 +36,7 @@ import java.util.Optional;
 public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> implements UserService<U, R, ID> {
 
     private static final Logger log = LoggerFactory.getLogger(UserServiceImpl.class);
+    private static final long USER_EXISTS_MIN_PROCESSING_MS = 25L;
     private final UserRepository<U, R, ID> userRepository;
     private final EventPublisher eventPublisher;
     private final CacheHelper<U, R, ID> cacheHelper;
@@ -246,6 +247,8 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         } catch (Exception e) {
             log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
+        } finally {
+            ensureMinimumProcessingTime(startTime, USER_EXISTS_MIN_PROCESSING_MS);
         }
     }
 
@@ -310,6 +313,19 @@ public class UserServiceImpl<U extends AuthUser<ID, R>, R extends Role, ID> impl
         } catch (Exception e) {
             log.error("Operation: {} for email: {} failed after {}ms. Error: {}", operation, LogSanitizer.sanitize(email), System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
+        }
+    }
+
+    private void ensureMinimumProcessingTime(long startTime, long minimumMs) {
+        long elapsed = System.currentTimeMillis() - startTime;
+        if (elapsed >= minimumMs) {
+            return;
+        }
+
+        try {
+            Thread.sleep(minimumMs - elapsed);
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
         }
     }
 
