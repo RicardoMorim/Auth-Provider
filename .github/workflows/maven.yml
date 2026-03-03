@@ -25,8 +25,7 @@ jobs:
       SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
       SONAR_ORGANIZATION: ${{ secrets.SONAR_ORGANIZATION }}
     permissions:
-      contents: read
-      id-token: write
+      contents: write
     services:
       redis:
         image: redis:7
@@ -79,7 +78,26 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build with Maven (includes tests)
+      - name: Cache SonarQube packages
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_ORGANIZATION != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+        uses: actions/cache@v4
+        with:
+          path: ~/.sonar/cache
+          key: ${{ runner.os }}-sonar
+          restore-keys: ${{ runner.os }}-sonar
+
+      - name: Build, test, coverage and SonarQube analysis
+        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_ORGANIZATION != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false) }}
+        run: |
+          ./mvnw -B verify -P coverage sonar:sonar --file pom.xml \
+            -Dsonar.organization=${SONAR_ORGANIZATION} \
+            -Dsonar.projectKey=RicardoMorim_Auth-Provider \
+            -Dsonar.host.url=${SONAR_HOST_URL} \
+            -Dsonar.token=${SONAR_TOKEN} \
+            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
+
+      - name: Build, test and coverage (without SonarQube)
+        if: ${{ !(env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_ORGANIZATION != '' && (github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false)) }}
         run: ./mvnw -B verify -P coverage --file pom.xml
 
       - name: Upload coverage report
@@ -88,17 +106,7 @@ jobs:
           name: jacoco-report
           path: target/site/jacoco/
 
-      - name: SonarQube Analysis
-        if: ${{ env.SONAR_TOKEN != '' && env.SONAR_HOST_URL != '' && env.SONAR_ORGANIZATION != '' }}
-        run: |
-          ./mvnw -B sonar:sonar \
-            -DskipTests \
-            -Dsonar.organization=${SONAR_ORGANIZATION} \
-            -Dsonar.projectKey=RicardoMorim_Auth-Provider \
-            -Dsonar.host.url=${SONAR_HOST_URL} \
-            -Dsonar.token=${SONAR_TOKEN} \
-            -Dsonar.coverage.jacoco.xmlReportPaths=target/site/jacoco/jacoco.xml
-
 
       - name: Update dependency graph
+        if: ${{ github.event_name != 'pull_request' || github.event.pull_request.head.repo.fork == false }}
         uses: advanced-security/maven-dependency-submission-action@b275d12641ac2d2108b2cbb7598b154ad2f2cee8
