@@ -3,127 +3,253 @@ package com.ricardo.auth.security;
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.TokenBlocklist;
+import io.jsonwebtoken.MalformedJwtException;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
-import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.mock.web.MockHttpServletRequest;
 import org.springframework.mock.web.MockHttpServletResponse;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 
 import java.io.IOException;
 import java.util.List;
 
-import static org.assertj.core.api.Assertions.assertThat;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.*;
 
 class JwtAuthFilterUnitTest {
 
-    private JwtService jwtService;
-    private TokenBlocklist tokenBlocklist;
-    private JwtAuthFilter jwtAuthFilter;
+    private static final String TOKEN = "aaa.bbb.ccc";
 
-    @BeforeEach
-    void setUp() {
-        jwtService = mock(JwtService.class);
-        tokenBlocklist = mock(TokenBlocklist.class);
-
-        AuthProperties authProperties = new AuthProperties();
-        authProperties.getCookies().getAccess().setSecure(true);
-        authProperties.getCookies().getAccess().setPath("/");
-
-        jwtAuthFilter = new JwtAuthFilter(jwtService, tokenBlocklist, authProperties);
+    @AfterEach
+    void tearDown() {
         SecurityContextHolder.clearContext();
     }
 
     @Test
-    void doFilterInternal_WhenSecureCookieRequiredAndRequestInsecure_ShouldReturnUnauthorized() throws ServletException, IOException {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/protected");
+    void doFilterInternal_shouldBypassPublicEndpoint() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
+
+        MockHttpServletRequest request = request("/api/auth/login", null);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain filterChain = mock(FilterChain.class);
+        FilterChain chain = mock(FilterChain.class);
 
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        verifyNoInteractions(jwtService, tokenBlocklist);
+    }
+
+    @Test
+    void doFilterInternal_shouldReturn401_whenCookieMissing() throws ServletException, IOException {
+        JwtAuthFilter filter = newFilter(mock(JwtService.class), mock(TokenBlocklist.class), false, "/");
+
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", null));
+
+        assertEquals(401, response.getStatus());
+        assertNull(SecurityContextHolder.getContext().getAuthentication());
+    }
+
+    @Test
+    void doFilterInternal_shouldReturn401_whenSecureCookieExpectedOnInsecureRequest() throws ServletException, IOException {
+        JwtAuthFilter filter = newFilter(mock(JwtService.class), mock(TokenBlocklist.class), true, "/");
+
+        MockHttpServletRequest request = request("/api/private", TOKEN);
         request.setSecure(false);
-        request.setCookies(new Cookie("access_token", "aaa.bbb.ccc"));
+        MockHttpServletResponse response = runFilter(filter, request);
 
-        jwtAuthFilter.doFilterInternal(request, response, filterChain);
+        assertEquals(401, response.getStatus());
+    }
 
-        assertThat(response.getStatus()).isEqualTo(401);
-        verify(filterChain, never()).doFilter(any(), any());
+    @Test
+    void doFilterInternal_shouldContinue_whenForwardedProtoIsHttps() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenReturn(true);
+        when(jwtService.extractSubject(TOKEN)).thenReturn("user@example.com");
+        when(jwtService.extractRoles(TOKEN)).thenReturn(List.of("ROLE_USER"));
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, true, "/");
+
+        MockHttpServletRequest request = request("/api/private", TOKEN);
+        request.setSecure(false);
+        request.addHeader("X-Forwarded-Proto", "https");
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertEquals(200, response.getStatus());
+    }
+
+    @Test
+    void doFilterInternal_shouldReturn401_whenCookiePathMismatch() throws ServletException, IOException {
+        JwtAuthFilter filter = newFilter(mock(JwtService.class), mock(TokenBlocklist.class), false, "/api/auth");
+
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", TOKEN));
+
+        assertEquals(401, response.getStatus());
+    }
+
+    @Test
+    void doFilterInternal_shouldReturn401_whenTokenFormatInvalid() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
+
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", "invalid-token"));
+
+        assertEquals(401, response.getStatus());
+        verifyNoInteractions(jwtService, tokenBlocklist);
+    }
+
+    @Test
+    void doFilterInternal_shouldReturn401_whenTokenRevoked() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(true);
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
+
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", TOKEN));
+
+        assertEquals(401, response.getStatus());
+        verify(tokenBlocklist).isRevoked(TOKEN);
         verifyNoInteractions(jwtService);
     }
 
     @Test
-    void doFilterInternal_WhenForwardedProtoIsHttps_ShouldAllowValidationFlow() throws ServletException, IOException {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/protected");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain filterChain = mock(FilterChain.class);
+    void doFilterInternal_shouldReturn401_whenJwtServiceSaysInvalid() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenReturn(false);
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
 
-        request.setSecure(false);
-        request.addHeader("X-Forwarded-Proto", "https");
-        request.setCookies(new Cookie("access_token", "aaa.bbb.ccc"));
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", TOKEN));
 
-        when(tokenBlocklist.isRevoked("aaa.bbb.ccc")).thenReturn(false);
-        when(jwtService.isTokenValid("aaa.bbb.ccc")).thenReturn(true);
-        when(jwtService.extractSubject("aaa.bbb.ccc")).thenReturn("user@example.com");
-        when(jwtService.extractRoles("aaa.bbb.ccc")).thenReturn(List.of("ROLE_USER"));
-
-        jwtAuthFilter.doFilterInternal(request, response, filterChain);
-
-        assertThat(response.getStatus()).isNotEqualTo(401);
-        verify(filterChain).doFilter(any(), any());
-        assertThat(SecurityContextHolder.getContext().getAuthentication()).isNotNull();
+        assertEquals(401, response.getStatus());
     }
 
     @Test
-    void doFilterInternal_WhenSubjectIsBlank_ShouldReturnUnauthorized() throws ServletException, IOException {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/protected");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain filterChain = mock(FilterChain.class);
+    void doFilterInternal_shouldReturn401_whenJwtParsingThrowsMalformed() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenThrow(new MalformedJwtException("bad token"));
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
 
-        request.setSecure(true);
-        request.setCookies(new Cookie("access_token", "aaa.bbb.ccc"));
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", TOKEN));
 
-        when(tokenBlocklist.isRevoked("aaa.bbb.ccc")).thenReturn(false);
-        when(jwtService.isTokenValid("aaa.bbb.ccc")).thenReturn(true);
-        when(jwtService.extractSubject("aaa.bbb.ccc")).thenReturn("   ");
-        when(jwtService.extractRoles("aaa.bbb.ccc")).thenReturn(List.of("ROLE_USER"));
-
-        jwtAuthFilter.doFilterInternal(request, response, filterChain);
-
-        assertThat(response.getStatus()).isEqualTo(401);
-        verify(filterChain, never()).doFilter(any(), any());
+        assertEquals(401, response.getStatus());
     }
 
     @Test
-    void doFilterInternal_WhenRolesAreNull_ShouldReturnUnauthorized() throws ServletException, IOException {
-        MockHttpServletRequest request = new MockHttpServletRequest("GET", "/api/protected");
-        MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain filterChain = mock(FilterChain.class);
+    void doFilterInternal_shouldReturn401_whenSubjectMissing() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenReturn(true);
+        when(jwtService.extractSubject(TOKEN)).thenReturn("  ");
+        when(jwtService.extractRoles(TOKEN)).thenReturn(List.of("ROLE_USER"));
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
 
-        request.setSecure(true);
-        request.setCookies(new Cookie("access_token", "aaa.bbb.ccc"));
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", TOKEN));
 
-        when(tokenBlocklist.isRevoked("aaa.bbb.ccc")).thenReturn(false);
-        when(jwtService.isTokenValid("aaa.bbb.ccc")).thenReturn(true);
-        when(jwtService.extractSubject("aaa.bbb.ccc")).thenReturn("user@example.com");
-        when(jwtService.extractRoles("aaa.bbb.ccc")).thenReturn(null);
-
-        jwtAuthFilter.doFilterInternal(request, response, filterChain);
-
-        assertThat(response.getStatus()).isEqualTo(401);
-        verify(filterChain, never()).doFilter(any(), any());
+        assertEquals(401, response.getStatus());
     }
 
     @Test
-    void doFilterInternal_WhenPublicEndpoint_ShouldBypassAuthentication() throws ServletException, IOException {
-        MockHttpServletRequest request = new MockHttpServletRequest("POST", "/api/auth/login");
+    void doFilterInternal_shouldReturn401_whenRolesMissing() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenReturn(true);
+        when(jwtService.extractSubject(TOKEN)).thenReturn("user@example.com");
+        when(jwtService.extractRoles(TOKEN)).thenReturn(null);
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
+
+        MockHttpServletResponse response = runFilter(filter, request("/api/private", TOKEN));
+
+        assertEquals(401, response.getStatus());
+    }
+
+    @Test
+    void doFilterInternal_shouldAuthenticateAndContinue_whenTokenValid() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenReturn(true);
+        when(jwtService.extractSubject(TOKEN)).thenReturn("user@example.com");
+        when(jwtService.extractRoles(TOKEN)).thenReturn(List.of("ROLE_USER", "ROLE_ADMIN"));
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
+
+        MockHttpServletRequest request = request("/api/private", TOKEN);
         MockHttpServletResponse response = new MockHttpServletResponse();
-        FilterChain filterChain = mock(FilterChain.class);
+        FilterChain chain = mock(FilterChain.class);
 
-        jwtAuthFilter.doFilterInternal(request, response, filterChain);
+        filter.doFilterInternal(request, response, chain);
 
-        verify(filterChain).doFilter(any(), any());
-        verifyNoInteractions(jwtService, tokenBlocklist);
+        verify(chain).doFilter(request, response);
+        assertNotNull(SecurityContextHolder.getContext().getAuthentication());
+        assertEquals("user@example.com", SecurityContextHolder.getContext().getAuthentication().getName());
+    }
+
+    @Test
+    void doFilterInternal_shouldNotOverrideExistingAuthentication() throws ServletException, IOException {
+        JwtService jwtService = mock(JwtService.class);
+        TokenBlocklist tokenBlocklist = mock(TokenBlocklist.class);
+        when(tokenBlocklist.isRevoked(TOKEN)).thenReturn(false);
+        when(jwtService.isTokenValid(TOKEN)).thenReturn(true);
+        when(jwtService.extractSubject(TOKEN)).thenReturn("new@example.com");
+        when(jwtService.extractRoles(TOKEN)).thenReturn(List.of("ROLE_USER"));
+        JwtAuthFilter filter = newFilter(jwtService, tokenBlocklist, false, "/");
+
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken("existing@example.com", null, List.of())
+        );
+
+        MockHttpServletRequest request = request("/api/private", TOKEN);
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+
+        filter.doFilterInternal(request, response, chain);
+
+        verify(chain).doFilter(request, response);
+        assertEquals("existing@example.com", SecurityContextHolder.getContext().getAuthentication().getName());
+    }
+
+    private JwtAuthFilter newFilter(JwtService jwtService, TokenBlocklist tokenBlocklist, boolean secureCookie, String path) {
+        AuthProperties properties = new AuthProperties();
+        properties.getCookies().getAccess().setSecure(secureCookie);
+        properties.getCookies().getAccess().setPath(path);
+        return new JwtAuthFilter(jwtService, tokenBlocklist, properties);
+    }
+
+    private MockHttpServletRequest request(String uri, String token) {
+        MockHttpServletRequest request = new MockHttpServletRequest();
+        request.setRequestURI(uri);
+        if (token != null) {
+            request.setCookies(new Cookie("access_token", token));
+        }
+        return request;
+    }
+
+    private MockHttpServletResponse runFilter(JwtAuthFilter filter, MockHttpServletRequest request)
+            throws ServletException, IOException {
+        MockHttpServletResponse response = new MockHttpServletResponse();
+        FilterChain chain = mock(FilterChain.class);
+        filter.doFilterInternal(request, response, chain);
+        verify(chain, never()).doFilter(any(), any());
+        return response;
     }
 }
