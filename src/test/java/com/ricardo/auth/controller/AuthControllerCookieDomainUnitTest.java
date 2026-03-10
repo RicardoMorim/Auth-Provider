@@ -15,6 +15,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.mockito.Mockito.mock;
 
 class AuthControllerCookieDomainUnitTest {
@@ -27,7 +28,7 @@ class AuthControllerCookieDomainUnitTest {
         ReflectionTestUtils.invokeMethod(controller, "setAccessCookie", response, "access-token");
 
         List<String> headers = response.getHeaders("Set-Cookie");
-        assertTrue(headers.stream().anyMatch(h -> h.contains("access_token=") && h.contains("Domain=.example.com")));
+        assertTrue(headers.stream().anyMatch(h -> h.contains("access_token=") && h.contains("Domain=example.com")));
     }
 
     @Test
@@ -38,7 +39,7 @@ class AuthControllerCookieDomainUnitTest {
         ReflectionTestUtils.invokeMethod(controller, "setRefreshCookie", response, "refresh-token");
 
         List<String> headers = response.getHeaders("Set-Cookie");
-        assertTrue(headers.stream().anyMatch(h -> h.contains("refresh_token=") && h.contains("Domain=.example.com")));
+        assertTrue(headers.stream().anyMatch(h -> h.contains("refresh_token=") && h.contains("Domain=example.com")));
     }
 
     @Test
@@ -50,6 +51,41 @@ class AuthControllerCookieDomainUnitTest {
 
         List<String> headers = response.getHeaders("Set-Cookie");
         assertFalse(headers.stream().anyMatch(h -> h.contains("Domain=")));
+    }
+
+    @Test
+    void constructor_shouldRejectWildcardDomain() {
+        assertThrows(IllegalArgumentException.class, () ->
+                newController(propertiesWithDomain("*.example.com", null))
+        );
+    }
+
+    @Test
+    void constructor_shouldRejectSchemeInDomain() {
+        assertThrows(IllegalArgumentException.class, () ->
+                newController(propertiesWithDomain("https://example.com", null))
+        );
+    }
+
+    @Test
+    void constructor_shouldRejectIpAddressDomain() {
+        assertThrows(IllegalArgumentException.class, () ->
+                newController(propertiesWithDomain("127.0.0.1", null))
+        );
+    }
+
+    @Test
+    void constructor_shouldRejectLocalhostDomain() {
+        assertThrows(IllegalArgumentException.class, () ->
+                newController(propertiesWithDomain("localhost", null))
+        );
+    }
+
+    @Test
+    void constructor_shouldRejectPublicSuffixDomain() {
+        assertThrows(IllegalArgumentException.class, () ->
+                newController(propertiesWithDomain("co.uk", null))
+        );
     }
 
     private AuthController newController(AuthProperties properties) {

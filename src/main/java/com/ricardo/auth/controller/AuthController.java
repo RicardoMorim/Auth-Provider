@@ -47,7 +47,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Generic Auth Controller that works with any AuthUser implementation and ID type.
@@ -70,7 +72,19 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private final TokenBlocklist blocklist;
     private final UserService<U, R, ID> userService;
     private final Publisher eventPublisher;
+        private final String accessCookieDomain;
+        private final String refreshCookieDomain;
     private final ConcurrentHashMap<String, LoginAttemptState> loginAttempts = new ConcurrentHashMap<>();
+
+        private static final Pattern COOKIE_DOMAIN_PATTERN = Pattern.compile(
+            "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
+        );
+        private static final Pattern IPV4_PATTERN = Pattern.compile(
+            "^(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)){3}$"
+        );
+        private static final Set<String> DISALLOWED_PUBLIC_SUFFIXES = Set.of(
+            "co.uk", "com", "org", "net", "gov", "edu", "io", "dev", "app"
+        );
 
     /**
      * Constructor with optional refresh token service
@@ -97,6 +111,14 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         this.blocklist = blocklist;
         this.eventPublisher = eventPublisher;
         this.userService = userService;
+        this.accessCookieDomain = sanitizeAndValidateCookieDomain(
+            authProperties.getCookies().getAccess().getDomain(),
+            "access"
+        );
+        this.refreshCookieDomain = sanitizeAndValidateCookieDomain(
+            authProperties.getCookies().getRefresh().getDomain(),
+            "refresh"
+        );
     }
 
 
@@ -503,8 +525,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 .path(accessCfg.getPath())
                 .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000));
 
-        if (StringUtils.hasText(accessCfg.getDomain())) {
-            accessCookieBuilder.domain(accessCfg.getDomain().trim());
+        if (StringUtils.hasText(accessCookieDomain)) {
+            accessCookieBuilder.domain(accessCookieDomain);
         }
 
         ResponseCookie accessTokenCookie = accessCookieBuilder.build();
@@ -522,8 +544,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 .path(refreshCfg.getPath())
                 .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000));
 
-        if (StringUtils.hasText(refreshCfg.getDomain())) {
-            refreshCookieBuilder.domain(refreshCfg.getDomain().trim());
+        if (StringUtils.hasText(refreshCookieDomain)) {
+            refreshCookieBuilder.domain(refreshCookieDomain);
         }
 
         ResponseCookie refreshTokenCookie = refreshCookieBuilder.build();
@@ -542,8 +564,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 .path(accessCfg.getPath())
             .maxAge(0);
 
-        if (StringUtils.hasText(accessCfg.getDomain())) {
-            accessCookieBuilder.domain(accessCfg.getDomain().trim());
+        if (StringUtils.hasText(accessCookieDomain)) {
+            accessCookieBuilder.domain(accessCookieDomain);
         }
 
         ResponseCookie accessTokenCookie = accessCookieBuilder.build();
@@ -555,8 +577,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 .path(refreshCfg.getPath())
             .maxAge(0);
 
-        if (StringUtils.hasText(refreshCfg.getDomain())) {
-            refreshCookieBuilder.domain(refreshCfg.getDomain().trim());
+        if (StringUtils.hasText(refreshCookieDomain)) {
+            refreshCookieBuilder.domain(refreshCookieDomain);
         }
 
         ResponseCookie refreshTokenCookie = refreshCookieBuilder.build();
@@ -577,6 +599,31 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             return "unknown";
         }
         return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String sanitizeAndValidateCookieDomain(String configuredDomain, String cookieType) {
+        if (!StringUtils.hasText(configuredDomain)) {
+            return null;
+        }
+
+        String normalized = configuredDomain.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith(".")) {
+            normalized = normalized.substring(1);
+        }
+
+        if (!StringUtils.hasText(normalized)
+                || normalized.contains("*")
+                || normalized.contains(":")
+                || normalized.contains("/")
+                || normalized.contains("\\")
+                || IPV4_PATTERN.matcher(normalized).matches()
+                || "localhost".equals(normalized)
+                || DISALLOWED_PUBLIC_SUFFIXES.contains(normalized)
+                || !COOKIE_DOMAIN_PATTERN.matcher(normalized).matches()) {
+            throw new IllegalArgumentException("Invalid cookie domain configured for " + cookieType + " cookie: " + configuredDomain);
+        }
+
+        return normalized;
     }
 
     private boolean isLoginTemporarilyLocked(String normalizedEmail) {
