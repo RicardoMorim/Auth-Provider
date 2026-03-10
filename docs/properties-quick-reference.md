@@ -92,11 +92,29 @@ ricardo:
         http-only: true             # Prevent JavaScript access
         same-site: STRICT           # CSRF protection (STRICT/LAX/NONE)
         path: "/"                   # Cookie path
+        domain: ""                  # Optional. When unset, cookie is host-only
       refresh:
         secure: true
         http-only: true
         same-site: STRICT
         path: "/api/auth/refresh"   # Restricted to refresh endpoint
+        domain: ""                  # Optional. When unset, cookie is host-only
+```
+
+### Security Headers
+
+```yaml
+ricardo:
+  auth:
+    security-headers:
+      csp:
+        enabled: true
+        policy: "default-src 'self'; script-src 'self'; object-src 'none'"
+      hsts:
+        enabled: true
+        max-age-seconds: 31536000
+        include-sub-domains: true
+        preload: true
 ```
 
 ### Password Policy

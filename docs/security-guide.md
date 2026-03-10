@@ -112,14 +112,18 @@ ricardo:
         http-only: true     # No JavaScript access
         same-site: Strict   # CSRF protection
         path: /             # Scope to entire application
+        domain: ""          # Optional. When unset, cookie is host-only
         max-age: 900        # 15 minutes
       refresh:
         secure: true
         http-only: true
         same-site: Strict
         path: /api/auth/refresh  # Scope to refresh endpoint only
+        domain: ""               # Optional. When unset, cookie is host-only
         max-age: 604800     # 7 days
 ```
+
+> Leaving `domain` unset is the most restrictive and safest default. Set a domain only when you need cross-subdomain cookie sharing.
 
 ### CORS Configuration for Cookie Authentication
 
@@ -184,6 +188,15 @@ JWT tokens are signed using RSA (RS256) via the configured `RsaKeyProvider`:
 // The starter automatically handles token generation
 String token = jwtService.generateToken(username, authorities);
 ```
+
+### Why JWKS Endpoint Is Public
+
+The endpoint `/api/auth/.well-known/jwks.json` is intentionally public so external services can validate JWT signatures.
+
+- JWKS exposes only public key material.
+- Private keys are never published via JWKS.
+- Security relies on private key secrecy and strong key generation/storage.
+- Making JWKS private breaks standard token verification and does not improve private-key resistance.
 
 ### Key Management Security
 

@@ -496,13 +496,18 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private void setAccessCookie(HttpServletResponse response, String accessToken) {
         AuthProperties.Cookies.AccessCookie accessCfg = authProperties.getCookies().getAccess();
 
-        ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", accessToken)
+        ResponseCookie.ResponseCookieBuilder accessCookieBuilder = ResponseCookie.from("access_token", accessToken)
                 .httpOnly(accessCfg.isHttpOnly())
                 .secure(accessCfg.isSecure())
                 .sameSite(accessCfg.getSameSite().getValue())
                 .path(accessCfg.getPath())
-                .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000))
-                .build();
+                .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000));
+
+        if (StringUtils.hasText(accessCfg.getDomain())) {
+            accessCookieBuilder.domain(accessCfg.getDomain().trim());
+        }
+
+        ResponseCookie accessTokenCookie = accessCookieBuilder.build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
     }
@@ -510,13 +515,18 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
         AuthProperties.Cookies.RefreshCookie refreshCfg = authProperties.getCookies().getRefresh();
 
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshToken)
+        ResponseCookie.ResponseCookieBuilder refreshCookieBuilder = ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(refreshCfg.isHttpOnly())
                 .secure(refreshCfg.isSecure())
                 .sameSite(refreshCfg.getSameSite().getValue())
                 .path(refreshCfg.getPath())
-                .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000))
-                .build();
+                .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000));
+
+        if (StringUtils.hasText(refreshCfg.getDomain())) {
+            refreshCookieBuilder.domain(refreshCfg.getDomain().trim());
+        }
+
+        ResponseCookie refreshTokenCookie = refreshCookieBuilder.build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
     }
@@ -525,21 +535,31 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         AuthProperties.Cookies.AccessCookie accessCfg = authProperties.getCookies().getAccess();
         AuthProperties.Cookies.RefreshCookie refreshCfg = authProperties.getCookies().getRefresh();
 
-        ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", "")
+        ResponseCookie.ResponseCookieBuilder accessCookieBuilder = ResponseCookie.from("access_token", "")
                 .httpOnly(accessCfg.isHttpOnly())
                 .secure(accessCfg.isSecure())
                 .sameSite(accessCfg.getSameSite().getValue())
                 .path(accessCfg.getPath())
-                .maxAge(0)
-                .build();
+            .maxAge(0);
 
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", "")
+        if (StringUtils.hasText(accessCfg.getDomain())) {
+            accessCookieBuilder.domain(accessCfg.getDomain().trim());
+        }
+
+        ResponseCookie accessTokenCookie = accessCookieBuilder.build();
+
+        ResponseCookie.ResponseCookieBuilder refreshCookieBuilder = ResponseCookie.from("refresh_token", "")
                 .httpOnly(refreshCfg.isHttpOnly())
                 .secure(refreshCfg.isSecure())
                 .sameSite(refreshCfg.getSameSite().getValue())
                 .path(refreshCfg.getPath())
-                .maxAge(0)
-                .build();
+            .maxAge(0);
+
+        if (StringUtils.hasText(refreshCfg.getDomain())) {
+            refreshCookieBuilder.domain(refreshCfg.getDomain().trim());
+        }
+
+        ResponseCookie refreshTokenCookie = refreshCookieBuilder.build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());

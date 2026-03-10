@@ -151,4 +151,40 @@ class AuthPropertiesTest {
         assertThat(properties.getJwt().getAccessTokenExpiration()).isEqualTo(7200000L);
         assertThat(properties.getJwt().getRefreshTokenExpiration()).isEqualTo(86400000L);
     }
+
+    /**
+     * Should support cookie domain configuration.
+     */
+    @Test
+    void shouldSupportCookieDomainConfiguration() {
+        AuthProperties properties = new AuthProperties();
+
+        properties.getCookies().getAccess().setDomain(".example.com");
+        properties.getCookies().getRefresh().setDomain(".example.com");
+
+        assertThat(properties.getCookies().getAccess().getDomain()).isEqualTo(".example.com");
+        assertThat(properties.getCookies().getRefresh().getDomain()).isEqualTo(".example.com");
+    }
+
+    /**
+     * Should support security headers configuration.
+     */
+    @Test
+    void shouldSupportSecurityHeadersConfiguration() {
+        AuthProperties properties = new AuthProperties();
+
+        properties.getSecurityHeaders().getCsp().setEnabled(false);
+        properties.getSecurityHeaders().getCsp().setPolicy("default-src 'none'");
+        properties.getSecurityHeaders().getHsts().setEnabled(false);
+        properties.getSecurityHeaders().getHsts().setMaxAgeSeconds(1000L);
+        properties.getSecurityHeaders().getHsts().setIncludeSubDomains(false);
+        properties.getSecurityHeaders().getHsts().setPreload(false);
+
+        assertThat(properties.getSecurityHeaders().getCsp().isEnabled()).isFalse();
+        assertThat(properties.getSecurityHeaders().getCsp().getPolicy()).isEqualTo("default-src 'none'");
+        assertThat(properties.getSecurityHeaders().getHsts().isEnabled()).isFalse();
+        assertThat(properties.getSecurityHeaders().getHsts().getMaxAgeSeconds()).isEqualTo(1000L);
+        assertThat(properties.getSecurityHeaders().getHsts().isIncludeSubDomains()).isFalse();
+        assertThat(properties.getSecurityHeaders().getHsts().isPreload()).isFalse();
+    }
 }

@@ -195,15 +195,25 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-                .headers(headers -> headers
-                    .contentSecurityPolicy(csp -> csp.policyDirectives("default-src 'self'; script-src 'self'; object-src 'none'"))
-                    .referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER))
-                    .httpStrictTransportSecurity(hsts -> hsts
-                        .maxAgeInSeconds(31536000)
-                        .includeSubDomains(true)
-                        .preload(true)
-                    )
-                )
+                .headers(headers -> {
+                    AuthProperties.SecurityHeaders securityHeaders = authProperties.getSecurityHeaders();
+
+                    if (securityHeaders.getCsp().isEnabled()) {
+                        headers.contentSecurityPolicy(csp -> csp.policyDirectives(securityHeaders.getCsp().getPolicy()));
+                    }
+
+                    headers.referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER));
+
+                    if (securityHeaders.getHsts().isEnabled()) {
+                        headers.httpStrictTransportSecurity(hsts -> hsts
+                                .maxAgeInSeconds(securityHeaders.getHsts().getMaxAgeSeconds())
+                                .includeSubDomains(securityHeaders.getHsts().isIncludeSubDomains())
+                                .preload(securityHeaders.getHsts().isPreload())
+                        );
+                    } else {
+                        headers.httpStrictTransportSecurity(hsts -> hsts.disable());
+                    }
+                })
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterAfter(new RateLimiterFilter(rateLimiter, ipResolver), JwtAuthFilter.class)

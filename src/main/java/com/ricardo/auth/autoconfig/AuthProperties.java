@@ -97,6 +97,11 @@ public class AuthProperties {
     private Cors cors = new Cors();
 
     /**
+     * Security headers configuration
+     */
+    private SecurityHeaders securityHeaders = new SecurityHeaders();
+
+    /**
      * Repository types for refresh tokens
      */
     public enum RepositoryType {
@@ -404,6 +409,11 @@ public class AuthProperties {
             private boolean httpOnly = true;
             private SameSitePolicy sameSite = SameSitePolicy.STRICT;
             private String path = "/";
+            /**
+             * Optional cookie domain.
+             * When unset, the cookie is host-only.
+             */
+            private String domain;
         }
 
         /**
@@ -416,6 +426,43 @@ public class AuthProperties {
             private boolean httpOnly = true;
             private SameSitePolicy sameSite = SameSitePolicy.STRICT;
             private String path = "/api/auth/refresh";
+            /**
+             * Optional cookie domain.
+             * When unset, the cookie is host-only.
+             */
+            private String domain;
+        }
+    }
+
+    /**
+     * Security headers configuration properties.
+     */
+    @Getter
+    @Setter
+    public static class SecurityHeaders {
+        private Csp csp = new Csp();
+        private Hsts hsts = new Hsts();
+
+        /**
+         * Content Security Policy configuration.
+         */
+        @Getter
+        @Setter
+        public static class Csp {
+            private boolean enabled = true;
+            private String policy = "default-src 'self'; script-src 'self'; object-src 'none'";
+        }
+
+        /**
+         * HTTP Strict Transport Security configuration.
+         */
+        @Getter
+        @Setter
+        public static class Hsts {
+            private boolean enabled = true;
+            private long maxAgeSeconds = 31536000L;
+            private boolean includeSubDomains = true;
+            private boolean preload = true;
         }
     }
 
