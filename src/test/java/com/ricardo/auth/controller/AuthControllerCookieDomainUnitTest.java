@@ -7,12 +7,15 @@ import com.ricardo.auth.core.RefreshTokenService;
 import com.ricardo.auth.core.TokenBlocklist;
 import com.ricardo.auth.core.UserService;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.params.ParameterizedTest;
+import org.junit.jupiter.params.provider.ValueSource;
 import org.springframework.mock.web.MockHttpServletResponse;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -86,6 +89,153 @@ class AuthControllerCookieDomainUnitTest {
         assertThrows(IllegalArgumentException.class, () ->
                 newController(propertiesWithDomain("co.uk", null))
         );
+    }
+
+    // --- Valid domain acceptance ---
+
+    @ParameterizedTest
+    @ValueSource(strings = {
+        "example.com",
+        ".example.com",
+        "my-service.example.com",
+        "auth2.example.com",
+        "sub.auth.example.com",
+        "0xdeadbeef.example.com"
+    })
+    void constructor_shouldAcceptValidDomain(String domain) {
+        assertDoesNotThrow(() -> newController(propertiesWithDomain(domain, null)));
+    }
+
+    // --- isValidDomainStructure: invalid structure ---
+
+    @Test
+    void isValidDomainStructure_shouldRejectSingleLabel() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "nodots");
+        assertFalse(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldRejectLabelStartingWithHyphen() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "-example.com");
+        assertFalse(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldRejectLabelEndingWithHyphen() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "example-.com");
+        assertFalse(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldRejectEmptyLabel() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "example..com");
+        assertFalse(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldRejectLabelExceeding63Chars() {
+        String longLabel = "a".repeat(64);
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", longLabel + ".com");
+        assertFalse(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldRejectUnderscore() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "my_service.example.com");
+        assertFalse(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldRejectNonAsciiCharacters() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "exämple.com");
+        assertFalse(result);
+    }
+
+    // --- isValidDomainStructure: valid structure ---
+
+    @Test
+    void isValidDomainStructure_shouldAcceptValidTwoLevelDomain() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "example.com");
+        assertTrue(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldAcceptSubdomain() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "auth.example.com");
+        assertTrue(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldAcceptHyphenInMiddleOfLabel() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", "my-service.example.com");
+        assertTrue(result);
+    }
+
+    @Test
+    void isValidDomainStructure_shouldAcceptLabelOfExactly63Chars() {
+        String maxLabel = "a".repeat(63);
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        Boolean result = ReflectionTestUtils.invokeMethod(controller, "isValidDomainStructure", maxLabel + ".com");
+        assertTrue(result);
+    }
+
+    // --- constructor: domain length guard ---
+
+    @Test
+    void constructor_shouldRejectDomainExceeding253Chars() {
+        // Build a domain with total length > 253 using valid-looking labels
+        String label = "a".repeat(50);
+        String longDomain = label + "." + label + "." + label + "." + label + "." + label + ".com";
+        assertThrows(IllegalArgumentException.class, () ->
+                newController(propertiesWithDomain(longDomain, null))
+        );
+    }
+
+    // --- isDomainChar ---
+
+    @Test
+    void isDomainChar_shouldAcceptLowerCaseLetters() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", 'a'));
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", 'z'));
+    }
+
+    @Test
+    void isDomainChar_shouldAcceptDigits() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", '0'));
+        assertTrue((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", '9'));
+    }
+
+    @Test
+    void isDomainChar_shouldRejectHyphen() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", '-'));
+    }
+
+    @Test
+    void isDomainChar_shouldRejectUpperCaseLetters() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", 'A'));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", 'Z'));
+    }
+
+    @Test
+    void isDomainChar_shouldRejectSpecialCharacters() {
+        AuthController<?, ?, ?> controller = newController(propertiesWithDomain(null, null));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", '_'));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", '.'));
+        assertFalse((Boolean) ReflectionTestUtils.invokeMethod(controller, "isDomainChar", '@'));
     }
 
     private AuthController newController(AuthProperties properties) {
