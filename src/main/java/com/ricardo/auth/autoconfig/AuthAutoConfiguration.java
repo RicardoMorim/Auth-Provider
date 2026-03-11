@@ -913,7 +913,6 @@ public class AuthAutoConfiguration {
     @DependsOn("userSchemaInitializer")
     @Component("PasswordResetTokenSchemaInitializer")
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
-    @ConditionalOnMissingBean(PasswordResetTokenSchemaInitializer.class)
     public static class PasswordResetTokenSchemaInitializer {
 
         private final AuthProperties authProperties;
