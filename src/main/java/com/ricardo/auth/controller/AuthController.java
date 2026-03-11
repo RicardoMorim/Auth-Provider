@@ -76,15 +76,13 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         private final String refreshCookieDomain;
     private final ConcurrentHashMap<String, LoginAttemptState> loginAttempts = new ConcurrentHashMap<>();
 
-        private static final Pattern COOKIE_DOMAIN_PATTERN = Pattern.compile(
-            "^(?=.{1,253}$)(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)(?:\\.[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?)+$"
-        );
         private static final Pattern IPV4_PATTERN = Pattern.compile(
             "^(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)){3}$"
         );
         private static final Set<String> DISALLOWED_PUBLIC_SUFFIXES = Set.of(
             "co.uk", "com", "org", "net", "gov", "edu", "io", "dev", "app"
         );
+        private static final String MSG_AUTH_FAILED = "Authentication failed";
 
     /**
      * Constructor with optional refresh token service
@@ -230,7 +228,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 }
 
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("Authentication failed"));
+                    .body(new ErrorResponse(MSG_AUTH_FAILED));
         }
     }
 
@@ -282,12 +280,12 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         try {
             if (!StringUtils.hasText(refreshTokenCookie) || refreshTokenCookie.trim().length() < 10) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Authentication failed"));
+                        .body(new ErrorResponse(MSG_AUTH_FAILED));
             }
 
             if (blocklist.isRevoked(refreshTokenCookie)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ErrorResponse("Authentication failed"));
+                        .body(new ErrorResponse(MSG_AUTH_FAILED));
             }
 
             RefreshToken refreshToken = refreshTokenService.findByToken(refreshTokenCookie);
@@ -315,7 +313,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("Authentication failed"));
+                    .body(new ErrorResponse(MSG_AUTH_FAILED));
         } catch (Exception e) {
             logger.error("Error refreshing token", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -612,6 +610,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         }
 
         if (!StringUtils.hasText(normalized)
+                || normalized.length() > 253
                 || normalized.contains("*")
                 || normalized.contains(":")
                 || normalized.contains("/")
@@ -619,11 +618,37 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                 || IPV4_PATTERN.matcher(normalized).matches()
                 || "localhost".equals(normalized)
                 || DISALLOWED_PUBLIC_SUFFIXES.contains(normalized)
-                || !COOKIE_DOMAIN_PATTERN.matcher(normalized).matches()) {
+                || !isValidDomainStructure(normalized)) {
             throw new IllegalArgumentException("Invalid cookie domain configured for " + cookieType + " cookie: " + configuredDomain);
         }
 
         return normalized;
+    }
+
+    private boolean isValidDomainStructure(String domain) {
+        String[] labels = domain.split("\\.", -1);
+        if (labels.length < 2) {
+            return false;
+        }
+        for (String label : labels) {
+            if (label.isEmpty() || label.length() > 63) {
+                return false;
+            }
+            if (!isDomainChar(label.charAt(0)) || !isDomainChar(label.charAt(label.length() - 1))) {
+                return false;
+            }
+            for (int i = 1; i < label.length() - 1; i++) {
+                char c = label.charAt(i);
+                if (!isDomainChar(c) && c != '-') {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isDomainChar(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
     }
 
     private boolean isLoginTemporarilyLocked(String normalizedEmail) {
