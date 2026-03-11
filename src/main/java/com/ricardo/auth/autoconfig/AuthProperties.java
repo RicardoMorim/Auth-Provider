@@ -55,6 +55,11 @@ public class AuthProperties {
     private RateLimiter rateLimiter = new RateLimiter();
 
     /**
+     * Login lockout configuration
+     */
+    private LoginLockout loginLockout = new LoginLockout();
+
+    /**
      * Token blocklist configuration
      */
     private TokenBlocklist tokenBlocklist = new TokenBlocklist();
@@ -85,6 +90,16 @@ public class AuthProperties {
      * Role management configuration
      */
     private RoleManagement roleManagement = new RoleManagement();
+
+    /**
+     * CORS configuration
+     */
+    private Cors cors = new Cors();
+
+    /**
+     * Security headers configuration
+     */
+    private SecurityHeaders securityHeaders = new SecurityHeaders();
 
     /**
      * Repository types for refresh tokens
@@ -175,7 +190,8 @@ public class AuthProperties {
     @Setter
     public static class Jwt {
         /**
-         * JWT secret key (Base64 encoded) - REQUIRED
+         * Deprecated legacy JWT secret key. RS256 with {@code RsaKeyProvider} is used for signing.
+         * This value is ignored by default runtime wiring.
          */
         private String secret;
 
@@ -188,6 +204,11 @@ public class AuthProperties {
          * JWT refresh token expiration time in milliseconds (default: 7 days)
          */
         private long refreshTokenExpiration = 604800000L;
+
+        /**
+         * Key ID (kid) for JWKS endpoint. If not set, a hash of the public key will be used.
+         */
+        private String kid;
     }
 
     /**
@@ -260,6 +281,12 @@ public class AuthProperties {
          * Required when preventCommonPasswords is true
          */
         private String commonPasswordsFilePath = "/commonpasswords.txt";
+
+        /**
+         * BCrypt encoder strength (4 to 31). Default is 10.
+         */
+        @Min(4)
+        private int bcryptStrength = 10;
     }
 
     /**
@@ -330,6 +357,18 @@ public class AuthProperties {
     }
 
     /**
+     * Login lockout configuration properties
+     */
+    @Getter
+    @Setter
+    public static class LoginLockout {
+        private boolean enabled = true;
+        private int maxFailedAttempts = 10;
+        private long attemptWindowMs = 900000L;
+        private long lockDurationMs = 900000L;
+    }
+
+    /**
      * Token blocklist configuration properties
      */
     @Getter
@@ -370,6 +409,11 @@ public class AuthProperties {
             private boolean httpOnly = true;
             private SameSitePolicy sameSite = SameSitePolicy.STRICT;
             private String path = "/";
+            /**
+             * Optional cookie domain.
+             * When unset, the cookie is host-only.
+             */
+            private String domain;
         }
 
         /**
@@ -382,6 +426,43 @@ public class AuthProperties {
             private boolean httpOnly = true;
             private SameSitePolicy sameSite = SameSitePolicy.STRICT;
             private String path = "/api/auth/refresh";
+            /**
+             * Optional cookie domain.
+             * When unset, the cookie is host-only.
+             */
+            private String domain;
+        }
+    }
+
+    /**
+     * Security headers configuration properties.
+     */
+    @Getter
+    @Setter
+    public static class SecurityHeaders {
+        private Csp csp = new Csp();
+        private Hsts hsts = new Hsts();
+
+        /**
+         * Content Security Policy configuration.
+         */
+        @Getter
+        @Setter
+        public static class Csp {
+            private boolean enabled = true;
+            private String policy = "default-src 'self'; script-src 'self'; object-src 'none'";
+        }
+
+        /**
+         * HTTP Strict Transport Security configuration.
+         */
+        @Getter
+        @Setter
+        public static class Hsts {
+            private boolean enabled = true;
+            private long maxAgeSeconds = 31536000L;
+            private boolean includeSubDomains = true;
+            private boolean preload = true;
         }
     }
 
@@ -425,5 +506,44 @@ public class AuthProperties {
         private boolean enableRoleEvents = true;
         private boolean requireAdminForRoleChanges = true;
         private boolean allowSelfRoleModification = false;
+    }
+
+    /**
+     * CORS configuration properties
+     */
+    @Getter
+    @Setter
+    public static class Cors {
+        /**
+         * Allowed origin patterns for CORS requests.
+         * Defaults to empty list (no cross-origin allowed).
+         * Use specific origins like "https://example.com" instead of "*" for security.
+         */
+        private java.util.List<String> allowedOrigins = java.util.List.of();
+
+        /**
+         * Allowed HTTP methods for CORS requests.
+         */
+        private java.util.List<String> allowedMethods = java.util.List.of(
+                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
+        );
+
+        /**
+         * Allowed headers for CORS requests.
+         */
+        private java.util.List<String> allowedHeaders = java.util.List.of(
+                "Content-Type", "X-Requested-With", "Authorization",
+                "X-XSRF-TOKEN", "Cache-Control", "Accept"
+        );
+
+        /**
+         * Whether credentials (cookies) are allowed in CORS requests.
+         */
+        private boolean allowCredentials = true;
+
+        /**
+         * Max age (in seconds) for CORS preflight cache.
+         */
+        private long maxAge = 3600L;
     }
 }

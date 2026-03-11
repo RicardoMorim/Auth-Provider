@@ -118,6 +118,28 @@ class AuthControllerTest {
     }
 
     /**
+     * Login should return 429 when repeated failed attempts hit lockout threshold.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void login_shouldReturn429_whenFailedAttemptsExceedThreshold() throws Exception {
+        LoginRequestDTO request = new LoginRequestDTO("bruteforce@example.com", "wrongpassword");
+
+        for (int i = 0; i < 9; i++) {
+            mockMvc.perform(post("/api/auth/login")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(objectMapper.writeValueAsString(request)))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isTooManyRequests());
+    }
+
+    /**
      * Gets authenticated user should return user details when token is valid.
      *
      * @throws Exception the exception

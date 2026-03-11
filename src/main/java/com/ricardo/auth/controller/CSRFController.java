@@ -1,5 +1,6 @@
 package com.ricardo.auth.controller;
 
+import com.ricardo.auth.helper.LogSanitizer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -59,23 +60,11 @@ public class CSRFController {
         }
 
         Map<String, String> tokenInfo = Map.of(
-                "token", sanitizeForLogging(csrfToken.getToken()),
-                "headerName", sanitizeForLogging(csrfToken.getHeaderName()),
-                "parameterName", sanitizeForLogging(csrfToken.getParameterName())
+                "token", LogSanitizer.sanitize(csrfToken.getToken()),
+                "headerName", LogSanitizer.sanitize(csrfToken.getHeaderName()),
+                "parameterName", LogSanitizer.sanitize(csrfToken.getParameterName())
         );
 
         return ResponseEntity.ok(tokenInfo);
-    }
-
-    private static String sanitizeForLogging(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\"", "\\\"")
-                .trim();
     }
 }

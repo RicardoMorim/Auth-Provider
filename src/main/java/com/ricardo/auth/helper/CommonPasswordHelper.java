@@ -1,5 +1,7 @@
 package com.ricardo.auth.helper;
 
+import lombok.extern.slf4j.Slf4j;
+
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -14,7 +16,12 @@ import java.util.stream.Collectors;
 /**
  * The type Common password helper.
  */
+@Slf4j
 public class CommonPasswordHelper {
+
+    private CommonPasswordHelper() {
+        throw new UnsupportedOperationException("Utility class");
+    }
 
     /**
      * Load common passwords set.
@@ -43,37 +50,37 @@ public class CommonPasswordHelper {
         try {
             Set<String> passwords = loadFromFileSystem(resourcePath);
             if (!passwords.isEmpty()) {
-                System.out.println("Loaded common passwords from external file: " + resourcePath);
+                log.info("Loaded common passwords from external file: {}", resourcePath);
                 return passwords;
             }
         } catch (Exception e) {
-            // Continue to next strategy
+            log.debug("Failed loading common passwords from external file: {}", resourcePath, e);
         }
 
         // Strategy 2: Try as classpath resource from user's project
         try {
             Set<String> passwords = loadFromClasspath(resourcePath, contextClass);
             if (!passwords.isEmpty()) {
-                System.out.println("Loaded common passwords from classpath: " + resourcePath);
+                log.info("Loaded common passwords from classpath: {}", resourcePath);
                 return passwords;
             }
         } catch (Exception e) {
-            // Continue to next strategy
+            log.debug("Failed loading common passwords from classpath: {}", resourcePath, e);
         }
 
         // Strategy 3: Try from starter's built-in resources
         try {
             Set<String> passwords = loadFromStarterClasspath(resourcePath);
             if (!passwords.isEmpty()) {
-                System.out.println("Loaded common passwords from starter resources: " + resourcePath);
+                log.info("Loaded common passwords from starter resources: {}", resourcePath);
                 return passwords;
             }
         } catch (Exception e) {
-            // Continue to fallback
+            log.debug("Failed loading common passwords from starter resources: {}", resourcePath, e);
         }
 
         // Strategy 4: Fallback to hardcoded defaults
-        System.out.println("Using default common passwords list");
+        log.info("Using default common passwords list");
         return getDefaultCommonPasswords();
     }
 
@@ -83,12 +90,14 @@ public class CommonPasswordHelper {
             throw new IOException("File not found: " + filePath);
         }
 
-        return Files.lines(path, StandardCharsets.UTF_8)
-                .map(String::trim)
-                .filter(line -> !line.isEmpty())
-                .filter(line -> !line.startsWith("#"))
-                .map(String::toLowerCase)
-                .collect(Collectors.toSet());
+        try (var lines = Files.lines(path, StandardCharsets.UTF_8)) {
+            return lines
+                    .map(String::trim)
+                    .filter(line -> !line.isEmpty())
+                    .filter(line -> !line.startsWith("#"))
+                    .map(String::toLowerCase)
+                    .collect(Collectors.toSet());
+        }
     }
 
     private static Set<String> loadFromClasspath(String resourcePath, Class<?> contextClass) throws IOException {

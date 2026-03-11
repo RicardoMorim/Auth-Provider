@@ -2,18 +2,18 @@ package com.ricardo.auth.blocklist;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.core.TokenBlocklist;
-import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.scheduling.annotation.Scheduled;
-import org.springframework.stereotype.Component;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * The type In memory token blocklist.
  */
-@Component
-@ConditionalOnProperty(prefix = "ricardo.auth.blocklist", name = "type", havingValue = "MEMORY", matchIfMissing = true)
 public class InMemoryTokenBlocklist implements TokenBlocklist {
     private final Map<String, Long> revokedTokens = new ConcurrentHashMap<>();
     private final long ttlMillis;
@@ -32,7 +32,7 @@ public class InMemoryTokenBlocklist implements TokenBlocklist {
         if (token == null || token.isEmpty()) {
             throw new IllegalArgumentException("Token cannot be null or empty");
         }
-        revokedTokens.put(token, System.currentTimeMillis() + ttlMillis);
+        revokedTokens.put(toBlocklistKey(token), System.currentTimeMillis() + ttlMillis);
     }
 
     @Override
@@ -40,13 +40,28 @@ public class InMemoryTokenBlocklist implements TokenBlocklist {
         if (token == null || token.isEmpty()) {
             throw new IllegalArgumentException("Token cannot be null or empty");
         }
-        Long expiration = revokedTokens.get(token);
+        String tokenKey = toBlocklistKey(token);
+        Long expiration = revokedTokens.get(tokenKey);
         if (expiration == null) return false;
         if (expiration < System.currentTimeMillis()) {
-            revokedTokens.remove(token);
+            revokedTokens.remove(tokenKey);
             return false;
         }
         return true;
+    }
+
+    private String toBlocklistKey(String token) {
+        return hashToken(token);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
+        }
     }
 
     /**

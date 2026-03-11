@@ -2,6 +2,7 @@ package com.ricardo.auth.core;
 
 import org.springframework.security.core.GrantedAuthority;
 
+import java.security.PublicKey;
 import java.util.Collection;
 import java.util.List;
 
@@ -51,4 +52,6 @@ public interface JwtService {
      * @return the list
      */
     List<String> extractRoles(String token);
+
+    PublicKey getPublicKey();
 }

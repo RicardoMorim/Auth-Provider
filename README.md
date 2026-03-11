@@ -5,6 +5,9 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Status](https://img.shields.io/badge/Status-Production%20Ready-brightgreen)](https://github.com/RicardoMorim/Auth-Provider)
 [![Maintenance](https://img.shields.io/badge/Maintained-Yes-green.svg)](https://github.com/RicardoMorim/Auth-Provider/graphs/commit-activity)
+[![Quality Gate Status](https://sonarcloud.io/api/project_badges/measure?project=RicardoMorim_Auth-Provider&metric=alert_status)](https://sonarcloud.io/summary/new_code?id=RicardoMorim_Auth-Provider)
+[![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=RicardoMorim_Auth-Provider&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=RicardoMorim_Auth-Provider)
+[![Security Rating](https://sonarcloud.io/api/project_badges/measure?project=RicardoMorim_Auth-Provider&metric=security_rating)](https://sonarcloud.io/summary/new_code?id=RicardoMorim_Auth-Provider)
 
 A **plug-and-play** Spring Boot starter that adds JWT authentication and user management to your application with
 minimal configuration required.

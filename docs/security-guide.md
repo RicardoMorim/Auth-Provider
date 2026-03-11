@@ -112,14 +112,18 @@ ricardo:
         http-only: true     # No JavaScript access
         same-site: Strict   # CSRF protection
         path: /             # Scope to entire application
+        domain: ""          # Optional. When unset, cookie is host-only
         max-age: 900        # 15 minutes
       refresh:
         secure: true
         http-only: true
         same-site: Strict
         path: /api/auth/refresh  # Scope to refresh endpoint only
+        domain: ""               # Optional. When unset, cookie is host-only
         max-age: 604800     # 7 days
 ```
+
+> Leaving `domain` unset is the most restrictive and safest default. Set a domain only when you need cross-subdomain cookie sharing.
 
 ### CORS Configuration for Cookie Authentication
 
@@ -178,25 +182,34 @@ ricardo:
 
 ### Token Generation
 
-JWT tokens are signed using HMAC SHA-256 with your secret key:
+JWT tokens are signed using RSA (RS256) via the configured `RsaKeyProvider`:
 
 ```java
 // The starter automatically handles token generation
 String token = jwtService.generateToken(username, authorities);
 ```
 
-### Secret Key Security
+### Why JWKS Endpoint Is Public
 
-**Critical: Your JWT secret key is the cornerstone of security.**
+The endpoint `/api/auth/.well-known/jwks.json` is intentionally public so external services can validate JWT signatures.
+
+- JWKS exposes only public key material.
+- Private keys are never published via JWKS.
+- Security relies on private key secrecy and strong key generation/storage.
+- Making JWKS private breaks standard token verification and does not improve private-key resistance.
+
+### Key Management Security
+
+**Critical: Your RSA private key is the cornerstone of security.**
 
 #### Requirements
 
-- **Minimum length**: 256 bits (32 characters)
-- **Randomness**: Cryptographically secure random generation
-- **Uniqueness**: Different for each environment
-- **Secrecy**: Never commit to version control
+- **Private key secrecy**: Never commit private keys to version control
+- **Key rotation**: Rotate key pairs on a defined schedule
+- **Environment isolation**: Use different key pairs per environment
+- **Stable distribution**: Share the same key pair across all app instances in the same environment
 
-#### Generating Secure Secrets
+#### Generating Secure Key Pairs
 
 **OpenSSL (Recommended):**
 
@@ -232,9 +245,9 @@ nextBytes(bytes);
 String secret = Base64.getEncoder().encodeToString(bytes);
 ```
 
-#### Secret Rotation
+#### Key Rotation
 
-Rotate your JWT secret regularly:
+Rotate your JWT signing keys regularly:
 
 1. **Generate a new secret**
 2. **Update configuration** with the new secret

@@ -37,3 +37,4 @@ build/
 ./out/*
 
 pom.xml.asc
+.sonarlint/connectedMode.json

@@ -8,6 +8,7 @@ import com.ricardo.auth.domain.exceptions.ResourceNotFoundException;
 import com.ricardo.auth.domain.exceptions.TokenExpiredException;
 import com.ricardo.auth.domain.refreshtoken.RefreshToken;
 import com.ricardo.auth.domain.user.AuthUser;
+import com.ricardo.auth.helper.LogSanitizer;
 import com.ricardo.auth.repository.refreshToken.RefreshTokenRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -15,6 +16,9 @@ import org.springframework.cache.annotation.CacheEvict;
 import org.springframework.cache.annotation.Cacheable;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Base64;
@@ -31,6 +35,7 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
         implements RefreshTokenService<U, R, ID> {
 
     private static final Logger log = LoggerFactory.getLogger(RefreshTokenServiceImpl.class);
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
     private final RefreshTokenRepository refreshTokenRepository;
     private final UserService<U, R, ID> userService;
     private final AuthProperties authProperties;
@@ -53,20 +58,23 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
     @Override
     @Transactional
     public RefreshToken createRefreshToken(U user) {
+        String rawToken = generateSecureToken();
         RefreshToken token = new RefreshToken(
-                generateSecureToken(),
+            hashToken(rawToken),
                 user.getEmail(),
                 calculateExpiry()
         );
+        token.setRawToken(rawToken);
 
         long startTime = System.currentTimeMillis();
-        log.debug("Attempting to save refresh token for user: {}", user.getEmail());
+        log.debug("Attempting to save refresh token");
         RefreshToken savedToken = refreshTokenRepository.saveToken(token);
-        log.info("Refresh token for user {} saved successfully in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
-        log.debug("Starting cleanup of oldest tokens for user: {}", user.getEmail());
+        savedToken.setRawToken(rawToken);
+        log.info("Refresh token saved successfully in {}ms", System.currentTimeMillis() - startTime);
+        log.debug("Starting cleanup of oldest refresh tokens");
         startTime = System.currentTimeMillis();
         cleanupOldestTokensForUser(user.getEmail());
-        log.debug("Cleanup of oldest tokens for user {} completed. in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
+        log.debug("Cleanup of oldest refresh tokens completed in {}ms", System.currentTimeMillis() - startTime);
         return savedToken;
     }
 
@@ -92,33 +100,38 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
         RefreshToken token = findByToken(tokenValue);
         token.setRevoked(true);
         long startTime = System.currentTimeMillis();
-        log.debug("Attempting to revoke refresh token for user: {}", token.getUserEmail());
+        log.debug("Attempting to revoke refresh token");
         refreshTokenRepository.saveToken(token);
-        log.info("Refresh token for user {} revoked successfully in {}ms", token.getUserEmail(), System.currentTimeMillis() - startTime);
-        log.info("Refresh token revoked for user: {}", token.getUserEmail());
+        log.info("Refresh token revoked successfully in {}ms", System.currentTimeMillis() - startTime);
     }
 
     @Override
     @CacheEvict(value = "userByEmail", key = "#user.email", condition = "#user != null")
     public void revokeAllUserTokens(U user) {
         long startTime = System.currentTimeMillis();
-        log.debug("Attempting to revoke all refresh tokens for user: {}", user.getEmail());
+        log.debug("Attempting to revoke all refresh tokens for user");
         refreshTokenRepository.revokeAllUserTokens(user.getEmail());
-        log.info("All refresh tokens for user {} revoked successfully in {}ms", user.getEmail(), System.currentTimeMillis() - startTime);
+        log.info("All refresh tokens revoked successfully in {}ms", System.currentTimeMillis() - startTime);
     }
 
     @Override
     @Cacheable(value = "refreshToken", key = "#tokenValue", condition = "#tokenValue != null")
     public RefreshToken findByToken(String tokenValue) {
+        if (tokenValue == null || tokenValue.isBlank()) {
+            throw new ResourceNotFoundException("Token not found");
+        }
+
+        String tokenHash = hashToken(tokenValue);
         long startTime = System.currentTimeMillis();
         log.debug("Attempting to find refresh token by value");
         try {
-            RefreshToken token = refreshTokenRepository.findByToken(tokenValue)
+            RefreshToken token = refreshTokenRepository.findByToken(tokenHash)
                     .orElseThrow(() -> new ResourceNotFoundException("Token not found"));
+            token.setRawToken(tokenValue);
             log.info("Refresh token found successfully in {}ms", System.currentTimeMillis() - startTime);
             return token;
         } catch (Exception e) {
-            log.error("Failed to find refresh token after {}ms. Error: {}", System.currentTimeMillis() - startTime, e.getMessage());
+            log.error("Failed to find refresh token after {}ms. Error: {}", System.currentTimeMillis() - startTime, LogSanitizer.sanitize(e.getMessage()));
             throw e;
         }
     }
@@ -138,10 +151,19 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
      * @return a securely generated random token string
      */
     private String generateSecureToken() {
-        SecureRandom random = new SecureRandom();
         byte[] bytes = new byte[64];
-        random.nextBytes(bytes);
+        SECURE_RANDOM.nextBytes(bytes);
         return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
+    private String hashToken(String rawToken) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashedBytes = digest.digest(rawToken.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hashedBytes);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
+        }
     }
 
     private Instant calculateExpiry() {
@@ -163,16 +185,15 @@ public class RefreshTokenServiceImpl<U extends AuthUser<ID, R>, R extends Role, 
 
         try {
             long startTime = System.currentTimeMillis();
-            log.debug("Starting cleanup of oldest tokens for user: {}", userEmail);
+            log.debug("Starting cleanup of oldest tokens for user");
             int deletedCount = refreshTokenRepository.deleteOldestTokensForUser(userEmail, maxTokens);
-            log.info("Cleanup of oldest tokens for user {} completed in {}ms", userEmail, System.currentTimeMillis() - startTime);
+            log.info("Cleanup of oldest tokens completed in {}ms", System.currentTimeMillis() - startTime);
 
             if (deletedCount > 0) {
-                log.info("Cleaned up {} oldest tokens for user: {} (exceeded limit of {})",
-                        deletedCount, userEmail, maxTokens);
+                log.info("Cleaned up {} oldest tokens (limit: {})", deletedCount, maxTokens);
             }
         } catch (Exception e) {
-            log.error("Error cleaning up oldest tokens for user: {}", userEmail, e);
+            log.error("Error cleaning up oldest tokens", e);
         }
     }
 

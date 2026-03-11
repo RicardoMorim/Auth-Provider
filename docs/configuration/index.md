@@ -71,7 +71,7 @@ That's it! Ricardo Auth will use sensible defaults for everything else.
 
 ### ✅ **Required (Must Have)**
 
-- [ ] [ JWT secret key configured ](basic.md#jwt-configuration) - `ricardo.auth.jwt.secret`
+- [ ] [ JWT key provider configured ](basic.md#jwt-configuration) - `RsaKeyProvider` bean for production keys
 - [ ] [ Database dependency added ](basic.md#database-setup) - `spring-boot-starter-data-jpa`
 - [ ] [ Database configured ](database.md) - Connection details in `application.yml`
 

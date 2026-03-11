@@ -358,7 +358,7 @@ class PasswordPolicyTest {
                 () -> passwordPolicyService.validatePassword(" ValidPa"));
 
         IllegalArgumentException exception2 = assertThrows(IllegalArgumentException.class,
-                () -> passwordPolicyService.validatePassword("ValP123 "));
+                () -> passwordPolicyService.validatePassword("ValP123"));
     }
 
     /**

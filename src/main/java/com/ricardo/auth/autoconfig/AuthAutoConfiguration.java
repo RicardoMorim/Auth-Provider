@@ -69,6 +69,13 @@ import java.util.UUID;
 public class AuthAutoConfiguration {
     private static final Logger logger = LoggerFactory.getLogger(AuthAutoConfiguration.class);
 
+
+    @Bean
+    @ConditionalOnMissingBean
+    public RsaKeyProvider rsaKeyProvider() {
+        return new InMemoryRsaKeyProvider();
+    }
+
     /**
      * Jwt service.
      *
@@ -77,15 +84,10 @@ public class AuthAutoConfiguration {
      */
     @Bean
     @ConditionalOnMissingBean
-    public JwtService jwtService(AuthProperties authProperties) {
-        Dotenv dotenv = Dotenv.load();
-
-        if (dotenv.get("AUTH_JWT_SECRET_KEY") != null && !dotenv.get("AUTH_JWT_SECRET_KEY").isBlank()) {
-            authProperties.getJwt().setSecret(dotenv.get("AUTH_JWT_SECRET_KEY"));
-        }
-
-        return new JwtServiceImpl(authProperties);
+    public JwtService jwtService(AuthProperties authProperties, RsaKeyProvider rsaKeyProvider) {
+        return new JwtServiceImpl(authProperties, rsaKeyProvider);
     }
+
 
     // ========== COMMON SERVICES ==========
 
@@ -612,8 +614,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the token blocklist
          */
-        @Bean
-        @ConditionalOnMissingBean
+        @Bean(name="RedisTokenBlocklist")
+        @ConditionalOnMissingBean(TokenBlocklist.class)
         public TokenBlocklist redisTokenBlocklist(
                 RedisTemplate<String, String> redisTemplate,
                 AuthProperties authProperties
@@ -627,6 +629,7 @@ public class AuthAutoConfiguration {
      */
     @Configuration
     @ConditionalOnMissingBean(TokenBlocklist.class)
+    @ConditionalOnProperty(prefix = "ricardo.auth.token-blocklist", name = "type", havingValue = "memory", matchIfMissing = true)
     static class MemoryBlocklistConfig {
         /**
          * In memory token blocklist token blocklist.
@@ -634,7 +637,8 @@ public class AuthAutoConfiguration {
          * @param authProperties the auth properties
          * @return the token blocklist
          */
-        @Bean
+        @Bean(name="InMemoryTokenBlocklist")
+        @ConditionalOnMissingBean(TokenBlocklist.class)
         public TokenBlocklist inMemoryTokenBlocklist(AuthProperties authProperties) {
             return new InMemoryTokenBlocklist(authProperties);
         }
@@ -709,20 +713,26 @@ public class AuthAutoConfiguration {
          */
         @Bean
         public JavaMailSender javaMailSender(AuthProperties properties) {
-            Dotenv dotenv = Dotenv.load();
+            Dotenv dotenv = Dotenv.configure().ignoreIfMissing().load();
             JavaMailSenderImpl sender = new JavaMailSenderImpl();
             String mailUsername = dotenv.get("MAIL_USERNAME");
             String mailPassword = dotenv.get("MAIL_PASSWORD");
-            if (properties.getEmail().getPassword() == null && mailPassword == null) {
+
+            boolean hasPassword = properties.getEmail().getPassword() != null || mailPassword != null;
+            boolean hasUsername = properties.getEmail().getFromAddress() != null || mailUsername != null;
+
+            if (!hasPassword) {
                 logger.warn("Email password not configured. Email sending will be disabled. Set 'MAIL_PASSWORD' env variable or configure in properties.");
-                return null; // Return null to indicate email service is not available
             }
-
-            if (mailUsername == null && properties.getEmail().getFromAddress() == null) {
+            if (!hasUsername) {
                 logger.warn("Email username not configured. Email sending will be disabled. Set 'MAIL_USERNAME' env variable or configure in properties.");
-                return null;
             }
 
+            if (!hasPassword || !hasUsername) {
+                // Return a no-op sender so the bean chain doesn't break.
+                // EmailSenderServiceImpl should handle send failures gracefully.
+                return sender;
+            }
 
             if (mailUsername != null && !mailUsername.isBlank()) {
                 properties.getEmail().setFromAddress(mailUsername);
@@ -841,7 +851,6 @@ public class AuthAutoConfiguration {
          * @param authProperties        the auth properties
          * @param eventPublisher        the event publisher
          * @param idConverter           the id converter
-         * @param properties            the properties
          * @param cacheManager          the cache manager
          * @return the password reset service
          */
@@ -854,7 +863,6 @@ public class AuthAutoConfiguration {
                                                          AuthProperties authProperties,
                                                          Publisher eventPublisher,
                                                          IdConverter<UUID> idConverter,
-                                                         AuthProperties properties,
                                                          CacheManager cacheManager) {
             return new PasswordResetServiceImpl<>(emailSenderService,
                     userService,
@@ -864,7 +872,6 @@ public class AuthAutoConfiguration {
                     authProperties,
                     eventPublisher,
                     idConverter,
-                    properties,
                     cacheManager);
         }
     }
@@ -906,7 +913,6 @@ public class AuthAutoConfiguration {
     @DependsOn("userSchemaInitializer")
     @Component("PasswordResetTokenSchemaInitializer")
     @ConditionalOnProperty(prefix = "ricardo.auth.repository", name = "type", havingValue = "POSTGRESQL")
-    @ConditionalOnMissingBean(PasswordResetTokenSchemaInitializer.class)
     public static class PasswordResetTokenSchemaInitializer {
 
         private final AuthProperties authProperties;
@@ -942,12 +948,7 @@ public class AuthAutoConfiguration {
         private void createPasswordResetTokenTableIfNotExists(JdbcTemplate jdbcTemplate) {
             jdbcTemplate.execute("CREATE EXTENSION IF NOT EXISTS \"pgcrypto\"");
 
-            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
-
-            // Validate table name to prevent SQL injection
-            if (!tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
-                throw new IllegalArgumentException("Invalid table name: " + tableName);
-            }
+            String tableName = getValidatedPasswordResetTableName();
 
             String createTableSql = String.format("""
                                     CREATE TABLE IF NOT EXISTS %s (
@@ -966,7 +967,7 @@ public class AuthAutoConfiguration {
         }
 
         private void createPasswordResetTokenIndexes(JdbcTemplate jdbcTemplate) {
-            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+            String tableName = getValidatedPasswordResetTableName();
             String[] indexStatements = {
                     String.format("CREATE UNIQUE INDEX IF NOT EXISTS idx_%s_token ON %s(token)", tableName, tableName),
                     String.format("CREATE INDEX IF NOT EXISTS idx_%s_email ON %s(email)", tableName, tableName),
@@ -982,6 +983,14 @@ public class AuthAutoConfiguration {
             }
 
             logger.debug("All password reset token indexes created or already exist");
+        }
+
+        private String getValidatedPasswordResetTableName() {
+            String tableName = authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+            if (tableName == null || tableName.isBlank() || !tableName.matches("^[a-zA-Z_][a-zA-Z0-9_]*$")) {
+                throw new IllegalArgumentException("Invalid table name: " + tableName);
+            }
+            return tableName;
         }
     }
 

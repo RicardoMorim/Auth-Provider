@@ -1,12 +1,21 @@
 package com.ricardo.auth.blocklist;
 
+import com.ricardo.auth.core.TokenBlocklist;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.data.redis.RedisSystemException;
+import org.springframework.data.redis.connection.RedisConnection;
 import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.context.TestPropertySource;
+
+import java.nio.charset.StandardCharsets;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.Base64;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -15,16 +24,21 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @SpringBootTest
 @TestPropertySource(properties = {
-        "ricardo.auth.blocklist.type=redis",
+        "ricardo.auth.rate-limiter.type=redis",
+        "ricardo.auth.token-blocklist.type=redis",
+        "ricardo.auth.token-blocklist.enabled=true",
         "ricardo.auth.jwt.access-token-expiration=1000",
         "ricardo.auth.jwt.secret=jrQBZmSULrzxVbDCxZk1BOqp3dOo95fp+ZA422w1GXs="
 })
+@ActiveProfiles("test")
 class RedisTokenBlockListTest {
     private final long ttlMillis = 1000L;
     @Autowired
     private RedisTemplate<String, String> redisTemplate;
+
     @Autowired
-    private RedisTokenBlockList blockList;
+    @Qualifier("RedisTokenBlocklist")
+    private TokenBlocklist blockList;
 
     /**
      * Clean redis.
@@ -51,7 +65,7 @@ class RedisTokenBlockListTest {
     void testRevokeCallsRedisSet() {
         String token = "token1";
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
     }
 
@@ -92,7 +106,7 @@ class RedisTokenBlockListTest {
         String token = "dupToken";
         blockList.revoke(token);
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
     }
 
@@ -136,7 +150,7 @@ class RedisTokenBlockListTest {
     void testVeryLongToken() {
         String token = "t".repeat(200);
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
         assertTrue(blockList.isRevoked(token));
     }
@@ -148,7 +162,7 @@ class RedisTokenBlockListTest {
     void testSpecialCharToken() {
         String token = "tok:!@#$_-çãõ";
         blockList.revoke(token);
-        String redisKey = "revoked:" + token;
+        String redisKey = buildKey(token);
         assertTrue(redisTemplate.hasKey(redisKey));
         assertTrue(blockList.isRevoked(token));
     }
@@ -174,5 +188,19 @@ class RedisTokenBlockListTest {
         for (Thread t : arr) t.start();
         for (Thread t : arr) t.join();
         for (boolean b : results) assertTrue(b);
+    }
+
+    private String buildKey(String token) {
+        return "revoked:" + hashToken(token);
+    }
+
+    private String hashToken(String token) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(token.getBytes(StandardCharsets.UTF_8));
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (NoSuchAlgorithmException exception) {
+            throw new IllegalStateException("SHA-256 algorithm is not available", exception);
+        }
     }
 }

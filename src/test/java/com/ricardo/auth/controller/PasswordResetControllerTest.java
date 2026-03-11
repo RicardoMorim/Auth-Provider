@@ -1,6 +1,7 @@
 package com.ricardo.auth.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.ricardo.auth.core.PasswordPolicyService;
 import com.ricardo.auth.core.PasswordResetService;
 import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.core.UserService;
@@ -61,6 +62,9 @@ class PasswordResetControllerTest {
     @MockBean
     private UserService<User, AppRole, UUID> userService;
 
+    @MockBean
+    private PasswordPolicyService passwordPolicyService;
+
     /**
      * Sets up.
      */
@@ -68,8 +72,8 @@ class PasswordResetControllerTest {
     void setUp() {
         when(rateLimiter.isEnabled()).thenReturn(true);
         when(rateLimiter.allowRequest(anyString())).thenReturn(true);
-        // Default: return null for IP unless overridden in test
-        when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn(null);
+                // Default fallback IP for filter + controller paths
+                when(ipResolver.resolveIp(any(HttpServletRequest.class))).thenReturn("127.0.0.1");
     }
 
     /**
@@ -200,26 +204,30 @@ class PasswordResetControllerTest {
         verify(passwordResetService).completePasswordReset("valid-token", "NewPassword123!");
     }
 
-    /**
-     * Complete password reset with weak password should return bad request.
-     *
-     * @throws Exception the exception
-     */
-    @Test
-    void completePasswordReset_WithWeakPassword_ShouldReturnBadRequest() throws Exception {
-        // Given
-        PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
-        request.setPassword("123");
-        request.setConfirmPassword("123");
+        /**
+         * Complete password reset should return bad request when service rejects password.
+         *
+         * @throws Exception the exception
+         */
+        @Test
+        void completePasswordReset_WhenServiceRejectsPassword_ShouldReturnBadRequest() throws Exception {
+                // Given
+                PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
+                request.setPassword("123");
+                request.setConfirmPassword("123");
 
-        // When & Then
-        mockMvc.perform(post("/api/auth/reset/valid-token")
-                        .contentType(MediaType.APPLICATION_JSON)
-                        .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                doThrow(new IllegalArgumentException("Password does not meet complexity requirements"))
+                                .when(passwordResetService)
+                                .completePasswordReset("valid-token", "123");
 
-        verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
-    }
+                // When & Then
+                mockMvc.perform(post("/api/auth/reset/valid-token")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest());
+
+                verify(passwordResetService).completePasswordReset("valid-token", "123");
+        }
 
     /**
      * Complete password reset with mismatched passwords should return bad request.
@@ -314,6 +322,94 @@ class PasswordResetControllerTest {
         verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
     }
 
+        /**
+         * Request password reset should process when rate limiter is disabled.
+         *
+         * @throws Exception the exception
+         */
+        @Test
+        void requestPasswordReset_WhenRateLimiterDisabled_ShouldStillProcessRequest() throws Exception {
+                PasswordResetRequest request = new PasswordResetRequest();
+                request.setEmail("user@example.com");
+
+                when(rateLimiter.isEnabled()).thenReturn(false);
+
+                mockMvc.perform(post("/api/auth/reset-request")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value(
+                                                "If an account with that email exists, you will receive password reset instructions."));
+
+                verify(passwordResetService).requestPasswordReset("user@example.com");
+                verify(rateLimiter, never()).allowRequest(anyString());
+        }
+
+        /**
+         * Complete password reset should reject invalid token format.
+         *
+         * @throws Exception the exception
+         */
+        @Test
+        void completePasswordReset_WithInvalidTokenFormat_ShouldReturnBadRequest() throws Exception {
+                PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
+                request.setPassword("NewPassword123!");
+                request.setConfirmPassword("NewPassword123!");
+
+                mockMvc.perform(post("/api/auth/reset/invalid token")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isBadRequest())
+                                .andExpect(jsonPath("$.error").value("Invalid token format."));
+
+                verify(passwordResetService, never()).completePasswordReset(anyString(), anyString());
+        }
+
+        /**
+         * Complete password reset should process when rate limiter is disabled.
+         *
+         * @throws Exception the exception
+         */
+        @Test
+        void completePasswordReset_WhenRateLimiterDisabled_ShouldStillProcessRequest() throws Exception {
+                PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
+                request.setPassword("NewPassword123!");
+                request.setConfirmPassword("NewPassword123!");
+
+                when(rateLimiter.isEnabled()).thenReturn(false);
+
+                mockMvc.perform(post("/api/auth/reset/valid-token")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isOk())
+                                .andExpect(jsonPath("$.message").value("Password has been reset successfully."));
+
+                verify(passwordResetService).completePasswordReset("valid-token", "NewPassword123!");
+                verify(rateLimiter, never()).allowRequest(anyString());
+        }
+
+        /**
+         * Complete password reset should return internal server error on unexpected exception.
+         *
+         * @throws Exception the exception
+         */
+        @Test
+        void completePasswordReset_WhenUnexpectedExceptionOccurs_ShouldReturnInternalServerError() throws Exception {
+                PasswordResetCompleteRequest request = new PasswordResetCompleteRequest();
+                request.setPassword("NewPassword123!");
+                request.setConfirmPassword("NewPassword123!");
+
+                doThrow(new RuntimeException("Unexpected failure"))
+                                .when(passwordResetService)
+                                .completePasswordReset(anyString(), anyString());
+
+                mockMvc.perform(post("/api/auth/reset/valid-token")
+                                                .contentType(MediaType.APPLICATION_JSON)
+                                                .content(objectMapper.writeValueAsString(request)))
+                                .andExpect(status().isInternalServerError())
+                                .andExpect(jsonPath("$.error").value("An error occurred while resetting password."));
+        }
+
     /**
      * Validate token with invalid token should return invalid.
      *
@@ -323,8 +419,90 @@ class PasswordResetControllerTest {
     @WithMockUser(roles = "ADMIN")
     void validateToken_WithInvalidToken_ShouldReturnInvalid() throws Exception {
         mockMvc.perform(get("/api/auth/reset/invalid-token/validate"))
-                .andExpect(status().isOk())
+                                .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.valid").value(false));
+    }
+
+    /**
+     * Validate token with valid token should return valid when service confirms token.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WithValidToken_ShouldReturnValid() throws Exception {
+        when(passwordResetService.validatePasswordResetToken("valid-token")).thenReturn(true);
+
+        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.valid").value(true))
+                .andExpect(jsonPath("$.message").value("Token is valid."));
+    }
+
+    /**
+     * Validate token with malformed token should return invalid without calling service.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WithMalformedToken_ShouldReturnInvalidWithoutCallingService() throws Exception {
+        mockMvc.perform(get("/api/auth/reset/invalid token/validate"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Token is invalid or expired."));
+
+        verify(passwordResetService, never()).validatePasswordResetToken(anyString());
+    }
+
+    /**
+     * Validate token should return invalid when service throws security exception.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WhenServiceThrowsSecurityException_ShouldReturnInvalid() throws Exception {
+        doThrow(new SecurityException("Token check failed"))
+                .when(passwordResetService)
+                .validatePasswordResetToken("valid-token");
+
+        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Token is invalid or expired."));
+    }
+
+    /**
+     * Validate token should return invalid when service throws unexpected exception.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WhenServiceThrowsUnexpectedException_ShouldReturnInvalid() throws Exception {
+        doThrow(new RuntimeException("Unexpected failure"))
+                .when(passwordResetService)
+                .validatePasswordResetToken("valid-token");
+
+        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Token is invalid or expired."));
+    }
+
+    /**
+     * Validate token should return too many requests when rate limit is exceeded.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void validateToken_WhenRateLimitExceeded_ShouldReturnTooManyRequests() throws Exception {
+        when(rateLimiter.allowRequest(anyString())).thenReturn(false);
+
+        mockMvc.perform(get("/api/auth/reset/valid-token/validate"))
+                .andExpect(status().isTooManyRequests())
+                .andExpect(jsonPath("$.valid").value(false))
+                .andExpect(jsonPath("$.message").value("Too many requests. Please try again later."));
+
+                verify(rateLimiter).allowRequest("password_reset_validate:127.0.0.1");
+        verify(passwordResetService, never()).validatePasswordResetToken(anyString());
     }
 
     /**

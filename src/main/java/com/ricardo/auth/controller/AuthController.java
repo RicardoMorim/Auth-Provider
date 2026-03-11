@@ -12,6 +12,8 @@ import com.ricardo.auth.domain.user.AuthUser;
 import com.ricardo.auth.dto.AuthenticatedUserDTO;
 import com.ricardo.auth.dto.ErrorResponse;
 import com.ricardo.auth.dto.LoginRequestDTO;
+import com.ricardo.auth.dto.RevokeTokenRequest;
+import com.ricardo.auth.helper.LogSanitizer;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -29,14 +31,25 @@ import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.authentication.AuthenticationManager;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.AuthenticationException;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 import org.springframework.web.bind.annotation.*;
 
+import java.security.MessageDigest;
+import java.security.PublicKey;
+import java.security.interfaces.RSAPublicKey;
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Base64;
 import java.util.Collection;
+import java.util.List;
+import java.util.Locale;
 import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.regex.Pattern;
 
 /**
  * Generic Auth Controller that works with any AuthUser implementation and ID type.
@@ -59,6 +72,17 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private final TokenBlocklist blocklist;
     private final UserService<U, R, ID> userService;
     private final Publisher eventPublisher;
+        private final String accessCookieDomain;
+        private final String refreshCookieDomain;
+    private final ConcurrentHashMap<String, LoginAttemptState> loginAttempts = new ConcurrentHashMap<>();
+
+        private static final Pattern IPV4_PATTERN = Pattern.compile(
+            "^(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)(?:\\.(?:25[0-5]|2[0-4]\\d|1\\d{2}|[1-9]?\\d)){3}$"
+        );
+        private static final Set<String> DISALLOWED_PUBLIC_SUFFIXES = Set.of(
+            "co.uk", "com", "org", "net", "gov", "edu", "io", "dev", "app"
+        );
+        private static final String MSG_AUTH_FAILED = "Authentication failed";
 
     /**
      * Constructor with optional refresh token service
@@ -85,19 +109,16 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         this.blocklist = blocklist;
         this.eventPublisher = eventPublisher;
         this.userService = userService;
+        this.accessCookieDomain = sanitizeAndValidateCookieDomain(
+            authProperties.getCookies().getAccess().getDomain(),
+            "access"
+        );
+        this.refreshCookieDomain = sanitizeAndValidateCookieDomain(
+            authProperties.getCookies().getRefresh().getDomain(),
+            "refresh"
+        );
     }
 
-    private static String sanitizeForLogging(String input) {
-        if (input == null) {
-            return "null";
-        }
-        return input
-                .replace("\n", "\\n")
-                .replace("\r", "\\r")
-                .replace("\t", "\\t")
-                .replace("\"", "\\\"")
-                .trim();
-    }
 
     /**
      * Login endpoint that works with any AuthUser implementation
@@ -139,13 +160,25 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @Parameter(description = "Login credentials", required = true)
             @Valid @RequestBody LoginRequestDTO request,
             HttpServletResponse response) {
+        String normalizedEmail = normalizeEmail(request.getEmail());
+
+        if (isLoginTemporarilyLocked(normalizedEmail)) {
+            logger.warn("Login temporarily locked due to too many failed attempts");
+            eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
+                LogSanitizer.sanitize(normalizedEmail),
+                AuthenticationFailedReason.INVALID_CREDENTIALS
+            ));
+            return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                .body(new ErrorResponse("Too many failed login attempts. Please try again later."));
+        }
+
         try {
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(request.getEmail(), request.getPassword()));
 
             Object principal = authentication.getPrincipal();
             if (principal == null) {
-                logger.warn("Authentication failed: no principal for email: {}", sanitizeForLogging(request.getEmail()));
+                logger.warn("Authentication failed: no principal returned by authentication provider");
                 return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                         .body(new ErrorResponse("Authentication failed: no principal"));
             }
@@ -153,11 +186,12 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @SuppressWarnings("unchecked")
             U userDetails = (U) principal;
 
-            logger.info("Successful login for user: {}", sanitizeForLogging(userDetails.getEmail()));
+            clearFailedLoginAttempts(normalizedEmail);
+            logger.info("Successful login");
 
             eventPublisher.publishEvent(new UserAuthenticatedEvent(
-                    sanitizeForLogging(userDetails.getUsername()),
-                    sanitizeForLogging(userDetails.getEmail()),
+                    LogSanitizer.sanitize(userDetails.getUsername()),
+                    LogSanitizer.sanitize(userDetails.getEmail()),
                     userDetails.getRoles()
             ));
 
@@ -168,25 +202,33 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
             if (refreshTokenService != null) {
                 RefreshToken refreshToken = refreshTokenService.createRefreshToken(userDetails);
-                setAuthCookies(response, accessToken, refreshToken.getToken());
+                String cookieRefreshToken = refreshToken.getRawToken() != null ? refreshToken.getRawToken() : refreshToken.getToken();
+                setAuthCookies(response, accessToken, cookieRefreshToken);
             } else {
                 setAccessCookie(response, accessToken);
             }
 
             return ResponseEntity.ok().build();
 
-        } catch (Exception e) {
-            logger.warn("Failed login attempt for email: {} - {}",
-                    sanitizeForLogging(request.getEmail()),
-                    sanitizeForLogging(e.getMessage()));
+        } catch (AuthenticationException e) {
+            boolean lockedNow = recordFailedLoginAttempt(normalizedEmail);
+            logger.warn("Failed login attempt");
+            if (lockedNow) {
+                logger.warn("Login temporarily locked due to repeated failed attempts");
+            }
 
             eventPublisher.publishEvent(new UserAuthenticationFailedEvent(
-                    sanitizeForLogging(request.getEmail()),
+                    LogSanitizer.sanitize(normalizedEmail),
                     AuthenticationFailedReason.INVALID_CREDENTIALS
             ));
 
+                if (lockedNow) {
+                return ResponseEntity.status(HttpStatus.TOO_MANY_REQUESTS)
+                    .body(new ErrorResponse("Too many failed login attempts. Please try again later."));
+                }
+
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("Authentication failed"));
+                    .body(new ErrorResponse(MSG_AUTH_FAILED));
         }
     }
 
@@ -238,12 +280,12 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         try {
             if (!StringUtils.hasText(refreshTokenCookie) || refreshTokenCookie.trim().length() < 10) {
                 return ResponseEntity.badRequest()
-                        .body(new ErrorResponse("Authentication failed"));
+                        .body(new ErrorResponse(MSG_AUTH_FAILED));
             }
 
             if (blocklist.isRevoked(refreshTokenCookie)) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                        .body(new ErrorResponse("Authentication failed"));
+                        .body(new ErrorResponse(MSG_AUTH_FAILED));
             }
 
             RefreshToken refreshToken = refreshTokenService.findByToken(refreshTokenCookie);
@@ -256,11 +298,13 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
                     user.getAuthorities()
             );
 
-            String newRefreshToken = refreshToken.getToken();
+            String newRefreshToken = refreshTokenCookie;
             if (shouldRotateRefreshToken()) {
                 RefreshToken newRefreshTokenObj = refreshTokenService.createRefreshToken(user);
-                refreshTokenService.revokeToken(refreshToken.getToken());
-                newRefreshToken = newRefreshTokenObj.getToken();
+                refreshTokenService.revokeToken(refreshTokenCookie);
+                newRefreshToken = newRefreshTokenObj.getRawToken() != null
+                    ? newRefreshTokenObj.getRawToken()
+                    : newRefreshTokenObj.getToken();
                 blocklist.revoke(refreshTokenCookie);
             }
 
@@ -269,7 +313,7 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
 
         } catch (ResourceNotFoundException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
-                    .body(new ErrorResponse("Authentication failed"));
+                    .body(new ErrorResponse(MSG_AUTH_FAILED));
         } catch (Exception e) {
             logger.error("Error refreshing token", e);
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
@@ -343,9 +387,11 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             @Parameter(description = "Refresh token from HTTP-only cookie", hidden = true)
             @CookieValue(value = "refresh_token", required = false) String refreshToken) {
 
+        String email = null;
         if (StringUtils.hasText(accessToken)) {
             try {
                 if (jwtService.isTokenValid(accessToken)) {
+                    email = jwtService.extractSubject(accessToken);
                     blocklist.revoke(accessToken);
                     logger.debug("Access token revoked during logout");
                 }
@@ -354,13 +400,8 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             }
         }
 
-        String email = jwtService.extractSubject(accessToken);
 
-        if (email == null) {
-            logger.info("Logging out user with unknown email");
-        } else {
-            logger.info("Logging out user: {}", sanitizeForLogging(email));
-        }
+        logger.info("Processing logout request");
 
         if (StringUtils.hasText(refreshToken) && refreshTokenService != null) {
             try {
@@ -377,15 +418,15 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             try {
                 user = userService.getUserByEmail(email);
             } catch (Exception e) {
-                logger.warn("Could not find user during logout for email: {}", sanitizeForLogging(email));
+                logger.warn("Could not resolve user during logout");
             }
         }
 
         clearAuthCookies(response);
         if (user != null) {
             eventPublisher.publishEvent(new UserLoggedOutEvent(
-                    sanitizeForLogging(user.getUsername()),
-                    sanitizeForLogging(user.getEmail())
+                    LogSanitizer.sanitize(user.getUsername()),
+                    LogSanitizer.sanitize(user.getEmail())
             ));
         }
         return ResponseEntity.ok().build();
@@ -394,16 +435,78 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     /**
      * Admin endpoint to revoke any token
      *
-     * @param token the token to revoke
+     * @param request the revoke token request
      * @return the response entity
      */
     @PostMapping("/revoke")
     @PreAuthorize("hasRole('ADMIN')")
-    public ResponseEntity<?> revokeToken(@RequestBody String token) {
-        // Sanitize only if used in logs — not used here, but safe to sanitize if logged later
+    public ResponseEntity<?> revokeToken(@Valid @RequestBody RevokeTokenRequest request) {
+        String token = request.getToken().trim();
+
+        // Basic JWT format validation (header.payload.signature)
+        String[] parts = token.split("\\.");
+        if (parts.length != 3 || parts[0].isEmpty() || parts[1].isEmpty() || parts[2].isEmpty()) {
+            return ResponseEntity.badRequest()
+                    .body(new ErrorResponse("Invalid token format"));
+        }
+
         blocklist.revoke(token);
         return ResponseEntity.ok().body(Map.of("message", "Token revoked successfully"));
     }
+
+    @GetMapping("/.well-known/jwks.json")
+    public Map<String, Object> jwks() {
+
+        PublicKey key = jwtService.getPublicKey();
+
+        if (!(key instanceof RSAPublicKey rsaKey)) {
+            throw new IllegalStateException("Public key is not an RSA key");
+        }
+
+        String kid = authProperties.getJwt().getKid();
+        if (kid == null || kid.isBlank()) {
+            kid = generateKeyId(rsaKey);
+        }
+
+        Map<String, Object> jwk = Map.of(
+                "kty", "RSA",
+                "alg", "RS256",
+                "use", "sig",
+                "kid", kid,
+                "n", base64url(rsaKey.getModulus().toByteArray()),
+                "e", base64url(rsaKey.getPublicExponent().toByteArray())
+        );
+
+        return Map.of("keys", List.of(jwk));
+    }
+
+    /**
+     * Generate a key ID from the public key using SHA-256 hash.
+     */
+    private String generateKeyId(RSAPublicKey publicKey) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(publicKey.getEncoded());
+            return Base64.getUrlEncoder().withoutPadding().encodeToString(hash);
+        } catch (Exception e) {
+            logger.warn("Failed to generate key ID from public key, using fallback", e);
+            return "ricardo-auth-key-1";
+        }
+    }
+
+    /**
+     * Encode bytes to Base64url (no padding) as required by JWK spec.
+     */
+    private String base64url(byte[] bytes) {
+        // RSA BigInteger may have a leading zero byte for sign - strip it
+        if (bytes.length > 0 && bytes[0] == 0) {
+            byte[] trimmed = new byte[bytes.length - 1];
+            System.arraycopy(bytes, 1, trimmed, 0, trimmed.length);
+            bytes = trimmed;
+        }
+        return Base64.getUrlEncoder().withoutPadding().encodeToString(bytes);
+    }
+
 
     private void setAuthCookies(HttpServletResponse response, String accessToken, String refreshToken) {
         setAccessCookie(response, accessToken);
@@ -413,13 +516,18 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private void setAccessCookie(HttpServletResponse response, String accessToken) {
         AuthProperties.Cookies.AccessCookie accessCfg = authProperties.getCookies().getAccess();
 
-        ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", accessToken)
+        ResponseCookie.ResponseCookieBuilder accessCookieBuilder = ResponseCookie.from("access_token", accessToken)
                 .httpOnly(accessCfg.isHttpOnly())
                 .secure(accessCfg.isSecure())
                 .sameSite(accessCfg.getSameSite().getValue())
                 .path(accessCfg.getPath())
-                .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000))
-                .build();
+                .maxAge(Duration.ofSeconds(authProperties.getJwt().getAccessTokenExpiration() / 1000));
+
+        if (StringUtils.hasText(accessCookieDomain)) {
+            accessCookieBuilder.domain(accessCookieDomain);
+        }
+
+        ResponseCookie accessTokenCookie = accessCookieBuilder.build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
     }
@@ -427,13 +535,18 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
     private void setRefreshCookie(HttpServletResponse response, String refreshToken) {
         AuthProperties.Cookies.RefreshCookie refreshCfg = authProperties.getCookies().getRefresh();
 
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", refreshToken)
+        ResponseCookie.ResponseCookieBuilder refreshCookieBuilder = ResponseCookie.from("refresh_token", refreshToken)
                 .httpOnly(refreshCfg.isHttpOnly())
                 .secure(refreshCfg.isSecure())
                 .sameSite(refreshCfg.getSameSite().getValue())
                 .path(refreshCfg.getPath())
-                .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000))
-                .build();
+                .maxAge(Duration.ofSeconds(authProperties.getJwt().getRefreshTokenExpiration() / 1000));
+
+        if (StringUtils.hasText(refreshCookieDomain)) {
+            refreshCookieBuilder.domain(refreshCookieDomain);
+        }
+
+        ResponseCookie refreshTokenCookie = refreshCookieBuilder.build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
     }
@@ -442,21 +555,31 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
         AuthProperties.Cookies.AccessCookie accessCfg = authProperties.getCookies().getAccess();
         AuthProperties.Cookies.RefreshCookie refreshCfg = authProperties.getCookies().getRefresh();
 
-        ResponseCookie accessTokenCookie = ResponseCookie.from("access_token", "")
+        ResponseCookie.ResponseCookieBuilder accessCookieBuilder = ResponseCookie.from("access_token", "")
                 .httpOnly(accessCfg.isHttpOnly())
                 .secure(accessCfg.isSecure())
                 .sameSite(accessCfg.getSameSite().getValue())
                 .path(accessCfg.getPath())
-                .maxAge(0)
-                .build();
+            .maxAge(0);
 
-        ResponseCookie refreshTokenCookie = ResponseCookie.from("refresh_token", "")
+        if (StringUtils.hasText(accessCookieDomain)) {
+            accessCookieBuilder.domain(accessCookieDomain);
+        }
+
+        ResponseCookie accessTokenCookie = accessCookieBuilder.build();
+
+        ResponseCookie.ResponseCookieBuilder refreshCookieBuilder = ResponseCookie.from("refresh_token", "")
                 .httpOnly(refreshCfg.isHttpOnly())
                 .secure(refreshCfg.isSecure())
                 .sameSite(refreshCfg.getSameSite().getValue())
                 .path(refreshCfg.getPath())
-                .maxAge(0)
-                .build();
+            .maxAge(0);
+
+        if (StringUtils.hasText(refreshCookieDomain)) {
+            refreshCookieBuilder.domain(refreshCookieDomain);
+        }
+
+        ResponseCookie refreshTokenCookie = refreshCookieBuilder.build();
 
         response.addHeader(HttpHeaders.SET_COOKIE, accessTokenCookie.toString());
         response.addHeader(HttpHeaders.SET_COOKIE, refreshTokenCookie.toString());
@@ -467,5 +590,128 @@ public class AuthController<U extends AuthUser<ID, R>, R extends Role, ID> {
             return authProperties.getRefreshTokens().isRotateOnRefresh();
         }
         return true;
+    }
+
+    private String normalizeEmail(String email) {
+        if (!StringUtils.hasText(email)) {
+            return "unknown";
+        }
+        return email.trim().toLowerCase(Locale.ROOT);
+    }
+
+    private String sanitizeAndValidateCookieDomain(String configuredDomain, String cookieType) {
+        if (!StringUtils.hasText(configuredDomain)) {
+            return null;
+        }
+
+        String normalized = configuredDomain.trim().toLowerCase(Locale.ROOT);
+        if (normalized.startsWith(".")) {
+            normalized = normalized.substring(1);
+        }
+
+        if (!StringUtils.hasText(normalized)
+                || normalized.length() > 253
+                || normalized.contains("*")
+                || normalized.contains(":")
+                || normalized.contains("/")
+                || normalized.contains("\\")
+                || IPV4_PATTERN.matcher(normalized).matches()
+                || "localhost".equals(normalized)
+                || DISALLOWED_PUBLIC_SUFFIXES.contains(normalized)
+                || !isValidDomainStructure(normalized)) {
+            throw new IllegalArgumentException("Invalid cookie domain configured for " + cookieType + " cookie: " + configuredDomain);
+        }
+
+        return normalized;
+    }
+
+    private boolean isValidDomainStructure(String domain) {
+        String[] labels = domain.split("\\.", -1);
+        if (labels.length < 2) {
+            return false;
+        }
+        for (String label : labels) {
+            if (label.isEmpty() || label.length() > 63) {
+                return false;
+            }
+            if (!isDomainChar(label.charAt(0)) || !isDomainChar(label.charAt(label.length() - 1))) {
+                return false;
+            }
+            for (int i = 1; i < label.length() - 1; i++) {
+                char c = label.charAt(i);
+                if (!isDomainChar(c) && c != '-') {
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+
+    private boolean isDomainChar(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= '0' && c <= '9');
+    }
+
+    private boolean isLoginTemporarilyLocked(String normalizedEmail) {
+        AuthProperties.LoginLockout lockoutConfig = authProperties.getLoginLockout();
+        if (lockoutConfig == null || !lockoutConfig.isEnabled()) {
+            return false;
+        }
+
+        LoginAttemptState state = loginAttempts.get(normalizedEmail);
+        if (state == null) {
+            return false;
+        }
+
+        long now = Instant.now().toEpochMilli();
+        if (state.lockUntilEpochMs > now) {
+            return true;
+        }
+
+        if (state.lockUntilEpochMs > 0 && state.lockUntilEpochMs <= now) {
+            loginAttempts.remove(normalizedEmail);
+        }
+
+        return false;
+    }
+
+    private boolean recordFailedLoginAttempt(String normalizedEmail) {
+        AuthProperties.LoginLockout lockoutConfig = authProperties.getLoginLockout();
+        if (lockoutConfig == null || !lockoutConfig.isEnabled()) {
+            return false;
+        }
+
+        long now = Instant.now().toEpochMilli();
+        LoginAttemptState state = loginAttempts.compute(normalizedEmail, (key, current) -> {
+            if (current == null || now - current.windowStartEpochMs > lockoutConfig.getAttemptWindowMs()) {
+                LoginAttemptState refreshed = new LoginAttemptState();
+                refreshed.windowStartEpochMs = now;
+                refreshed.failedAttempts = 1;
+                return refreshed;
+            }
+
+            if (current.lockUntilEpochMs > now) {
+                return current;
+            }
+
+            current.failedAttempts++;
+            if (current.failedAttempts >= lockoutConfig.getMaxFailedAttempts()) {
+                current.lockUntilEpochMs = now + lockoutConfig.getLockDurationMs();
+            }
+            return current;
+        });
+
+        return state != null && state.lockUntilEpochMs > now;
+    }
+
+    private void clearFailedLoginAttempts(String normalizedEmail) {
+        if (normalizedEmail != null) {
+            loginAttempts.remove(normalizedEmail);
+        }
+    }
+
+    private static class LoginAttemptState {
+        private int failedAttempts;
+        private long windowStartEpochMs;
+        private long lockUntilEpochMs;
     }
 }

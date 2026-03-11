@@ -8,20 +8,24 @@ import com.ricardo.auth.domain.user.AppRole;
 import com.ricardo.auth.domain.user.User;
 import com.ricardo.auth.dto.CreateUserRequestDTO;
 import com.ricardo.auth.repository.user.DefaultUserJpaRepository;
+import jakarta.servlet.http.Cookie;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.context.ActiveProfiles;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
 import java.util.UUID;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -181,5 +185,91 @@ class UserControllerTest {
         User createdUser = userRepository.findByEmail_Email("test@example.com").orElseThrow();
         assertNotEquals("Password@123", createdUser.getPassword()); // Should be hashed
         assertTrue(passwordEncoder.matches("Password@123", createdUser.getPassword())); // But should match when decoded
+    }
+
+    /**
+     * Get all users should return bad request when createdAfter is invalid.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void getAllUsers_shouldReturn400_whenCreatedAfterIsInvalid() throws Exception {
+        String token = adminToken();
+
+        mockMvc.perform(get("/api/users")
+                        .param("createdAfter", "not-a-date")
+                        .cookie(new Cookie("access_token", token)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("createdAfter must be in ISO 8601 format"));
+    }
+
+    /**
+     * Get all users should return bad request when createdBefore is invalid.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void getAllUsers_shouldReturn400_whenCreatedBeforeIsInvalid() throws Exception {
+        String token = adminToken();
+
+        mockMvc.perform(get("/api/users")
+                        .param("createdBefore", "2026/01/01")
+                        .cookie(new Cookie("access_token", token)))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.message").value("createdBefore must be in ISO 8601 format"));
+    }
+
+    /**
+     * Get all users should return users for admin authentication.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void getAllUsers_shouldReturn200_whenAdminAuthenticated() throws Exception {
+        CreateUserRequestDTO request = new CreateUserRequestDTO("listUser", "list@example.com", "Password@123");
+        mockMvc.perform(post("/api/users/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        String token = adminToken();
+
+        mockMvc.perform(get("/api/users")
+                        .cookie(new Cookie("access_token", token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].email").value("list@example.com"));
+    }
+
+    /**
+     * Search users should return matching results for admin authentication.
+     *
+     * @throws Exception the exception
+     */
+    @Test
+    void searchUsers_shouldReturn200_withMatchingResults() throws Exception {
+        CreateUserRequestDTO request = new CreateUserRequestDTO("searchUser", "search@example.com", "Password@123");
+        mockMvc.perform(post("/api/users/create")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(request)))
+                .andExpect(status().isCreated());
+
+        String token = adminToken();
+
+        mockMvc.perform(get("/api/users/search")
+                        .param("query", "search")
+                        .cookie(new Cookie("access_token", token)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.content").isArray())
+                .andExpect(jsonPath("$.content.length()").value(1))
+                .andExpect(jsonPath("$.content[0].username").value("searchuser"));
+    }
+
+    private String adminToken() {
+        return jwtService.generateAccessToken(
+                "admin@example.com",
+                List.of(new SimpleGrantedAuthority("ROLE_ADMIN"))
+        );
     }
 }

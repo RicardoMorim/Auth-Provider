@@ -15,6 +15,7 @@ import java.sql.Timestamp;
 import java.time.Instant;
 import java.util.Optional;
 import java.util.UUID;
+import java.util.regex.Pattern;
 
 /**
  * The type Postgre sql password reset token repository.
@@ -22,8 +23,9 @@ import java.util.UUID;
 public class PostgreSqlPasswordResetTokenRepository implements PasswordResetTokenRepository {
 
     private static final Logger logger = LoggerFactory.getLogger(PostgreSqlPasswordResetTokenRepository.class);
+    private static final Pattern SAFE_TABLE_NAME_PATTERN = Pattern.compile("^[a-zA-Z_][a-zA-Z0-9_]*$");
     private final JdbcTemplate jdbcTemplate;
-    private final AuthProperties authProperties;
+    private final String tableName;
     private final PasswordResetTokenRowMapper rowMapper = new PasswordResetTokenRowMapper();
 
     /**
@@ -34,7 +36,7 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
      */
     public PostgreSqlPasswordResetTokenRepository(DataSource dataSource, AuthProperties authProperties) {
         this.jdbcTemplate = new JdbcTemplate(dataSource);
-        this.authProperties = authProperties;
+        this.tableName = validateTableName(authProperties.getRepository().getDatabase().getPasswordResetTokensTable());
     }
 
     @Override
@@ -127,7 +129,20 @@ public class PostgreSqlPasswordResetTokenRepository implements PasswordResetToke
     }
 
     private String getTableName() {
-        return authProperties.getRepository().getDatabase().getPasswordResetTokensTable();
+        return tableName;
+    }
+
+    private String validateTableName(String configuredTableName) {
+        if (configuredTableName == null || configuredTableName.isBlank()) {
+            throw new IllegalArgumentException("Password reset tokens table name cannot be null or blank");
+        }
+
+        String normalizedTableName = configuredTableName.trim();
+        if (!SAFE_TABLE_NAME_PATTERN.matcher(normalizedTableName).matches()) {
+            throw new IllegalArgumentException("Invalid password reset tokens table name: " + normalizedTableName);
+        }
+
+        return normalizedTableName;
     }
 
     private static class PasswordResetTokenRowMapper implements RowMapper<PasswordResetToken> {

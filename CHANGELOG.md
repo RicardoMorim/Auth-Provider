@@ -5,6 +5,57 @@ All notable changes to the Ricardo Auth Spring Boot Starter will be documented i
 The format is based on Keep a Changelog (https://keepachangelog.com/en/1.0.0/),
 and this project adheres to Semantic Versioning (https://semver.org/spec/v2.0.0.html).
 
+## [5.0.0] - 2026-03-02
+
+### Breaking Changes
+
+- JWT signing is now RS256-based via `RsaKeyProvider`.
+- `ricardo.auth.jwt.secret` is legacy and ignored by runtime wiring.
+
+### Added
+
+- Login lockout protection with configurable thresholds and lock duration:
+  - `ricardo.auth.login-lockout.enabled`
+  - `ricardo.auth.login-lockout.max-failed-attempts`
+  - `ricardo.auth.login-lockout.attempt-window-ms`
+  - `ricardo.auth.login-lockout.lock-duration-ms`
+- JWKS support and key-id (`kid`) alignment for RS256 key distribution.
+- Regression test coverage for:
+  - login lockout (`429 Too Many Requests` after repeated failed attempts),
+  - password reset HTTPS URL enforcement,
+  - PostgreSQL password-reset table-name validation,
+  - Redis token blocklist hashed-key behavior.
+
+### Changed
+
+- Sensitive/tainted log data reduction in authentication, refresh-token, and role-management flows (CodeQL hardening).
+- Password reset link generation now strictly enforces HTTPS when configured (`require-https=true`).
+- Token blocklist storage now uses SHA-256 token hashes (in-memory and Redis) instead of raw token values.
+- Password reset PostgreSQL repository now validates and normalizes configured table names before SQL composition.
+- Auto-configuration now reuses validated table-name resolution for password reset schema/index creation.
+
+### Security
+
+- Reduced credential/identity leakage risk from logs.
+- Improved brute-force resistance via temporary login lockout policy.
+- Eliminated raw-token-at-rest patterns in blocklist backends.
+- Hardened dynamic SQL identifier handling for password reset tables.
+
+### Dependency Updates
+
+- Spring Boot parent: `3.5.6` → `3.5.11`
+- Jackson BOM introduced at `2.21.1`
+- `org.testcontainers:junit-jupiter`: `1.21.3` → `1.21.4`
+- `org.springdoc:springdoc-openapi-starter-webmvc-ui`: `2.8.13` → `2.8.16`
+- `org.apache.commons:commons-lang3`: `3.20.0`
+- `org.apache.commons:commons-compress`: `1.28.0` (test scope)
+- `org.sonatype.central:central-publishing-maven-plugin`: `0.9.0` → `0.10.0`
+
+### Documentation
+
+- Updated API/configuration/troubleshooting docs to match RS256 runtime behavior and key-provider requirements.
+- Added guidance that `RsaKeyProvider` must be configured for persistent production keys.
+
 ## [4.0.2] - 2025-01-19
 ### Fix:
 - The password reset link will now include the "/" even if the base url does not end with it.

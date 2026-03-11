@@ -126,7 +126,7 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("Authentication Failed: Invalid credentials", response.getBody().getMessage());
+        assertEquals("Authentication failed.", response.getBody().getMessage());
     }
 
     /**
@@ -527,7 +527,7 @@ class GlobalExceptionHandlerTest {
         // Assert
         assertEquals(HttpStatus.UNAUTHORIZED, response.getStatusCode());
         assertNotNull(response.getBody());
-        assertEquals("Authentication Failed: Bad credentials", response.getBody().getMessage());
+        assertEquals("Authentication failed.", response.getBody().getMessage());
     }
 
     /**

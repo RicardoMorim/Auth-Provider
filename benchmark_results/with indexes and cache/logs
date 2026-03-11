@@ -8,9 +8,9 @@ Dataset Size: 100000
 Sequential Requests: 60000
 Concurrent Threads: 4, Total Requests: 100000
 Query/Update Count: 60000
-Initial CSRF token for login obtained: AbAGdsypFO5QKpnTMPOF...
+Initial CSRF token for login obtained: TOKEN
 Login successful for session 2739458320304. Status: 200
-Session cookies after login: {'XSRF-TOKEN': 'd5cee9a4-6bac-466d-a744-90d73b1fbc3e', 'access_token': 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJyaWNhcmRvLWF1dGgtY2xpZW50Iiwicm9sZXMiOlsiUk9MRV9BRE1JTiJdLCJpc3MiOiJyaWNhcmRvLWF1dGgiLCJ0b2tlbl90eXBlIjoiYWNjZXNzIiwianRpIjoiNjg3NWExNzEtZWM3MC00MzFhLTkwMDAtMDAzYzkyNDM3NDU3Iiwic3ViIjoicmljYXJkb2F0bTI4QGdtYWlsLmNvbSIsImlhdCI6MTc1ODA3MDA0MywiZXhwIjoxMTc1ODA3MDA0M30.Zo5F5FqHpEHoZ5XbOY5cSKjDyuu3OmSjNxfcsMtsCQk', 'refresh_token': 'i-QR7qZnXUZ0YOnb4b0kmtK5t1irWLgWLjgP3YxVJZ-xvghAbMfYKDSRXh4uCeKYa9WZ0PoUMc9SXQXfp_GOSA'}
+Session cookies after login: {'XSRF-TOKEN': TOKEN, 'access_token': TOKEN, 'refresh_token': TOKEN}
 Main CSRF token and cookies stored globally.
 ✓ Initial authentication successful.
 ✓ Main CSRF token re-fetched and confirmed after login.
@@ -28,7 +28,7 @@ Proceeding with tests using 100000 users.
 --- Re-logging in to get a fresh authentication token for stress tests ---
 Initial CSRF token for login obtained: wYJ1-Pz_eJMp0Kgny19o...
 Login successful for session 2739461224208. Status: 200
-Session cookies after login: {'XSRF-TOKEN': '0ef0751d-b7d6-482c-bb35-5e8c9ee6a57c', 'access_token': 'eyJhbGciOiJIUzI1NiJ9.eyJhdWQiOiJyaWNhcmRvLWF1dGgtY2xpZW50Iiwicm9sZXMiOlsiUk9MRV9BRE1JTiJdLCJpc3MiOiJyaWNhcmRvLWF1dGgiLCJ0b2tlbl90eXBlIjoiYWNjZXNzIiwianRpIjoiYmJkNzlmMDItMjg5NC00NzIyLTlhZTgtYjE5NTg5YWUzYmY0Iiwic3ViIjoicmljYXJkb2F0bTI4QGdtYWlsLmNvbSIsImlhdCI6MTc1ODA3MzcwMywiZXhwIjoxMTc1ODA3MzcwM30.byCe0dNj25nG86--_Zq5Bg1QQW9z6rbV6XmzIdqHI3k', 'refresh_token': 'T7NENJGNZ4vO03OQeuKztp9NMaWirn1kKlPZ23skszWor_XD1lzg-czQS3OaK1eFmMOQtFhpQKj6K3kf2zxing'}
+Session cookies after login: {'XSRF-TOKEN': TOKEN, 'access_token': TOKEN, 'refresh_token': TOKEN}
 Main CSRF token and cookies stored globally.
 ✓ Re-login successful. Tokens updated for stress tests.
 

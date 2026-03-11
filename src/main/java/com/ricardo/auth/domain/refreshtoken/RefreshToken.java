@@ -38,6 +38,11 @@ public class RefreshToken {
 
     @Column(unique = true, nullable = false, length = 1000)
     private String token;
+
+    @Transient
+    @Setter
+    private String rawToken;
+
     // store the email. works with ANY AuthUser implementation. no need for generic class as this handles it much simpler
     @Column(name = "user_email", nullable = false)
     private String userEmail;
@@ -96,9 +101,9 @@ public class RefreshToken {
     @Override
     public String toString() {
         return "RefreshToken{" +
-                "refreshToken='" + token + '\'' +
-                "is revoked:" +
-                isRevoked() +
+                "id=" + id +
+                ", userEmail='" + userEmail + '\'' +
+                ", revoked=" + isRevoked() +
                 '}';
     }
 

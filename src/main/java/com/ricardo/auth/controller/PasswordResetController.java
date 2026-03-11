@@ -240,11 +240,24 @@ public class PasswordResetController {
     @GetMapping("/reset/{token}/validate")
     public ResponseEntity<Map<String, Object>> validateToken(
             @Parameter(description = "Password reset token to validate", required = true)
-            @PathVariable String token) {
+                        @PathVariable String token,
+                        @Parameter(hidden = true) HttpServletRequest httpRequest) {
+
+                String clientIp = getClientIp(httpRequest);
+                String rateLimitKey = PasswordResetServiceImpl.PASSWORD_RESET_VALIDATE_KEY_PREFIX + clientIp;
+
+                if (rateLimiter.isEnabled() && !rateLimiter.allowRequest(rateLimitKey)) {
+                        log.warn("Rate limit exceeded for password reset token validation from IP: {}", clientIp);
+                        return ResponseEntity.status(429).body(Map.of(
+                                        "valid", false,
+                                        "message", "Too many requests. Please try again later."
+                        ));
+                }
+
         // Basic token format validation
         if (token == null || token.trim().isEmpty() ||
                 token.length() > 255 || !token.matches("^[a-zA-Z0-9\\-_]+$")) {
-            return ResponseEntity.ok(Map.of(
+                        return ResponseEntity.badRequest().body(Map.of(
                     "valid", false,
                     "message", "Token is invalid or expired."
             ));
@@ -252,13 +265,27 @@ public class PasswordResetController {
 
         try {
             boolean isValid = passwordResetService.validatePasswordResetToken(token);
+                        if (!isValid) {
+                                return ResponseEntity.badRequest().body(Map.of(
+                                                "valid", false,
+                                                "message", "Token is invalid or expired."
+                                ));
+                        }
+
             return ResponseEntity.ok(Map.of(
                     "valid", isValid,
                     "message", isValid ? "Token is valid." : "Token is invalid or expired."
             ));
 
-        } catch (SecurityException e) {
-            return ResponseEntity.ok(Map.of(
+                } catch (SecurityException | IllegalArgumentException e) {
+                        log.warn("Invalid password reset token validation attempt: {}", e.getMessage());
+                        return ResponseEntity.badRequest().body(Map.of(
+                                        "valid", false,
+                                        "message", "Token is invalid or expired."
+                        ));
+                } catch (Exception e) {
+                        log.error("Unexpected error during password reset token validation", e);
+                        return ResponseEntity.badRequest().body(Map.of(
                     "valid", false,
                     "message", "Token is invalid or expired."
             ));
@@ -272,20 +299,5 @@ public class PasswordResetController {
      */
     private String getClientIp(HttpServletRequest request) {
         return ipResolver.resolveIp(request);
-    }
-
-    /**
-     * Validates if a string is a valid IP address (IPv4 or IPv6).
-     */
-    private boolean isValidIpAddress(String ip) {
-        if (ip == null || ip.isEmpty() || ip.length() > 45) { // Max IPv6 length is 45
-            return false;
-        }
-
-        // Basic validation for IPv4 and IPv6 patterns
-        return ip.matches("^(?:[0-9]{1,3}\\.){3}[0-9]{1,3}$") || // IPv4
-                ip.matches("^(?:[0-9a-fA-F]{1,4}:){7}[0-9a-fA-F]{1,4}$") || // IPv6 full
-                ip.matches("^::1$") || // IPv6 loopback
-                ip.matches("^([0-9a-fA-F]{1,4}:)*::([0-9a-fA-F]{1,4}:)*[0-9a-fA-F]{1,4}$"); // IPv6 compressed
     }
 }

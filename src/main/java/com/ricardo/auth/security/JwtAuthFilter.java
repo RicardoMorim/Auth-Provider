@@ -4,6 +4,7 @@ import com.ricardo.auth.autoconfig.AuthProperties;
 import com.ricardo.auth.config.SecurityConfig;
 import com.ricardo.auth.core.JwtService;
 import com.ricardo.auth.core.TokenBlocklist;
+import com.ricardo.auth.helper.LogSanitizer;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
@@ -15,7 +16,6 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
-import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
@@ -26,7 +26,6 @@ import java.util.stream.Collectors;
  * The type Jwt auth filter.
  * Bean Creation is handled in the {@link com.ricardo.auth.autoconfig.AuthAutoConfiguration}
  */
-@Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
     private static final Logger logger = LoggerFactory.getLogger(JwtAuthFilter.class);
@@ -71,7 +70,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         // Validate cookie security configuration
         if (!validateCookieSecurity(request)) {
-            logger.warn("Access token cookie security validation failed for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.warn("Access token cookie security validation failed for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid cookie security configuration");
             return;
         }
@@ -84,7 +83,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         // Check if token is blacklisted
         if (tokenBlocklist.isRevoked(token)) {
-            logger.debug("Blocked revoked token for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.debug("Blocked revoked token for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Token no longer valid");
             return;
         }
@@ -95,7 +94,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         try {
             if (!jwtService.isTokenValid(token)) {
-                logger.debug("Invalid JWT token for request: {}", sanitizeForLog(request.getRequestURI()));
+                logger.debug("Invalid JWT token for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
                 sendUnauthorizedError(response, "Invalid authentication");
                 return;
             }
@@ -104,32 +103,32 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             roles = jwtService.extractRoles(token);
 
         } catch (io.jsonwebtoken.ExpiredJwtException e) {
-            logger.debug("Expired JWT token for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.debug("Expired JWT token for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Authentication expired");
             return;
         } catch (io.jsonwebtoken.security.SignatureException e) {
-            logger.warn("JWT signature validation failed for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.warn("JWT signature validation failed for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         } catch (io.jsonwebtoken.MalformedJwtException e) {
-            logger.debug("Malformed JWT token for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.debug("Malformed JWT token for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         } catch (Exception e) {
-            logger.error("Unexpected error during JWT validation for request: {}", sanitizeForLog(request.getRequestURI()), e);
+            logger.error("Unexpected error during JWT validation for request: {}", LogSanitizer.sanitize(request.getRequestURI()), e);
             sendUnauthorizedError(response, "Authentication error");
             return;
         }
 
         // Validate extracted data
         if (subject == null || subject.trim().isEmpty()) {
-            logger.debug("JWT token missing subject for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.debug("JWT token missing subject for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         }
 
         if (roles == null) {
-            logger.debug("JWT token missing roles for request: {}", sanitizeForLog(request.getRequestURI()));
+            logger.debug("JWT token missing roles for request: {}", LogSanitizer.sanitize(request.getRequestURI()));
             sendUnauthorizedError(response, "Invalid authentication");
             return;
         }
@@ -153,8 +152,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         for (Cookie cookie : cookies) {
             if (ACCESS_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
-                String token = cookie.getValue();
-                return token;
+                return cookie.getValue();
             }
         }
         return null;
@@ -180,7 +178,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                     "https".equalsIgnoreCase(forwardedScheme);
 
             if (!isSecureConnection) {
-                logger.warn("Secure cookie expected but connection is not HTTPS. Request: {}", sanitizeForLog(request.getRequestURI()));
+                logger.warn("Secure cookie expected but connection is not HTTPS. Request: {}", LogSanitizer.sanitize(request.getRequestURI()));
                 return false;
             }
         }
@@ -190,9 +188,9 @@ public class JwtAuthFilter extends OncePerRequestFilter {
         if (expectedPath != null && !"/".equals(expectedPath)) {
             String requestPath = request.getRequestURI();
             if (!requestPath.startsWith(expectedPath)) {
-                logger.warn("Cookie path mismatch. Expected: {}, Request path: {}", expectedPath, sanitizeForLog(requestPath));
-                // This might be too strict, so we'll log but not fail
-                // return false;
+                logger.warn("Cookie path mismatch. Expected: {}, Request path: {}", expectedPath, LogSanitizer.sanitize(requestPath));
+                // block the request - Fail close
+                return false;
             }
         }
 
@@ -235,8 +233,6 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
         authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
         SecurityContextHolder.getContext().setAuthentication(authToken);
-
-        logger.debug("Authentication set for user: {} with roles: {}", subject, roles);
     }
 
     /**
@@ -245,16 +241,5 @@ public class JwtAuthFilter extends OncePerRequestFilter {
     private void sendUnauthorizedError(HttpServletResponse response, String logMessage) throws IOException {
         logger.debug("Authentication failed: {}", logMessage);
         response.sendError(HttpServletResponse.SC_UNAUTHORIZED, UNAUTHORIZED_MESSAGE);
-    }
-
-    /**
-     * Sanitize a string for log output by removing CR and LF characters to prevent log injection.
-     */
-    private String sanitizeForLog(String input) {
-        if (input == null) {
-            return null;
-        }
-        // Remove CR and LF characters
-        return input.replace("\n", "").replace("\r", "");
     }
 }

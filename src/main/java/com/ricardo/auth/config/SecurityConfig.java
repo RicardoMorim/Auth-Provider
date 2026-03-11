@@ -1,12 +1,14 @@
 package com.ricardo.auth.config;
 
 import com.ricardo.auth.autoconfig.AuthProperties;
+import com.ricardo.auth.core.IpResolver;
 import com.ricardo.auth.core.RateLimiter;
 import com.ricardo.auth.ratelimiter.RateLimiterFilter;
 import com.ricardo.auth.security.JwtAuthFilter;
 import jakarta.servlet.http.HttpServletResponse;
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Qualifier;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnMissingBean;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -23,12 +25,12 @@ import org.springframework.security.web.AuthenticationEntryPoint;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
+import org.springframework.security.web.header.writers.ReferrerPolicyHeaderWriter;
 import org.springframework.util.AntPathMatcher;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-import java.util.Arrays;
 import java.util.List;
 
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -50,6 +52,7 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/csrf-token",
+            "/api/auth/.well-known/jwks.json"
     };
 
     // Only login and user creation are public for CSRF (Refresh routes need CSRF protection)
@@ -61,14 +64,20 @@ public class SecurityConfig {
             "/swagger-ui/**",
             "/v3/api-docs/**",
             "/api/csrf-token",
+            "/api/auth/.well-known/jwks.json"
     };
 
     private static final AntPathMatcher PATH_MATCHER = new AntPathMatcher();
 
-    @Autowired
-    private JwtAuthFilter jwtAuthFilter;
-    @Autowired
-    private AuthProperties authProperties;
+    private final JwtAuthFilter jwtAuthFilter;
+    private final AuthProperties authProperties;
+
+    private static final Logger logger = LoggerFactory.getLogger(SecurityConfig.class);
+
+    public SecurityConfig(JwtAuthFilter jwtAuthFilter, AuthProperties authProperties) {
+        this.jwtAuthFilter = jwtAuthFilter;
+        this.authProperties = authProperties;
+    }
 
     /**
      * Is public endpoint boolean.
@@ -95,7 +104,7 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnMissingBean(PasswordEncoder.class)
     public PasswordEncoder passwordEncoder() {
-        return new BCryptPasswordEncoder();
+        return new BCryptPasswordEncoder(authProperties.getPasswordPolicy().getBcryptStrength());
     }
 
     /**
@@ -112,7 +121,7 @@ public class SecurityConfig {
     }
 
     /**
-     * Custom authentication entry point that returns 401 instead of 403.
+     * Custom authentication entry point that returns 401 without leaking internal details.
      *
      * @return the authentication entry point
      */
@@ -120,9 +129,10 @@ public class SecurityConfig {
     @ConditionalOnMissingBean(AuthenticationEntryPoint.class)
     public AuthenticationEntryPoint authenticationEntryPoint() {
         return (request, response, authException) -> {
+            logger.debug("Authentication failed: {}", authException.getMessage());
             response.setStatus(HttpServletResponse.SC_UNAUTHORIZED);
             response.setContentType("application/json");
-            response.getWriter().write("{\"message\":\"Authentication Failed: " + authException.getMessage() + "\"}");
+            response.getWriter().write("{\"message\":\"Unauthorized\"}");
         };
     }
 
@@ -135,27 +145,24 @@ public class SecurityConfig {
     @Bean
     @ConditionalOnMissingBean(CorsConfigurationSource.class)
     public CorsConfigurationSource corsConfigurationSource() {
+        AuthProperties.Cors corsConfig = authProperties.getCors();
         CorsConfiguration configuration = new CorsConfiguration();
 
-        // Allow specific origins (configure via application.properties)
-        configuration.setAllowedOriginPatterns(List.of("*"));
+        List<String> origins = corsConfig.getAllowedOrigins();
+        if (origins == null || origins.isEmpty()) {
+            logger.warn("No CORS allowed origins configured (ricardo.auth.cors.allowed-origins). " +
+                    "Cross-origin requests will be rejected. Configure specific origins for your frontend.");
+        } else if (origins.contains("*")) {
+            logger.warn("CORS is configured with wildcard '*' origin. " +
+                    "This is insecure for cookie-based authentication. " +
+                    "Configure specific origins via ricardo.auth.cors.allowed-origins");
+        }
 
-        // Allow common HTTP methods
-        configuration.setAllowedMethods(Arrays.asList(
-                "GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"
-        ));
-
-        // Allow common headers including CSRF token
-        configuration.setAllowedHeaders(Arrays.asList(
-                "Content-Type", "X-Requested-With", "Authorization",
-                "X-XSRF-TOKEN", "Cache-Control", "Accept"
-        ));
-
-        // Allow credentials for cookie authentication
-        configuration.setAllowCredentials(true);
-
-        // Cache preflight requests for 1 hour
-        configuration.setMaxAge(3600L);
+        configuration.setAllowedOriginPatterns(origins);
+        configuration.setAllowedMethods(corsConfig.getAllowedMethods());
+        configuration.setAllowedHeaders(corsConfig.getAllowedHeaders());
+        configuration.setAllowCredentials(corsConfig.isAllowCredentials());
+        configuration.setMaxAge(corsConfig.getMaxAge());
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
@@ -171,9 +178,9 @@ public class SecurityConfig {
      * @throws Exception the exception
      */
     @Bean
-    @Order(Ordered.HIGHEST_PRECEDENCE + 1)
+    @Order(Ordered.HIGHEST_PRECEDENCE)
     @ConditionalOnMissingBean(SecurityFilterChain.class)
-    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, @Qualifier("generalRateLimiter") RateLimiter rateLimiter, IpResolver ipResolver) throws Exception {
         if (authProperties.isRedirectHttps()) {
             http.redirectToHttps(withDefaults());
         }
@@ -188,9 +195,28 @@ public class SecurityConfig {
                         .anyRequest().authenticated()
                 )
                 .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .headers(headers -> {
+                    AuthProperties.SecurityHeaders securityHeaders = authProperties.getSecurityHeaders();
+
+                    if (securityHeaders.getCsp().isEnabled()) {
+                        headers.contentSecurityPolicy(csp -> csp.policyDirectives(securityHeaders.getCsp().getPolicy()));
+                    }
+
+                    headers.referrerPolicy(referrer -> referrer.policy(ReferrerPolicyHeaderWriter.ReferrerPolicy.NO_REFERRER));
+
+                    if (securityHeaders.getHsts().isEnabled()) {
+                        headers.httpStrictTransportSecurity(hsts -> hsts
+                                .maxAgeInSeconds(securityHeaders.getHsts().getMaxAgeSeconds())
+                                .includeSubDomains(securityHeaders.getHsts().isIncludeSubDomains())
+                                .preload(securityHeaders.getHsts().isPreload())
+                        );
+                    } else {
+                        headers.httpStrictTransportSecurity(hsts -> hsts.disable());
+                    }
+                })
                 .exceptionHandling(ex -> ex.authenticationEntryPoint(authenticationEntryPoint()))
-                .addFilterBefore(new RateLimiterFilter(rateLimiter), UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class)
+                .addFilterAfter(new RateLimiterFilter(rateLimiter, ipResolver), JwtAuthFilter.class)
                 .build();
     }
 

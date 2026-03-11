@@ -81,7 +81,7 @@ class PasswordResetServiceImplTest {
                 passwordPolicyService,
                 authProperties,
                 eventPublisher,
-                idConverter, new AuthProperties(), cacheManager
+                idConverter, cacheManager
         );
     }
 
@@ -111,6 +111,43 @@ class PasswordResetServiceImplTest {
         PasswordResetRequestedEvent event = eventCaptor.getValue();
         assertThat(event.username()).isEqualTo(user.getUsername());
         assertThat(event.email()).isEqualTo(email);
+    }
+
+    /**
+     * Request password reset with requireHttps enabled should send HTTPS reset URL.
+     */
+    @Test
+    void requestPasswordReset_WithRequireHttpsEnabled_ShouldSendHttpsResetUrl() {
+        String email = "user@example.com";
+        TestUser user = createTestUser(email);
+        authProperties.setBaseUrl("http://localhost:8080");
+        authProperties.getPasswordReset().setRequireHttps(true);
+
+        when(userService.getUserByEmail(email)).thenReturn(user);
+        when(emailSenderService.sendEmail(anyString(), anyString(), anyString())).thenReturn(true);
+
+        passwordResetService.requestPasswordReset(email);
+
+        ArgumentCaptor<String> bodyCaptor = ArgumentCaptor.forClass(String.class);
+        verify(emailSenderService).sendEmail(eq(email), anyString(), bodyCaptor.capture());
+        assertThat(bodyCaptor.getValue()).contains("https://localhost:8080/api/auth/reset/");
+    }
+
+    /**
+     * Request password reset with invalid base URL scheme should fail when requireHttps is enabled.
+     */
+    @Test
+    void requestPasswordReset_WithInvalidBaseUrlScheme_ShouldThrowWhenRequireHttpsEnabled() {
+        String email = "user@example.com";
+        TestUser user = createTestUser(email);
+        authProperties.setBaseUrl("localhost:8080");
+        authProperties.getPasswordReset().setRequireHttps(true);
+
+        when(userService.getUserByEmail(email)).thenReturn(user);
+
+        assertThatThrownBy(() -> passwordResetService.requestPasswordReset(email))
+                .isInstanceOf(IllegalStateException.class)
+                .hasMessageContaining("must use HTTPS");
     }
 
     /**
@@ -280,6 +317,88 @@ class PasswordResetServiceImplTest {
                 .isInstanceOf(SecurityException.class)
                 .hasMessageContaining("Invalid or expired token");
     }
+
+            /**
+             * Complete password reset with token for missing user should throw exception.
+             */
+            @Test
+            void completePasswordReset_WithMissingUser_ShouldThrowSecurityException() {
+            String token = "valid-token";
+            String newPassword = "NewPassword123!";
+
+            PasswordResetToken resetToken = new PasswordResetToken(
+                PasswordResetServiceImpl.hashToken(token), "missing@example.com", Instant.now().plusSeconds(3600)
+            );
+
+            when(passwordPolicyService.validatePassword(newPassword)).thenReturn(true);
+            when(tokenRepository.findByTokenAndNotUsed(PasswordResetServiceImpl.hashToken(token))).thenReturn(Optional.of(resetToken));
+            when(userService.getUserByEmail("missing@example.com")).thenReturn(null);
+
+            assertThatThrownBy(() -> passwordResetService.completePasswordReset(token, newPassword))
+                .isInstanceOf(SecurityException.class)
+                .hasMessageContaining("Invalid token");
+            }
+
+            /**
+             * Request password reset should throw when email delivery fails.
+             */
+            @Test
+            void requestPasswordReset_WhenEmailSendFails_ShouldThrowRuntimeException() {
+            String email = "user@example.com";
+            TestUser user = createTestUser(email);
+
+            when(userService.getUserByEmail(email)).thenReturn(user);
+            when(emailSenderService.sendEmail(anyString(), anyString(), anyString())).thenReturn(false);
+
+            assertThatThrownBy(() -> passwordResetService.requestPasswordReset(email))
+                .isInstanceOf(RuntimeException.class)
+                .hasMessageContaining("Failed to send password reset email");
+            }
+
+            /**
+             * Validate token should return false for null token.
+             */
+            @Test
+            void validatePasswordResetToken_WithNullToken_ShouldReturnFalse() {
+            assertThat(passwordResetService.validatePasswordResetToken(null)).isFalse();
+            verify(tokenRepository, never()).findByTokenAndNotUsed(anyString());
+            }
+
+            /**
+             * Validate token should return false for expired token.
+             */
+            @Test
+            void validatePasswordResetToken_WithExpiredToken_ShouldReturnFalse() {
+            String token = "expired-token";
+            PasswordResetToken expiredToken = new PasswordResetToken(
+                PasswordResetServiceImpl.hashToken(token),
+                "user@example.com",
+                Instant.now().minusSeconds(60)
+            );
+
+            when(tokenRepository.findByTokenAndNotUsed(PasswordResetServiceImpl.hashToken(token)))
+                .thenReturn(Optional.of(expiredToken));
+
+            assertThat(passwordResetService.validatePasswordResetToken(token)).isFalse();
+            }
+
+            /**
+             * Validate token should return true for valid and non-expired token.
+             */
+            @Test
+            void validatePasswordResetToken_WithValidToken_ShouldReturnTrue() {
+            String token = "valid-token";
+            PasswordResetToken validToken = new PasswordResetToken(
+                PasswordResetServiceImpl.hashToken(token),
+                "user@example.com",
+                Instant.now().plusSeconds(3600)
+            );
+
+            when(tokenRepository.findByTokenAndNotUsed(PasswordResetServiceImpl.hashToken(token)))
+                .thenReturn(Optional.of(validToken));
+
+            assertThat(passwordResetService.validatePasswordResetToken(token)).isTrue();
+            }
 
 
     /**

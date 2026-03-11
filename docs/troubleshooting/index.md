@@ -22,7 +22,7 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 
 | Issue                     | Guide                               | Common Causes                                |
 |---------------------------|-------------------------------------|----------------------------------------------|
-| App fails to start        | [Startup Issues](startup-issues.md) | Missing JWT secret, wrong dependencies       |
+| App fails to start        | [Startup Issues](startup-issues.md) | Missing key provider, wrong dependencies     |
 | Bean creation errors      | [Startup Issues](startup-issues.md) | Configuration conflicts, missing annotations |
 | Database connection fails | [Database Issues](database.md)      | Wrong URL, missing drivers                   |
 
@@ -72,9 +72,7 @@ Quick help for solving common Ricardo Auth issues. **Use Ctrl+F to search** for 
 
 ### Application Startup Errors
 
--
-
-`Property 'ricardo.auth.jwt.secret' is required` → [JWT Secret Not Configured](startup-issues.md#jwt-secret-not-configured)
+- `No RSA key provider configured for JWT signing` → [JWT Signing Key Provider Not Configured](startup-issues.md#jwt-signing-key-provider-not-configured)
 
 - `Failed to configure a DataSource` → [Missing JPA Dependencies](startup-issues.md#missing-jpa-dependencies)
 - `Error creating bean` → [Bean Creation Errors](startup-issues.md#bean-creation-errors)
@@ -237,7 +235,7 @@ curl -X GET http://localhost:8080/api/users/exists/test@example.com
 - Use H2 database for quick setup
 - Enable debug logging
 - Use relaxed password policies
-- Set JWT secret in configuration
+- Use an explicit JWT key provider in production
 
 ### Testing Environment
 
@@ -264,7 +262,7 @@ curl -X GET http://localhost:8080/api/users/exists/test@example.com
 ricardo:
   auth:
     jwt:
-      secret: ${JWT_SECRET}
+      kid: auth-key-1
     password-policy:
       min-length: 8
       require-uppercase: true

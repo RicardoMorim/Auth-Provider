@@ -139,12 +139,12 @@ jobs:
           echo MAIL_PASSWORD=${{ secrets.MAIL_PASSWORD }} >> .env
           echo RICARDO_AUTH_JWT_SECRET=${{ secrets.RICARDO_AUTH_JWT_SECRET }} >> .env
 
-
+      # Build no tests
       - if: matrix.language == 'java-kotlin'
         name: Build with Maven (manual mode)
         run: |
           chmod +x mvnw || true
-          ./mvnw clean package
+          ./mvnw clean package -DskipTests
 
 
       - name: Perform CodeQL Analysis

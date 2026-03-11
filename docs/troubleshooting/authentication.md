@@ -255,14 +255,14 @@ console.log('Token expires at:', new Date(payload.exp * 1000));
 console.log('Is expired:', Date.now() > payload.exp * 1000);
 ```
 
-**4. Verify JWT Secret Consistency:**
+**4. Verify JWT Key Provider Consistency:**
 
 ```yaml
-# Ensure same secret across all services/restarts
+# Ensure stable key id and token settings
 ricardo:
   auth:
     jwt:
-      secret: ${JWT_SECRET}  # Use environment variable
+      kid: auth-key-1
 ```
 
 **✅ Solutions:**
@@ -277,11 +277,13 @@ ricardo:
       expiration: 86400000  # 24 hours instead of default
 ```
 
-**2. JWT Secret Mismatch:**
+**2. JWT Signing Key Mismatch:**
 
-```bash
-# Set consistent environment variable
-export JWT_SECRET="your-consistent-secret-key-across-all-environments"
+```java
+@Bean
+public RsaKeyProvider rsaKeyProvider() {
+  return new YourPersistentRsaKeyProvider();
+}
 ```
 
 **3. Token Malformed:**

@@ -27,7 +27,7 @@ Fix **application startup problems** with Ricardo Auth quickly and efficiently.
 > - Blocklist e rate limiting (memória/Redis) são ativados por padrão para maior proteção.
 > - Endpoint de revogação de token disponível em `/api/auth/revoke` (ADMIN).
 
-### JWT Secret Not Configured
+### JWT Signing Key Provider Not Configured
 
 **❌ Error:**
 
@@ -37,10 +37,10 @@ APPLICATION FAILED TO START
 ***************************
 
 Description:
-Property 'ricardo.auth.jwt.secret' is required but not configured.
+No RSA key provider configured for JWT signing.
 
 Action:
-Configure the JWT secret in your application.yml or set the RICARDO_AUTH_JWT_SECRET environment variable.
+Provide a custom `RsaKeyProvider` bean for persistent production keys.
 ```
 
 **✅ Solution:**
@@ -50,17 +50,20 @@ Configure the JWT secret in your application.yml or set the RICARDO_AUTH_JWT_SEC
 ricardo:
   auth:
     jwt:
-      secret: "your-256-bit-secret-key-here-make-it-long-and-secure"
+      kid: "auth-key-1"
+      access-token-expiration: 900000
 ```
 
-**Or use environment variable:**
+**And provide a key provider bean:**
 
-```bash
-export RICARDO_AUTH_JWT_SECRET="your-256-bit-secret-key-here"
+```java
+@Bean
+public RsaKeyProvider rsaKeyProvider() {
+    return new YourPersistentRsaKeyProvider();
+}
 ```
 
-**❗ Importante:** O segredo JWT deve ser longo, aleatório e nunca exposto publicamente. Use variáveis de ambiente em
-produção.
+**❗ Importante:** O starter usa RS256 via `RsaKeyProvider`. A propriedade `ricardo.auth.jwt.secret` é legada e ignorada em runtime.
 
 ### Missing JPA Dependencies
 
@@ -646,7 +649,7 @@ env | grep SPRING
 - [ ] **Spring Boot 3.2+** in pom.xml
 - [ ] **JPA dependency** present
 - [ ] **Database dependency** (H2, PostgreSQL, etc.) present
-- [ ] **JWT secret** configured (256+ bits)
+- [ ] **JWT key provider** configured for production
 - [ ] **Database configuration** present
 - [ ] **Port 8080** available or alternative configured
 - [ ] **No YAML syntax errors**
